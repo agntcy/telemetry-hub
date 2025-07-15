@@ -1,0 +1,330 @@
+definitions:
+  http.CreateMetric:
+    properties:
+      app_id:
+        type: string
+      app_name:
+        type: string
+      metrics:
+        description: Use json.RawMessage to store arbitrary JSON data
+        example: '{"key":"value"}'
+        type: string
+      session_id:
+        type: string
+      span_id:
+        type: string
+      trace_id:
+        type: string
+    required:
+    - app_id
+    - app_name
+    - metrics
+    - session_id
+    - span_id
+    - trace_id
+    type: object
+  http.Metric:
+    properties:
+      app_id:
+        type: string
+      app_name:
+        type: string
+      id:
+        type: string
+      metrics:
+        description: Use json.RawMessage to store arbitrary JSON data
+        example: '{"accuracy":"0.95","latency_ms":"120"}'
+        type: string
+      session_id:
+        type: string
+      span_id:
+        type: string
+      timestamp:
+        type: string
+      trace_id:
+        type: string
+    type: object
+  http.SessionID:
+    properties:
+      id:
+        type: string
+      start_timestamp:
+        type: string
+    type: object
+  http.Trace:
+    properties:
+      duration:
+        type: integer
+      eventsAttributes:
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        type: array
+      eventsName:
+        items:
+          type: string
+        type: array
+      eventsTimestamp:
+        items:
+          type: string
+        type: array
+      linksAttributes:
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        type: array
+      linksSpanId:
+        items:
+          type: string
+        type: array
+      linksTraceId:
+        items:
+          type: string
+        type: array
+      linksTraceState:
+        items:
+          type: string
+        type: array
+      parentSpanId:
+        type: string
+      resourceAttributes:
+        additionalProperties:
+          type: string
+        type: object
+      scopeName:
+        type: string
+      scopeVersion:
+        type: string
+      serviceName:
+        type: string
+      spanAttributes:
+        additionalProperties:
+          type: string
+        type: object
+      spanId:
+        type: string
+      spanKind:
+        type: string
+      spanName:
+        type: string
+      statusCode:
+        type: string
+      statusMessage:
+        type: string
+      timestamp:
+        type: string
+      traceId:
+        type: string
+      traceState:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /metrics/session:
+    post:
+      consumes:
+      - application/json
+      description: Write session metrics to the server
+      parameters:
+      - description: Metric to write
+        in: body
+        name: metric
+        required: true
+        schema:
+          $ref: '#/definitions/http.CreateMetric'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Metric created successfully
+          schema:
+            $ref: '#/definitions/http.Metric'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Write session metrics
+      tags:
+      - APIs
+  /metrics/session/{session_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get metrics by session ID
+      parameters:
+      - description: Session ID
+        example: '"session_abc123"'
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'List of metrics for the session" example([{"id": "metric_001",
+            "span_id": "span_abc123", "trace_id": "trace_def456", "session_id": "session_abc123",
+            "timestamp": "2023-06-25T15:30:00Z", "metrics": {"accuracy": "0.95", "latency_ms":
+            "120"}, "app_name": "ml-service", "app_id": "app-001"}])'
+          schema:
+            items:
+              $ref: '#/definitions/http.Metric'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get metrics by session ID
+      tags:
+      - APIs
+  /metrics/span:
+    post:
+      consumes:
+      - application/json
+      description: Write span metrics to the server
+      parameters:
+      - description: Metric to write
+        in: body
+        name: metric
+        required: true
+        schema:
+          $ref: '#/definitions/http.CreateMetric'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Metric created successfully
+          schema:
+            $ref: '#/definitions/http.Metric'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Write span metrics
+      tags:
+      - APIs
+  /metrics/span/{span_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get metrics by span ID
+      parameters:
+      - description: Span ID
+        example: '"span"'
+        in: path
+        name: span_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'List of metrics for the span" example([{"id": "metric_001",
+            "span_id": "span_abc123", "trace_id": "trace_def456", "session_id": "session_abc123",
+            "timestamp": "2023-06-25T15:30:00Z", "metrics": {"accuracy": "0.95", "latency_ms":
+            "120"}, "app_name": "ml-service", "app_id": "app-001"}])'
+          schema:
+            items:
+              $ref: '#/definitions/http.Metric'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get metrics by span ID
+      tags:
+      - APIs
+  /traces/session/{session_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get traces by session ID
+      parameters:
+      - description: Session ID
+        example: '"session_abc123"'
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'List of traces for the session" example([{"trace_id": "trace_def456",
+            "span_name": "ml_inference", "timestamp": "2023-06-25T15:30:00Z"}, {"trace_id":
+            "trace_ghi789", "span_name": "data_processing", "timestamp": "2023-06-25T15:31:00Z"}])'
+          schema:
+            items:
+              $ref: '#/definitions/http.Trace'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get traces by session ID
+      tags:
+      - APIs
+  /traces/sessions:
+    get:
+      consumes:
+      - application/json
+      description: Get sessions by start and end time
+      parameters:
+      - description: Start time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)
+        example: '"2023-06-25T15:04:05Z"'
+        in: query
+        name: start_time
+        required: true
+        type: string
+      - description: End time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)
+        example: '"2023-06-25T18:04:05Z"'
+        in: query
+        name: end_time
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'List of session IDs with minimum timestamps" example([{"id":
+            "session_abc123", "start_timestamp": "2023-06-25T15:30:00Z"}, {"id": "session_def456",
+            "start_timestamp": "2023-06-25T16:15:00Z"}])'
+          schema:
+            items:
+              $ref: '#/definitions/http.SessionID'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get sessions
+      tags:
+      - APIs
+swagger: "2.0"

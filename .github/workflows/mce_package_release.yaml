@@ -1,0 +1,49 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: mce-release-python-package
+
+on:
+  push:
+    tags:
+      - 'mce-v*'
+  workflow_dispatch:  # Allow manual triggering of the workflow
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-mce-wheel:
+    name: MCE Python wheel
+    uses: ./.github/workflows/reusable-python-build-wheel.yaml
+
+  pypi-publish:
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    needs:
+      - build-mce-wheel
+    if: |
+      always() &&
+      (needs.build-mce-wheel.result == 'skipped' || needs.build-mce-wheel.result == 'success')
+    environment: pypi
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: write
+      contents: read
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: ./dist
+
+      - name: Show files
+        run: ls -l ./dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: ./dist

@@ -1,0 +1,33 @@
+---
+version: "3"
+
+includes:
+  utils: ./tasks/utils.yml
+
+silent: true
+
+tasks:
+  api-layer-version:
+    desc: Print api-layer version
+    cmds:
+      - task: utils:api-layer-version
+
+  api-layer-swagger:
+    desc: Generate api-layer swagger
+    cmds:
+      - task: utils:api-layer-swagger
+
+  api-layer-run:
+    desc: Run api-layer
+    cmds:
+      - task: utils:api-layer-run
+
+  api-layer-test:
+    desc: Test api-layer
+    cmds:
+      - task: utils:api-layer-test
+
+  api-layer-build:
+    desc: Build api-layer binary
+    cmds:
+      - task: utils:api-layer-build

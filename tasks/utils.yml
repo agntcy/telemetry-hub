@@ -1,0 +1,28 @@
+---
+version: "3"
+
+tasks:
+
+  api-layer-version:
+    internal: true
+    cmds:
+      - git describe --tags --match='api-layer-v*'
+
+  api-layer-swagger:
+    internal: true
+    cmds:
+      - cd api-layer && swag init
+  api-layer-run:
+    internal: true
+    cmds:
+      - cd api-layer && go run main.go
+
+  api-layer-test:
+    internal: true
+    cmds:
+      - cd api-layer && go test ./pkg/services/http/ -v
+
+  api-layer-build:
+    internal: true
+    cmds:
+      - cd api-layer && go mod tidy && go build  -ldflags "-X main.buildVersion=${BUILD_VERSION}" -o ../bins/api-layer main.go

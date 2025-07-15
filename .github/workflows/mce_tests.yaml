@@ -1,0 +1,34 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: mce-testing
+
+on:
+  pull_request:
+    paths:
+      - 'metrics_computation_engine/**'
+      - '.github/workflows/mce_tests.yaml'
+
+jobs:
+  mce-run-tests:
+    name: Run pytest on the MCE
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # legit:ignore
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+        with:
+          py-install: false
+          poetry-install: false
+          uv-install: true
+      - name: Build package
+        run: |
+          pushd metrics_computation_engine
+          uv build
+      - name: Run tests
+        run: |
+          pushd metrics_computation_engine
+          uv run pytest
