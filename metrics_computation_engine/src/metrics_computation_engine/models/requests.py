@@ -11,7 +11,7 @@ class LLMJudgeConfig(BaseModel):
     LLM_MODEL_NAME: str = "gpt-4o"
     LLM_API_KEY: str = "sk-..."
 
-
+    
 class BatchTimeRange(BaseModel):
     start: str
     end: str
