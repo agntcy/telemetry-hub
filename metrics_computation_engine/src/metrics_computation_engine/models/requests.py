@@ -20,7 +20,7 @@ class BatchTimeRange(BaseModel):
 
 class BatchConfig(BaseModel):
     time_range: Optional[BatchTimeRange] = None
-    num_sessions: Optional[int] = 1 
+    num_sessions: Optional[int] = 1
     app_name: Optional[str] = None
 
 
