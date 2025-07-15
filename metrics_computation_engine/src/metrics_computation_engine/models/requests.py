@@ -20,11 +20,11 @@ class BatchTimeRange(BaseModel):
 
 class BatchConfig(BaseModel):
     time_range: Optional[BatchTimeRange] = None
-    num_sessions: Optional[int] = None
+    num_sessions: Optional[int] = 1 
     app_name: Optional[str] = None
 
 
 class MetricsConfigRequest(BaseModel):
-    metrics: List[str] = ["AgentToToolInteractions", "GraphDeterminismScore"]
+    metrics: List[str] = ["AgentToToolInteractions", "ToolUtilizationAccuracy"]
     llm_judge_config: LLMJudgeConfig = LLMJudgeConfig()
     batch_config: BatchConfig = BatchConfig()
