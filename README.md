@@ -1,4 +1,4 @@
-# Agntcy - Observability and Evaluation
+# Agntcy - Telemetry Hub
 
 This is a monorepo that contains the code for the API layer, and the metrics computation engine (MCE) of the AGNTCY observability and evaluation platform.
 
