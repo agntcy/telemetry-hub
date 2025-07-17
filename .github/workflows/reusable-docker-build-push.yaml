@@ -24,7 +24,7 @@ on:
         required: false
         type: string
         description: "Image repo to use."
-        default: "ghcr.io/agntcy/slim"
+        default: "ghcr.io/agntcy/obs"
     secrets:
       github-token:
         description: "github token"
