@@ -47,7 +47,7 @@ target "docker-metadata-action" {
 
 target "api" {
   context = "./api-layer"
-  dockerfile = "./api-layer/Dockerfile"
+  dockerfile = "./Dockerfile"
   target = "api-layer-release"
   inherits = [
     "_common",
@@ -58,7 +58,7 @@ target "api" {
 
 target "api-debug" {
   context = "./api-layer"
-  dockerfile = "./api-layer/Dockerfile"
+  dockerfile = "./Dockerfile"
   target = "api-layer-debug"
   inherits = [
     "_common",
@@ -69,7 +69,7 @@ target "api-debug" {
 
 target "mce" {
   context = "./metrics_computation_engine"
-  dockerfile = "./metrics_computation_engine/Dockerfile"
+  dockerfile = "./Dockerfile"
   target = "mce-release"
   inherits = [
     "_common",
@@ -80,7 +80,7 @@ target "mce" {
 
 target "mce-debug" {
   context = "./metrics_computation_engine"
-  dockerfile = "./metrics_computation_engine/Dockerfile"
+  dockerfile = "./Dockerfile"
   target = "mce-debug"
   inherits = [
     "_common",
