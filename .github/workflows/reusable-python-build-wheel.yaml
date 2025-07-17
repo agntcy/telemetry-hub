@@ -50,8 +50,7 @@ jobs:
         run: |
           uv build
       - name: Upload wheel
-        working-directory: ${{ inputs.working-dir }}
         uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.platform.os }}-${{ matrix.platform.target }}
-          path: ./dist
+          path: ${{ inputs.working-dir }}/dist
