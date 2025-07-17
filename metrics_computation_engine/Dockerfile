@@ -19,7 +19,7 @@ ENV UV_LINK_MODE=copy \
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-dev --no-install-project --package metrics-computation-engine --no-install-workspace
+    uv sync --frozen --no-dev --no-install-project --package ioa-metrics-computation-engine --no-install-workspace
 
 # Copy code into builder
 COPY . /src
@@ -27,7 +27,7 @@ WORKDIR /src
 
 # Install just the mce-server package
 RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --frozen --no-dev --no-editable --package metrics-computation-engine
+  uv sync --frozen --no-dev --no-editable --package ioa-metrics-computation-engine
 
 FROM python:3.13-slim-bookworm AS mce-release
 
