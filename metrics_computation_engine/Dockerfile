@@ -29,7 +29,7 @@ WORKDIR /src
 RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --frozen --no-dev --no-editable --package metrics-computation-engine
 
-FROM python:3.13-slim-bookworm AS runner
+FROM python:3.13-slim-bookworm AS mce-release
 
 RUN useradd -m user
 

@@ -56,17 +56,6 @@ target "api" {
   tags = get_tag(target.docker-metadata-action.tags, "${target.api.name}")
 }
 
-target "api-debug" {
-  context = "./api-layer"
-  dockerfile = "./Dockerfile"
-  target = "api-layer-debug"
-  inherits = [
-    "_common",
-    "docker-metadata-action",
-  ]
-  tags = get_tag(target.docker-metadata-action.tags, "${target.api-debug.name}")
-}
-
 target "mce" {
   context = "./metrics_computation_engine"
   dockerfile = "./Dockerfile"
@@ -76,15 +65,4 @@ target "mce" {
     "docker-metadata-action",
   ]
   tags = get_tag(target.docker-metadata-action.tags, "${target.mce.name}")
-}
-
-target "mce-debug" {
-  context = "./metrics_computation_engine"
-  dockerfile = "./Dockerfile"
-  target = "mce-debug"
-  inherits = [
-    "_common",
-    "docker-metadata-action",
-  ]
-  tags = get_tag(target.docker-metadata-action.tags, "${target.mce-debug.name}")
 }

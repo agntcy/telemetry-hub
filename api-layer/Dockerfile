@@ -26,7 +26,7 @@ COPY . /app
 
 RUN set -e && go mod tidy && go test ./pkg/services/http/ -v && go build  -ldflags "-X main.buildVersion=${BUILD_VERSION}" -o api-layer main.go
 
-FROM ubuntu:22.04 AS run
+FROM ubuntu:22.04 AS api-layer-release
 
 ARG TEST=false
 ENV TEST=${TEST}
