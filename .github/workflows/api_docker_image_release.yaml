@@ -32,7 +32,7 @@ jobs:
           # This assumes tags are in this form
           # api-v<version>
 
-          _target=api
+          _target=${GITHUB_REF_NAME}
           target=${_target%-v*}
 
           # get version only
