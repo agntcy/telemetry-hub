@@ -6,9 +6,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "metrics-computation-engine"
+name = "ioa-metrics-computation-engine"
 version = "0.1.0"
-description = "Service for computing metrics on AI agent performance data"
+description = "Service for computing metrics on AI agent telemetry data"
 readme = "README.md"
 authors = [
     {name = "AGNTCY Observability team"},
