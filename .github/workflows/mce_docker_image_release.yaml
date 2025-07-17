@@ -32,7 +32,7 @@ jobs:
           # This assumes tags are in this form
           # mce-v<version>
 
-          _target=mce
+          _target=${GITHUB_REF_NAME}
           target=${_target%-v*}
 
           # get version only
