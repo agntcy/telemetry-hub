@@ -45,7 +45,7 @@ target "docker-metadata-action" {
 }
 
 
-target "api-layer" {
+target "api" {
   context = "./api-layer"
   dockerfile = "./api-layer/Dockerfile"
   target = "api-layer-release"
@@ -53,10 +53,10 @@ target "api-layer" {
     "_common",
     "docker-metadata-action",
   ]
-  tags = get_tag(target.docker-metadata-action.tags, "${target.api-layer.name}")
+  tags = get_tag(target.docker-metadata-action.tags, "${target.api.name}")
 }
 
-target "api-layer-debug" {
+target "api-debug" {
   context = "./api-layer"
   dockerfile = "./api-layer/Dockerfile"
   target = "api-layer-debug"
@@ -64,7 +64,7 @@ target "api-layer-debug" {
     "_common",
     "docker-metadata-action",
   ]
-  tags = get_tag(target.docker-metadata-action.tags, "${target.api-layer-debug.name}")
+  tags = get_tag(target.docker-metadata-action.tags, "${target.api-debug.name}")
 }
 
 target "mce" {
