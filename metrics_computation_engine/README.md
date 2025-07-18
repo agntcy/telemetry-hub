@@ -67,22 +67,50 @@ The `metrics` parameter is a list of metric names that you want to compute. Each
 
 The `llm_judge_config` parameter configures the LLM used for metrics that require LLM-as-a-Judge evaluation (such as `ToolUtilizationAccuracy` and `Groundedness`):
 
+**Configuration options:**
+- **LLM_MODEL_NAME**: The specific model to use (e.g., "gpt-4o")
+- **LLM_BASE_MODEL_URL**: Base URL for LLM providers
+- **LLM_API_KEY**: API key for model endpoints
+
+**Example configurations:**
+
+OpenAI:
 ```python
 "llm_judge_config": {
-    "OPENAI_API_KEY": "your_openai_api_key",
     "LLM_MODEL_NAME": "gpt-4o",
-    "LLM_BASE_MODEL_URL": "https://api.openai.com/v1",  # Optional: for custom OpenAI-compatible endpoints
-    "CUSTOM_API_KEY": "",      # Optional: for custom API endpoints
+    "LLM_BASE_MODEL_URL": "https://api.openai.com/v1",
+    "LLM_API_KEY": "your-openai-api-key",
 }
 ```
 
-**Configuration options:**
-- **OPENAI_API_KEY**: Your OpenAI API key for using GPT models
-- **LLM_MODEL_NAME**: The specific model to use (e.g., "gpt-4o")
-- **LLM_BASE_MODEL_URL**: Optional base URL for custom OpenAI-compatible endpoints
-- **CUSTOM_API_KEY**: Optional API key for custom model endpoints
+Anthropic:
+```python
+"llm_judge_config": {
+    "LLM_MODEL_NAME": "claude-sonnet-4-20250514",
+    "LLM_BASE_MODEL_URL": "https://api.anthropic.com/v1",
+    "LLM_API_KEY": "your-anthropic-api-key",
+}
+```
 
-Future support is planned for Anthropic, Google Gemini, and Mistral models.
+Mistral:
+```python
+"llm_judge_config": {
+    "LLM_MODEL_NAME": "mistral-large-latest",
+    "LLM_BASE_MODEL_URL": "https://api.mistral.ai/v1",
+    "LLM_API_KEY": "your-mistral-api-key",
+}
+```
+
+Custom/Enterprise deployment:
+```python
+"llm_judge_config": {
+    "LLM_MODEL_NAME": "your-model-name",
+    "LLM_BASE_MODEL_URL": "https://your-enterprise-deployment-url",
+    "LLM_API_KEY": "your-api-key",
+}
+```
+
+**Note:** Most OpenAI-compatible LLM providers are supported. Replace the placeholder API keys with your actual credentials.
 
 #### 3. Batch Config
 
@@ -168,11 +196,7 @@ To install MCE manually, you will need:
    **LLM Configuration:**
    - `LLM_BASE_MODEL_URL` - LLM endpoint (default: https://api.openai.com/v1)
    - `LLM_MODEL_NAME` - LLM Model name (default: gpt-4o)
-   - `OPENAI_API_KEY` - OpenAI API key for LLM-based metrics
-   - `ANTHROPIC_API_KEY` - Anthropic API key (planned support)
-   - `GEMINI_API_KEY` - Google Gemini API key (planned support)
-   - `MISTRAL_API_KEY` - Mistral API key (planned support)
-   - `CUSTOM_API_KEY` - Custom Deployment API key (i.e. Azure, Bedrock, etc)
+   - `LLM_API_KEY` - LLM API key for LLM-based metrics, (Tested and supports most OpenAI compatible endpoints)
 
 4. **Run the server**:
 

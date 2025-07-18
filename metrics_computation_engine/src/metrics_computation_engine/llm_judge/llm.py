@@ -19,7 +19,7 @@ class LLMClient:
     ):
         self.model = model_config.get("LLM_MODEL_NAME", "")
         self.api_base = model_config["LLM_BASE_MODEL_URL"]
-        self.api_key = model_config["CUSTOM_API_KEY"]
+        self.api_key = model_config["LLM_API_KEY"]
         self.api_version = model_config.get("api_version", "")
         self.custom_llm_provider = self._determine_provider()
 
