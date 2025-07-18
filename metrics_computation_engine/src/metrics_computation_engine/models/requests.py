@@ -9,12 +9,7 @@ from pydantic import BaseModel
 class LLMJudgeConfig(BaseModel):
     LLM_BASE_MODEL_URL: str = "https://api.openai.com/v1"
     LLM_MODEL_NAME: str = "gpt-4o"
-<<<<<<< HEAD
     LLM_API_KEY: str = "sk-..."
-=======
-    OPENAI_API_KEY: str = "sk-..."
-    CUSTOM_API_KEY: str = ""
->>>>>>> ff0fc83 (Default swagger docs (#6))
 
 
 class BatchTimeRange(BaseModel):
