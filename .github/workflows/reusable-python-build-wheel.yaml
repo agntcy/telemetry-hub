@@ -5,7 +5,12 @@
 name: python-build
 on:
   workflow_call:
-
+    inputs:
+      working-dir:
+        required: false
+        type: string
+        description: "Working directory"
+        default: "./"
 jobs:
   python-bindings-wheels:
     runs-on: ${{ matrix.platform.runner }}
@@ -41,10 +46,11 @@ jobs:
           poetry-install: false
           uv-install: true
       - name: Build wheel
+        working-directory: ${{ inputs.working-dir }}
         run: |
           uv build
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.platform.os }}-${{ matrix.platform.target }}
-          path: ./dist
+          path: ${{ inputs.working-dir }}/dist

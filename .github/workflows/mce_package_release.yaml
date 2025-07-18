@@ -18,6 +18,8 @@ jobs:
   build-mce-wheel:
     name: MCE Python wheel
     uses: ./.github/workflows/reusable-python-build-wheel.yaml
+    with:
+      working-dir: ./metrics_computation_engine
 
   pypi-publish:
     name: Upload release to PyPI
