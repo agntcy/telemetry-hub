@@ -63,9 +63,9 @@ The `metrics` parameter is a list of metric names that you want to compute. Each
 ]
 ```
 
-#### 2. LLM Judge Config
+#### 2. LLM Judge Config (Optional)
 
-The `llm_judge_config` parameter configures the LLM used for metrics that require LLM-as-a-Judge evaluation (such as `ToolUtilizationAccuracy` and `Groundedness`):
+The `llm_judge_config` parameter configures the LLM used for metrics that require LLM-as-a-Judge evaluation (such as `ToolUtilizationAccuracy` and `Groundedness`). When deploying as a service, LLM credentials can be configured via a `.env` file, making this parameter optional. If you do provide `llm_judge_config`, it will override the default credentials from the environment.
 
 ```python
 "llm_judge_config": {
@@ -118,6 +118,15 @@ This would retrieve agent sessions associated with a specific application or pro
 ### Deployment as a service
 
 For easy deployment of the MCE as a service, a [docker compose file](../deploy/docker-compose.yaml) is provided. This file locally deploys an instance of an OTel collector, an instance of Clickhouse DB, an instance of the API layer, and an instance of the MCE. OTel+Clickhouse is the default setup for retrieving and storing traces from agentic apps. The API layer provides an interface for other components such as the MCE to interact with the corresponding data. The MCE enables developers to measure their agentic applications.
+
+When deploying as a service, you can configure LLM credentials using a `.env` file. This allows the system to define default credentials for LLM-as-a-Judge metrics without requiring the `llm_judge_config` parameter in each request. However, if you do provide `llm_judge_config` in your request, those credentials will take priority over the environment configuration.
+
+To set up LLM credentials for service deployment, update the `env_file` path in the docker compose configuration:
+
+```yaml
+env_file:
+  - ../metrics_computation_engine/.env.example
+```
 
 Once deployed, you can generate traces from an agentic app instrumented with our [Observe SDK](https://github.com/agntcy/observe/tree/main).
 
