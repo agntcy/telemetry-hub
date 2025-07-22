@@ -20,10 +20,9 @@ payload = {
         "CyclesCount",
     ],
     "llm_judge_config": {
-        "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+        "LLM_API_KEY": os.environ["LLM_API_KEY"],
         "LLM_MODEL_NAME": os.environ["LLM_MODEL_NAME"],
-        "LLM_BASE_MODEL_URL": os.environ.get("LLM_BASE_MODEL_URL", ""),
-        "CUSTOM_API_KEY": os.environ.get("CUSTOM_API_KEY", ""),
+        "LLM_BASE_MODEL_URL": os.environ.get("LLM_BASE_MODEL_URL"),
     },
     "batch_config": {
         "time_range": {"start": "2000-06-20T15:04:05Z", "end": "2040-06-29T08:52:55Z"}
