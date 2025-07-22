@@ -22,6 +22,10 @@ from metrics_computation_engine.util import (
     get_metric_class,
 )
 
+from metrics_computation_engine.logger import setup_logger
+
+logger = setup_logger(__name__)
+
 # ========== FastAPI App ==========
 app = FastAPI(
     title="Metrics Computation Engine",
@@ -105,10 +109,17 @@ async def compute_metrics(config: MetricsConfigRequest):
             raise HTTPException(status_code=400, detail="batch_mode is required.")
 
         llm_judge_config = config.llm_judge_config
-        if not llm_judge_config.LLM_BASE_MODEL_URL:
+
+        # TODO: Awkward for now but the idea is to still show the example parameters in the FastAPI docs. If the user's request payload maintains the dummy credential values, then check the environmental variables for default LLM config.
+        if llm_judge_config.LLM_API_KEY == "sk-...":
             llm_judge_config.LLM_BASE_MODEL_URL = os.getenv(
                 "LLM_BASE_MODEL_URL", "https://api.openai.com/v1"
             )
+            llm_judge_config.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4-turbo")
+            llm_judge_config.LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-...")
+
+        logger.info(f"LLM Judge using - URL: {llm_judge_config.LLM_BASE_MODEL_URL}")
+        logger.info(f"LLM Judge using - Model: {llm_judge_config.LLM_MODEL_NAME}")
 
         registry = MetricRegistry()
         for metric in config.metrics:

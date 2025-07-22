@@ -79,9 +79,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    environment:
-      - API_BASE_URL=http://api-layer:8080
-      - OPENAI_API_KEY
+    env_file:
+      - ../metrics_computation_engine/.env.example
     depends_on:
       api-layer:
         condition: service_healthy
