@@ -116,9 +116,7 @@ async def compute_metrics(config: MetricsConfigRequest):
                 "LLM_BASE_MODEL_URL", "https://api.openai.com/v1"
             )
             llm_judge_config.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4-turbo")
-            llm_judge_config.LLM_API_KEY = os.getenv(
-                "LLM_API_KEY", "sk-..."
-            )
+            llm_judge_config.LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-...")
 
         logger.info(f"LLM Judge using - URL: {llm_judge_config.LLM_BASE_MODEL_URL}")
         logger.info(f"LLM Judge using - Model: {llm_judge_config.LLM_MODEL_NAME}")
