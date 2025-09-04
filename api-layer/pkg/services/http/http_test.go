@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cisco-eti/layer-api/pkg/common"
-	"github.com/cisco-eti/layer-api/pkg/services/clickhouse/models"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/common"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse/models"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -6,7 +6,7 @@ package services
 import (
 	"time"
 
-	"github.com/cisco-eti/layer-api/pkg/services/clickhouse/models"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse/models"
 )
 
 // DataService defines the interface for data operations

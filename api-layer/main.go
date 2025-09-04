@@ -11,10 +11,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/cisco-eti/layer-api/pkg/common"
-	"github.com/cisco-eti/layer-api/pkg/logger"
-	"github.com/cisco-eti/layer-api/pkg/services/clickhouse"
-	"github.com/cisco-eti/layer-api/pkg/services/http"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/common"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/logger"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/http"
 )
 
 func main() {
