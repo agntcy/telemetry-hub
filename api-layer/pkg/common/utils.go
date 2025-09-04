@@ -11,7 +11,7 @@ import (
 
 	"time"
 
-	"github.com/cisco-eti/layer-api/pkg/logger"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/logger"
 	"github.com/joho/godotenv"
 )
 

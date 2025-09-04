@@ -4,8 +4,8 @@
 package handlers
 
 import (
-	"github.com/cisco-eti/layer-api/pkg/logger"
-	"github.com/cisco-eti/layer-api/pkg/services/clickhouse/models"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/logger"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse/models"
 )
 
 func (h Handler) AddMetric(metric models.Metric) (models.Metric, error) {

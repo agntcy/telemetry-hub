@@ -1,7 +1,7 @@
 // Copyright AGNTCY Contributors (https://github.com/agntcy)
 // SPDX-License-Identifier: Apache-2.0
 
-module github.com/cisco-eti/layer-api
+module github.com/agntcy/telemetry-hub/api-layer
 
 go 1.24.2
 

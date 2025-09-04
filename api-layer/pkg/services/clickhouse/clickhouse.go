@@ -11,9 +11,9 @@ import (
 	"gorm.io/driver/clickhouse"
 	"gorm.io/gorm"
 
-	"github.com/cisco-eti/layer-api/pkg/logger"
-	"github.com/cisco-eti/layer-api/pkg/services/clickhouse/handlers"
-	"github.com/cisco-eti/layer-api/pkg/services/clickhouse/models"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/logger"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse/handlers"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse/models"
 )
 
 type ClickhouseService struct {
