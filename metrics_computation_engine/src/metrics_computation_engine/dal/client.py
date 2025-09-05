@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import requests
+import urllib3
 
 from metrics_computation_engine.dal.config import API_BASE_URL
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_api_response(path, params=None):

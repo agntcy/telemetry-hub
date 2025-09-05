@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 class SpanEntity(BaseModel):
-    entity_type: Literal["agent", "tool", "llm"]
+    entity_type: Literal["agent", "tool", "llm", "workflow", "other"]
     span_id: str
     entity_name: str
     input_payload: Optional[Dict[str, Any]] = None

@@ -7,6 +7,7 @@ from typing import (
     List,
     Optional,
 )
+
 from litellm import completion
 
 
@@ -33,6 +34,11 @@ class LLMClient:
     def query(self, messages: List[Dict[str, str]], **kwargs) -> Any:
         """Execute a query against this LLM."""
 
+        # TODO: Temp, top_p, and seed can be used to roughly control
+        # determinism of LLM outputs. However, it is found that different
+        # providers do not offer configuration of these params.
+        # To simplify usage, we will leave this out for now but worth
+        # revisiting in the future.
         return completion(
             model=self.model,
             api_base=self.api_base,

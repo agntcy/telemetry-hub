@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mce-ragas-adapter"
+version = "0.1.0"
+description = "RAGAS integration adapter for Metrics Computation Engine"
+authors = [
+    {name = "AGNTCY Telemetry Hub team"},
+]
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "ragas>=0.2.0,<0.3.0",  # Pin to 0.2.x series to avoid NumPy compatibility issues
+    "langchain-openai",
+    "langchain-core",
+    "numpy==1.26.2",
+    "scikit-learn>=1.0.0",   # Required by RAGAS for ML operations
+    "scipy>=1.7.0",          # Required by scikit-learn and RAGAS
+    # Note: metrics-computation-engine is expected to be available in the runtime environment
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "flake8",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/agntcy/telemetry-hub"
+Repository = "https://github.com/agntcy/telemetry-hub"
+Issues = "https://github.com/agntcy/telemetry-hub/issues"
+
+# Register the model loader
+[project.entry-points."metrics_computation_engine.model_loaders"]
+ragas = "mce_ragas_adapter:load_model"
+
+# Register the RAGAS adapter
+[project.entry-points."metrics_computation_engine.adapters"]
+ragas = "mce_ragas_adapter.adapter:RagasAdapter"
+
+# Optional: Register any specific RAGAS metrics directly
+[project.entry-points."metrics_computation_engine.plugins"]
+# Uncomment these if you want to expose specific metrics directly
+# RagasTopicAdherence = "mce_ragas_adapter.metrics:TopicAdherenceScore"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mce_ragas_adapter"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

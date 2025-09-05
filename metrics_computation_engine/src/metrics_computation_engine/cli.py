@@ -23,23 +23,48 @@ def cli():
     load_dotenv()
 
 
-@cli.command()
+@cli.command(name="list-metrics")
 def list_metrics():
     """List all available metrics."""
     try:
         # Import here to avoid circular imports during startup
-        from metrics_computation_engine.registry import MetricRegistry
+        from metrics_computation_engine.util import get_all_available_metrics
 
-        registry = MetricRegistry()
-        metrics = registry.list_metrics()
+        metrics = get_all_available_metrics()
 
         if not metrics:
             click.echo("No metrics available.")
             return
 
-        click.echo("Available metrics:")
-        for metric in metrics:
-            click.echo(f"  - {metric}")
+        # Separate native and plugin metrics
+        native_metrics = {
+            k: v for k, v in metrics.items() if v.get("source") == "native"
+        }
+        plugin_metrics = {
+            k: v for k, v in metrics.items() if v.get("source") == "plugin"
+        }
+
+        click.echo(f"Available metrics ({len(metrics)} total):")
+
+        if native_metrics:
+            click.echo(f"\nNative metrics ({len(native_metrics)}):")
+            for name, info in native_metrics.items():
+                aggregation = info.get("aggregation_level", "unknown")
+                description = info.get("description", "").strip()
+                description = description.replace("\n", " ")
+                if len(description) > 80:
+                    description = description[:80] + "..."
+                click.echo(f"  • {name} [{aggregation}] - {description}")
+        if plugin_metrics:
+            click.echo(f"\nPlugin metrics ({len(plugin_metrics)}):")
+            for name, info in plugin_metrics.items():
+                aggregation = info.get("aggregation_level", "unknown")
+                description = info.get("description", "").strip()
+                description = description.replace("\n", " ")
+                if len(description) > 80:
+                    description = description[:80] + "..."
+                click.echo(f"  • {name} [{aggregation}] - {description}")
+                click.echo(f"    - {info.get('module', '?')} {info.get('class', '?')}")
 
     except Exception as e:
         click.echo(f"Error listing metrics: {e}", err=True)

@@ -21,7 +21,7 @@ class Jury:
         json_prompt = "\n".join(
             [
                 f"`{k}`: {v['description']}"
-                for k, v in response_format.schema()["properties"].items()
+                for k, v in response_format.model_json_schema()["properties"].items()
             ]
         )
         judge_prompt = (
@@ -44,6 +44,7 @@ class Jury:
 
         cons_score = total_score / len(judge_responses)
 
+        # TODO: Put reasoning consolidation here.
         feedback = parse_key_from_nested_dict(res_dict, "score_reasoning")
 
         return {"metric_score": cons_score, "score_reasoning": feedback}

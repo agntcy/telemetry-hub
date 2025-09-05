@@ -1,16 +1,53 @@
-# MCE usage
+# 🧠 3rd Party Metrics Integration Test
 
-This folder contains a few tests to illustrate how the MCE can be used. This assumes that you have installed the MCE already.
+This demonstrates the integration of a 3rd party metric (DeepEval's AnswerRelevancyMetric) into the MCE. Where MCEmetrics are run alongside the 3rd party metrics.
 
-## Run the MCE as a package
+- [DeepEval](https://github.com/confident-ai/deepeval)
 
-The test script `mce_as_package_test.py` showcase an example of how to use the MCE as a python package, that can be imported directly into your pipeline. In that case, the data is loaded directly from a json file (examples are provided in the `data/` folder).
+---
 
+## 📦 Installation
 
-## Run the MCE as a service
+Make sure you have Python 3.8+ installed. Then:
 
-In this use case, the MCE is deployed as a service in a docker container (see `deploy/docker-compose.yaml`). The MCE is deployed along with the API layer, an instance of Clickhouse DB and an OTel Collector to which you can instrument an application to push telemetry data into.
+```bash
+pip install -r requirements.txt.txt
+```
 
-We provide two test scripts to show how the MCE works in such setting: `service_test.py` and `simple_service_test.py`.
+> **Note:** Some examples may require additional dependencies — check the import statements in each script.
 
-You can use the `load_clickhouse_db.sh` script to pre-load the Clickhouse DB with sample data to ease up your initial testing.
+---
+
+## 🔧 Environment Variables
+
+Set the following environment variables before running the tests:
+
+```bash
+export OPENAI_API_KEY=<your_openai_api_key>
+```
+
+---
+
+### 🚀 How to Run
+
+After installing the dependencies and setting environment variables, run an example with:
+
+```bash
+python third_party_plugins_test.py
+```
+
+You should get an expected output of
+```bash
+['AgentToAgentInteractions', 'Answer Relevancy']
+{'AgentToAgentInteractions': MetricResult(metric_name='AgentToAgentInteractions',
+                                          value=[('supervisor -> research', 1), ('research -> supervisor', 1)],
+                                          metadata={'metric_type': 'counter'},
+                                          success='success',
+                                          error_message=None),
+ 'Answer Relevancy': MetricResult(metric_name='Answer Relevancy',
+                                  value=1.0,
+                                  metadata={'threshold': 0.5, 'success': True, 'reason': 'The score is 1.00 because the response accurately and directly answered the question without any irrelevant information.', 'evaluation_cost': 0.0146, 'verbose_logs': 'Statements:\n[\n    "The 31st President of the United States was Herbert Hoover.",\n    "He served from 1929 to 1933.",\n    "You can find more information about him on Wikipedia."\n] \n \nVerdicts:\n[\n    {\n        "verdict": "yes",\n        "reason": null\n    },\n    {\n        "verdict": "yes",\n        "reason": null\n    },\n    {\n        "verdict": "idk",\n        "reason": null\n    }\n]'},
+                                  success=True,
+                                  error_message=None)}
+```
+---

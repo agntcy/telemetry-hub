@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mce_metrics_plugin"
+version = "0.1.0"
+description = "Metrics plugin"
+authors = [
+  {name = "AGNTCY Telemetry Hub team"},
+]
+
+requires-python=">3.8"
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/agntcy/telemetry-hub"
+Repository = "https://github.com/agntcy/telemetry-hub"
+Issues = "https://github.com/agntcy/telemetry-hub/issues"
+
+[project.entry-points."metrics_computation_engine.plugins"]
+ComponentConflictRate = "mce_metrics_plugin.session.component_conflict_rate:ComponentConflictRate"
+Consistency = "mce_metrics_plugin.session.consistency:Consistency"
+ContextPreservation = "mce_metrics_plugin.session.context_preservation:ContextPreservation"
+GoalSuccessRate = "mce_metrics_plugin.session.goal_success_rate:GoalSuccessRate"
+Groundedness = "mce_metrics_plugin.session.groundedness:Groundedness"
+InformationRetention = "mce_metrics_plugin.session.information_retention:InformationRetention"
+IntentRecognitionAccuracy = "mce_metrics_plugin.session.intent_recognition_accuracy:IntentRecognitionAccuracy"
+ResponseCompleteness = "mce_metrics_plugin.session.response_completeness:ResponseCompleteness"
+WorkflowCohesionIndex = "mce_metrics_plugin.session.workflow_cohesion_index:WorkflowCohesionIndex"
+WorkflowEfficiency = "mce_metrics_plugin.session.workflow_efficiency:WorkflowEfficiency"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mce_metrics_plugin"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

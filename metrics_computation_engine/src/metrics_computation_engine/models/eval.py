@@ -28,32 +28,6 @@ class MetricResult:
     error_message: Optional[str] = None
 
 
-class Grading(BaseModel):
-    """
-    A Pydantic model for grading responses based on a specific scoring rubric.
-
-    Attributes:
-    -----------
-    feedback : str
-        Detailed feedback that assesses the quality of the response based on the given score rubric.
-        The feedback should leverage on CoT reasoning.
-
-    score : int
-        The final evaluation as a score between 1 and 3.
-    """
-
-    score_reasoning: str = Field(
-        title="Feedback",
-        description="""Provide concise feedback on all responses at once (≤100 words) assessing quality per the rubric. """,
-    )
-    metric_score: int = Field(
-        title="Score",
-        description="""Provide the final evaluation as a score between 1 and 3. You should strictly refer to the given score rubric.""",
-        gte=1,
-        lte=3,
-    )
-
-
 class BinaryGrading(BaseModel):
     """
     A Pydantic model for grading responses based on a specific scoring rubric.
@@ -75,6 +49,6 @@ class BinaryGrading(BaseModel):
     metric_score: int = Field(
         title="Score",
         description="""Provide the final evaluation as a score of 1 or 0. You should strictly refer to the given score rubric.""",
-        gte=1,
-        lte=3,
+        ge=0,
+        le=1,
     )

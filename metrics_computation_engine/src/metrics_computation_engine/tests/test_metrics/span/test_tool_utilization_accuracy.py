@@ -67,7 +67,8 @@ async def test_tool_utilization_accuracy_no_jury():
 async def test_tool_utilization_accuracy_with_jury():
     """Case 3: Valid tool span and jury configured, should return success with graded value."""
     jury = MockJury()
-    metric = ToolUtilizationAccuracy(jury=jury)
+    metric = ToolUtilizationAccuracy()
+    metric.init_with_model(jury)
     span = SpanEntity(
         entity_type="tool",
         span_id="3",
