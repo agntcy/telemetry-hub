@@ -20,23 +20,17 @@ from metrics_computation_engine.metrics.session.agent_to_tool_interactions impor
     AgentToToolInteractions,
 )
 from metrics_computation_engine.metrics.session.cycles import CyclesCount
-from metrics_computation_engine.metrics.session.tool_error_rate import ToolErrorRate
-from metrics_computation_engine.metrics.span.tool_utilization_accuracy import (
-    ToolUtilizationAccuracy,
-)
 
 # Import MCE Plugin Metrics
 from mce_metrics_plugin.session.component_conflict_rate.component_conflict_rate import (
     ComponentConflictRate,
 )
-from mce_metrics_plugin.session.consistency.consistency import Consistency
 from mce_metrics_plugin.session.context_preservation.context_preservation import (
     ContextPreservation,
 )
 from mce_metrics_plugin.session.goal_success_rate.goal_success_rate import (
     GoalSuccessRate,
 )
-from mce_metrics_plugin.session.groundedness.groundedness import Groundedness
 from mce_metrics_plugin.session.information_retention.information_retention import (
     InformationRetention,
 )
@@ -124,7 +118,7 @@ async def compute():
         metric, metric_name = get_metric_class(metric)
         registry.register_metric(metric, metric_name)
     logger.info(
-        f"Registered DeepEval's AnswerRelevancy, Hallucination, RoleAdherence, and Opik's AnswerRevalance Metrics from 3rd parties."
+        "Registered DeepEval's AnswerRelevancy, Hallucination, RoleAdherence, and Opik's AnswerRevalance Metrics from 3rd parties."
     )
 
     registered_metrics = registry.list_metrics()
