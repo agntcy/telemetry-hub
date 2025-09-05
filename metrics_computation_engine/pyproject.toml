@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "metrics-computation-engine"
-version = "0.1.0"
+version = "1.0.0"
 description = "Service for computing metrics on AI agent performance data"
 readme = "README.md"
 authors = [

@@ -1,0 +1,104 @@
+name: Image Builder for api-layer
+
+on:
+  # we want pull requests so we can build(test) but not push to image registry
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'api-layer/**'
+      - '.github/workflows/api_layer_verify.yaml'
+  workflow_dispatch:
+
+# Grant read access for GITHUB_TOKEN on all jobs
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+  packages: write # needed to push docker image to gar or ecr
+
+jobs:
+
+    call-docker-build-push:
+        name: Build docker and push
+        runs-on: ubuntu-latest
+            # group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+        container:
+          image: ghcr.io/cisco-eti/dragonfly/container-images/actions/base-image:1.0.16
+          credentials:
+            username: ${{ secrets.GHCR_USERNAME }}
+            password: ${{ secrets.GHCR_TOKEN }}
+        steps:
+        - name: Import Vault Secrets
+          uses: hashicorp/vault-action@v3 # legit:ignore
+          with:
+            method: approle
+            url: ${{ vars.KEEPER_URL }}
+            roleId: ${{ secrets.VAULT_ESPRESSO_APPROLE_ROLE_ID }}
+            secretId: ${{ secrets.VAULT_ESPRESSO_APPROLE_SECRET_ID }}
+            namespace: eticloud/apps/espresso
+            secrets: |
+                secret/data/espresso-bot username | DOCKERHUB_USERNAME ;
+                secret/data/espresso-bot dockerhub-api-key | DOCKERHUB_API_KEY ;
+                secret/data/artifactory.devhub-cloud.cisco.com identity-token | ARTIFACTORY_CLOUD;
+                secret/data/ghec-eti-sre-cicd-token token | GH_TOKEN ;
+        - name: Checkout repo
+          uses: actions/checkout@v4 # legit:ignore
+          with:
+            ref: ${{ github.ref }}
+            fetch-depth: 0
+            submodules: 'recursive'
+            token: ${{ env.GH_TOKEN }}
+        - name: Generate tags
+          run: |
+              echo "TAG=$(task api-layer-version | cut -d "-" -f3- | cut -c 2-)" >> $GITHUB_ENV
+        - name: Check tags
+          run: |
+              echo "Tag: ${{ env.TAG }}"
+        - name: Import Vault Secrets
+          uses: cisco-eti/dragonfly-actions/vault@main # legit:ignore
+          with:
+            url: ${{ vars.KEEPER_URL }}
+            method: approle
+            roleId: ${{ secrets.VAULT_APPROLE_ROLE_ID }}
+            secretId: ${{ secrets.VAULT_APPROLE_SECRET_ID }}
+            namespace: ${{ vars.VAULT_NAMESPACE }}
+            secrets: |
+              ${{ vars.VAULT_SECRET_PATH }}  AWS_ROLE_GH_ACTIONS_ACCESS_ECR | AWS_ROLE_GH_ACTIONS_ACCESS_ECR ;
+              ${{ vars.VAULT_SECRET_PATH }}  AWS_ECR_REGION                 | AWS_ECR_REGION ;
+        - name: Build/Push api-layer docker image
+          uses: cisco-eti/dragonfly-actions/docker@docker-0.1.0 # legit:ignore
+          with:
+            vault-espresso-role-id: ${{ secrets.VAULT_ESPRESSO_APPROLE_ROLE_ID }}
+            vault-espresso-secret-id: ${{ secrets.VAULT_ESPRESSO_APPROLE_SECRET_ID }}
+            context: api-layer
+            docker-file: api-layer/Dockerfile
+            enable-devhub-cloud: "false"
+            enable-dockerhub: "false"
+            enable-ecr: "true"
+            aws-role: ${{ env.AWS_ROLE_GH_ACTIONS_ACCESS_ECR }}
+            aws-region: ${{ env.AWS_ECR_REGION }}
+            repository: poirot/container-images/api-layer
+            platforms: linux/amd64
+            push: false
+            tags: |
+                type=raw,value=${{ env.TAG }}
+                type=raw,value=latest
+            build-args: |
+                VERSION=${{ env.TAG }}
+    reusable-workflow-ci-status:
+        name: Reusable Workflow CI Status
+    # This should be an array of ALL active jobs that are used/run
+        needs: [ call-docker-build-push]
+        if: always()
+        runs-on:
+            group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+        steps:
+            - name: report failure
+              if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
+              run: |
+                echo -e "\033[31m*** WORKFLOW FAILED ***\033[0m"
+                exit 1
+            - name: report success
+              run: |
+                echo -e "\033[1;36m*** WORKFLOW SUCCESS ***\033[0m"
+                exit 0

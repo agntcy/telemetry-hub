@@ -2,33 +2,80 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-name: mce-testing
+  name: mce-testing
 
-on:
-  pull_request:
-    paths:
-      - 'metrics_computation_engine/**'
-      - '.github/workflows/mce_tests.yaml'
+  on:
+    pull_request:
+      paths:
+        - 'metrics_computation_engine/**'
+        - '.github/workflows/mce_tests.yaml'
 
-jobs:
-  mce-run-tests:
-    name: Run pytest on the MCE
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4 # legit:ignore
+  jobs:
+    mce-run-tests:
+      name: Run pytest on the MCE
+      runs-on: ubuntu-latest
+      steps:
+        - name: Import Vault Secrets
+          uses: hashicorp/vault-action@v3 # legit:ignore
+          with:
+            method: approle
+            url: ${{ vars.KEEPER_URL }}
+            roleId: ${{ vars.VAULT_OVAL_ROLE_ID }}
+            secretId: ${{ vars.VAULT_OVAL_SECRET_ID }}
+            namespace: eticloud/apps/oval
+            secrets: |
+              secret/data/dev/models/gpt-4o key | LLM_API_KEY ;
+              secret/data/dev/models/gpt-4o address | LLM_BASE_MODEL_URL ;
+              secret/data/dev/models/gpt-4o model | LLM_MODEL_NAME ;
+        - name: Checkout code
+          uses: actions/checkout@v4 # legit:ignore
 
-      - name: Setup Python
-        uses: ./.github/actions/setup-python
-        with:
-          py-install: false
-          poetry-install: false
-          uv-install: true
-      - name: Build package
-        run: |
-          pushd metrics_computation_engine
-          uv build
-      - name: Run tests
-        run: |
-          pushd metrics_computation_engine
-          uv run pytest
+        - name: Setup Python
+          uses: ./.github/actions/setup-python
+          with:
+            py-install: false
+            poetry-install: false
+            uv-install: true
+        - name: Create virtual environment
+          run: |
+            pushd metrics_computation_engine
+            uv venv
+        - name: Build package
+          run: |
+            pushd metrics_computation_engine
+            uv build
+        - name: Install current package
+          run: |
+            pushd metrics_computation_engine
+            uv run pip install -e .
+#        - name: Setup plugins configuration
+#          run: |
+#            pushd metrics_computation_engine
+#            # Create plugins.toml from template for the install script to work
+#            cp plugins.toml.template plugins.toml
+#        - name: Make install script executable
+#          run: |
+#            pushd metrics_computation_engine
+#            chmod +x install-plugins.sh
+#        - name: Install minimal required plugins
+#          run: |
+#            pushd metrics_computation_engine
+#            # Install only the plugins needed for the tests to work
+#            ./install-plugins.sh goal_success_rate
+#            ./install-plugins.sh deepeval_mce_plugin
+        - name: Build plugin
+          run: |
+            pushd metrics_computation_engine/plugins/mce_metrics_plugin/
+            uv build
+        - name: Install plugin
+          run: |
+            pushd metrics_computation_engine
+            uv pip install plugins/mce_metrics_plugin/dist/*.whl
+        - name: Run tests
+          env:
+            LLM_API_KEY: ${{ env.LLM_API_KEY }}
+            LLM_BASE_MODEL_URL: ${{ env.LLM_BASE_MODEL_URL }}
+            LLM_MODEL_NAME: ${{ env.LLM_MODEL_NAME }}
+          run: |
+            pushd metrics_computation_engine
+            uv run pytest -q
