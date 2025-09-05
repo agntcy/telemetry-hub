@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 
 
@@ -8,16 +11,18 @@ def setup_logger(
 ) -> logging.Logger:
     """
     Set up a logger with the specified name, level, and formatter.
+
     Parameters
     ----------
     name : str
         Name of the logger.
     level : int, optional
-        Logging level (default is `logging.DEBUG`).
+        Logging level (default is `logging.INFO`).
     formatter_str : str, optional
         Formatter string (default is
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         ).
+
     Returns
     -------
     logger : logging.Logger

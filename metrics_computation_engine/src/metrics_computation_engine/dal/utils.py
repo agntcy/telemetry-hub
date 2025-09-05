@@ -18,14 +18,15 @@ def format_metric_payload(metric, app_id, app_name, trace_id):
         metric = asdict(metric)
     metric = sanitize_metric(metric)
 
-    session_id_list = metric.get("session_id", [])
+    session_id = metric.get("session_id", [])
     span_id_list = metric.get("span_id", [])
 
-    session_id = (
-        session_id_list[0]
-        if isinstance(session_id_list, list) and session_id_list
-        else "default_session_id"
-    )
+    if type(session_id) == list:
+        session_id = (
+            session_id[0]
+            if isinstance(session_id, list) and session_id
+            else "default_session_id"
+        )
     span_id = (
         span_id_list[0]
         if isinstance(span_id_list, list) and span_id_list

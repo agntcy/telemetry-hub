@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import List
+from typing import List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
@@ -12,9 +12,11 @@ class ToolError(BaseMetric):
     Collects the Agent to Agent Interactions counts throughout a trace.
     """
 
-    def __init__(self, jury=None, dataset=None):
-        super().__init__(jury=jury, dataset=dataset)
-        self.name = "ToolError"
+    def __init__(self, metric_name: Optional[str] = None):
+        super().__init__()
+        if metric_name is None:
+            metric_name = self.__class__.__name__
+        self.name = metric_name
         self.aggregation_level = "span"
 
         self.required = {"entity_type": ["tool"]}
@@ -24,6 +26,15 @@ class ToolError(BaseMetric):
         return ["Events.Attributes"]
 
     def validate_config(self) -> bool:
+        return True
+
+    def create_model(self, llm_config):
+        return self.create_no_model()
+
+    def get_model_provider(self):
+        return self.get_provider_no_model_needed()
+
+    def init_with_model(self, model) -> bool:
         return True
 
     async def compute(self, data):
@@ -42,7 +53,7 @@ class ToolError(BaseMetric):
 
         if data.entity_type not in self.required["entity_type"]:
             return MetricResult(
-                metric_name="",
+                metric_name=self.name,
                 description="",
                 reasoning="",
                 value=-1,
@@ -68,8 +79,8 @@ class ToolError(BaseMetric):
                 reasoning="",
                 unit="",
                 aggregation_level=self.aggregation_level,
-                span_id="",
-                session_id="",
+                span_id=[span.span_id for span in data] if data else [],
+                session_id=[data[0].session_id] if data else [],
                 source="native",
                 entities_involved=[],
                 edges_involved=[],

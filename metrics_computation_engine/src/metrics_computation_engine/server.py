@@ -5,8 +5,9 @@
 
 import os
 
-import uvicorn
 from dotenv import load_dotenv
+
+from metrics_computation_engine.main import start_server
 
 
 def main():
@@ -19,21 +20,22 @@ def main():
     port: int = int(os.getenv("PORT", "8000"))
     reload: bool = os.getenv("RELOAD", "false").lower() == "true"
     log_level: str = os.getenv("LOG_LEVEL", "info").lower()
+    # fail fast if bad env variables format
+    pagination_limit = int(os.getenv("PAGINATION_LIMIT", "50"))
+    pagination_max_sessions = int(os.getenv("PAGINATION_DEFAULT_MAX_SESSIONS", "50"))
+    sessions_traces_max = int(os.getenv("SESSIONS_TRACES_MAX", "20"))
 
     print("Starting Metrics Computation Engine server...")
     print(f"Host: {host}")
     print(f"Port: {port}")
     print(f"Reload: {reload}")
     print(f"Log Level: {log_level}")
+    print(f"Pagination Limit: {pagination_limit}")
+    print(f"Pagination Default Max Sessions: {pagination_max_sessions}")
+    print(f"Sessions Traces Max {sessions_traces_max}")
 
     # Start the server
-    uvicorn.run(
-        "metrics_computation_engine.main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level=log_level,
-    )
+    start_server(host=host, port=port, reload=reload, log_level=log_level)
 
 
 if __name__ == "__main__":

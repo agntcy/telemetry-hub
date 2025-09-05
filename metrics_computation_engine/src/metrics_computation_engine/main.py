@@ -3,24 +3,29 @@
 
 """Main FastAPI application for the Metrics Computation Engine."""
 
-import os
 from datetime import datetime
-from typing import Dict, List
+import uvicorn
+import os
 
 from fastapi import FastAPI, HTTPException
 
 from metrics_computation_engine.dal.traces import (
     get_all_session_ids,
     get_traces_by_session,
-    get_last_n_sessions_with_traces,
+    get_traces_by_session_ids,
 )
+from metrics_computation_engine.dal.metrics import write_metrics
+from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
 from metrics_computation_engine.models.requests import MetricsConfigRequest
 from metrics_computation_engine.processor import MetricsProcessor
 from metrics_computation_engine.registry import MetricRegistry
 from metrics_computation_engine.util import (
     format_return,
     get_metric_class,
+    get_all_available_metrics,
 )
+
+from metrics_computation_engine.model_handler import ModelHandler
 
 from metrics_computation_engine.logger import setup_logger
 
@@ -29,24 +34,23 @@ logger = setup_logger(__name__)
 # ========== FastAPI App ==========
 app = FastAPI(
     title="Metrics Computation Engine",
-    description=(
-        "A FastAPI-based service for computing metrics on AI agent performance data"
-    ),
+    description=("MCE service for computing metrics on AI agent performance data"),
     version="0.1.0",
 )
 
+model_handler = None
 
-def set_batch_mode(num_sessions=None, time_range=None, app_name=None):
-    """Set batch mode configuration."""
-    modes = [num_sessions, time_range, app_name]
-    if sum(x is not None for x in modes) != 1:
-        raise ValueError("Specify exactly one batch_mode parameter.")
-    if num_sessions:
-        return {"num_sessions": num_sessions}
-    if time_range:
-        return {"time_range": time_range}
-    if app_name:
-        return {"app_name": app_name}
+
+def start_server(host: str, port: int, reload: bool, log_level: str):
+    global model_handler
+    model_handler = ModelHandler()
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        reload=reload,
+        log_level=log_level,
+    )
 
 
 @app.get("/")
@@ -58,8 +62,38 @@ async def root():
         "endpoints": {
             "compute_metrics": "/compute_metrics",
             "health": "/health",
+            "list_metrics": "/metrics",
+            "status": "/status",
         },
     }
+
+
+@app.get("/metrics")
+async def list_metrics():
+    """
+    List all available metrics in the system.
+    Returns:
+        dict: Dictionary containing all available metrics with their metadata
+    """
+    try:
+        metrics = get_all_available_metrics()
+
+        # Separate native and plugin metrics
+        native_metrics = {
+            k: v for k, v in metrics.items() if v.get("source") == "native"
+        }
+        plugin_metrics = {
+            k: v for k, v in metrics.items() if v.get("source") == "plugin"
+        }
+
+        return {
+            "total_metrics": len(metrics),
+            "native_metrics": len(native_metrics),
+            "plugin_metrics": len(plugin_metrics),
+            "metrics": {"native": native_metrics, "plugins": plugin_metrics},
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing metrics: {str(e)}")
 
 
 @app.get("/status")
@@ -81,53 +115,98 @@ async def status():
 @app.post("/compute_metrics")
 async def compute_metrics(config: MetricsConfigRequest):
     """Compute metrics based on the provided configuration."""
+    global model_handler
+    if model_handler is None:
+        logger.info("Warning: missing model_handler, creating it.")
+        model_handler = ModelHandler()
     try:
-        traces_by_session: Dict[str, List] = {}
+        # Get session IDs
+        logger.info(f"Is Batch: {config.is_batch_request()}")
+        if config.is_batch_request():
+            batch_config = config.get_batch_config()
+            session_ids = get_all_session_ids(batch_config=batch_config)
+        else:
+            session_ids = config.get_session_ids()
 
-        batch_config = config.batch_config
-        if batch_config:
-            if batch_config.num_sessions is not None:
-                session_ids = get_last_n_sessions_with_traces(batch_config.num_sessions)
-            elif batch_config.time_range is not None:
-                time_range = batch_config.time_range
-                session_ids = get_all_session_ids(
-                    start_time=time_range.start, end_time=time_range.end
-                )
-            elif batch_config.app_name is not None:
-                raise HTTPException(
-                    status_code=501,
-                    detail="app_name batch mode not yet implemented",
-                )
-            else:
-                raise HTTPException(
-                    status_code=400, detail="Invalid batch_mode parameter."
-                )
+        # ensure the request is valid
+        if not config.validate():
+            raise HTTPException(
+                status_code=400, detail="Invalid request configuration."
+            )
+
+        # Try batched approach first, fallback to sequential if endpoint doesn't exist
+        try:
+            traces_by_session, notfound_session_ids = get_traces_by_session_ids(
+                session_ids
+            )
+
+            # Log any sessions that weren't found
+            if notfound_session_ids:
+                logger.warning(f"Sessions not found: {notfound_session_ids}")
+
+            # Build SessionEntity objects and create mapping
+            session_entities = build_session_entities_from_dict(traces_by_session)
+            sessions_data = {entity.session_id: entity for entity in session_entities}
+
+        except Exception as e:
+            # Fallback to sequential approach if batched endpoint fails (404)
+            logger.warning(
+                f"Batched endpoint failed ({e}), falling back to sequential processing"
+            )
+            traces_by_session = {}
 
             for session_id in session_ids:
-                traces_by_session[session_id] = get_traces_by_session(session_id)
-        else:
-            raise HTTPException(status_code=400, detail="batch_mode is required.")
+                try:
+                    spans = get_traces_by_session(session_id)
+                    if spans:
+                        traces_by_session[session_id] = spans
+                except Exception as session_error:
+                    logger.error(
+                        f"Failed to get traces for session {session_id}: {session_error}"
+                    )
 
-        llm_judge_config = config.llm_judge_config
+            # Build SessionEntity objects and create mapping
+            if traces_by_session:
+                session_entities = build_session_entities_from_dict(traces_by_session)
+                sessions_data = {
+                    entity.session_id: entity for entity in session_entities
+                }
+            else:
+                sessions_data = {}
 
-        # TODO: Awkward for now but the idea is to still show the example parameters in the FastAPI docs. If the user's request payload maintains the dummy credential values, then check the environmental variables for default LLM config.
-        if llm_judge_config.LLM_API_KEY == "sk-...":
-            llm_judge_config.LLM_BASE_MODEL_URL = os.getenv(
+        logger.info(f"Session IDs Found: {list(sessions_data.keys())}")
+        # Configure LLM
+        llm_config = config.llm_judge_config
+        if llm_config.LLM_API_KEY == "sk-...":
+            llm_config.LLM_BASE_MODEL_URL = os.getenv(
                 "LLM_BASE_MODEL_URL", "https://api.openai.com/v1"
             )
-            llm_judge_config.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4-turbo")
-            llm_judge_config.LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-...")
+            llm_config.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4-turbo")
+            llm_config.LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-...")
 
-        logger.info(f"LLM Judge using - URL: {llm_judge_config.LLM_BASE_MODEL_URL}")
-        logger.info(f"LLM Judge using - Model: {llm_judge_config.LLM_MODEL_NAME}")
+        logger.info(f"LLM Judge using - URL: {llm_config.LLM_BASE_MODEL_URL}")
+        logger.info(f"LLM Judge using - Model: {llm_config.LLM_MODEL_NAME}")
 
+        # Register metrics
         registry = MetricRegistry()
         for metric in config.metrics:
-            registry.register_metric(get_metric_class(metric))
+            try:
+                metric_cls, metric_name = get_metric_class(metric)
+                logger.info(f"Metric Name: {metric_name} - {metric_cls}")
+                registry.register_metric(
+                    metric_class=metric_cls, metric_name=metric_name
+                )
+            except Exception as e:
+                logger.error(f"Error: {e}")
 
-        processor = MetricsProcessor(registry, llm_config=llm_judge_config.model_dump())
-        results = await processor.compute_metrics(traces_by_session)
+        logger.info(f"Registered Metrics: {registry.list_metrics()}")
 
+        # Process metrics with structured session data
+        processor = MetricsProcessor(
+            registry, model_handler=model_handler, llm_config=llm_config
+        )
+        results = await processor.compute_metrics(sessions_data)
+        write_metrics(results)
         return {
             "metrics": registry.list_metrics(),
             "results": format_return(results),

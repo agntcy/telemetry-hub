@@ -14,6 +14,7 @@ def safe_parse_json(value: str | None) -> dict | None:
         return None
 
 
+# TODO: use LaaJ to detect error-like patterns in output payloads
 def contains_error_like_pattern(output_dict: dict) -> bool:
     # Flatten the dictionary and look for error-indicative values
     def extract_strings(d):
@@ -38,18 +39,20 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
 
     for span in raw_spans:
         attrs = span.get("SpanAttributes", {})
-
         span_name = span.get("SpanName", "").lower()
+
         if span_name.endswith(".chat"):
             entity_type = "llm"
         elif span_name.endswith(".tool"):
             entity_type = "tool"
         elif span_name.endswith(".agent"):
             entity_type = "agent"
+        elif span_name.endswith(".workflow"):
+            entity_type = "workflow"
         else:
             entity_type = None
 
-        if entity_type not in {"agent", "tool", "llm"}:
+        if entity_type not in {"agent", "tool", "llm", "workflow"}:
             continue
 
         if entity_type == "llm":
@@ -75,6 +78,8 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
             entity_name = attrs.get("gen_ai.response.model", "unknown")
         elif entity_type == "agent":
             entity_name = attrs.get("ioa_observe.entity.name", "unknown")
+        elif entity_type == "workflow":
+            entity_name = attrs.get("ioa_observe.workflow.name", "unknown")
         else:
             entity_name = "unknown"
 
@@ -96,13 +101,40 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
 
         # output_payload logic for LLM
         if entity_type == "llm":
-            output_payload = {
-                key: attrs[key] for key in attrs if key.startswith("gen_ai.completion")
-            }
+            output_payload = {}
+            for key in attrs:
+                if key.startswith("gen_ai.completion"):
+                    value = attrs[key]
+                    # Try to parse JSON strings in all completion fields
+                    if isinstance(value, str):
+                        parsed_value = safe_parse_json(value)
+                        if parsed_value is not None:
+                            output_payload[key] = parsed_value
+                        else:
+                            output_payload[key] = value
+                    else:
+                        output_payload[key] = value
         elif entity_type == "agent":
-            output_payload = safe_parse_json(attrs.get("ioa_observe.entity.output"))
+            raw_output = attrs.get("ioa_observe.entity.output")
+            output_payload = safe_parse_json(raw_output)
+            # If parsing failed but we have a string, wrap it in a dict
+            if output_payload is None and raw_output is not None:
+                output_payload = {"value": raw_output}
         elif entity_type == "tool":
-            output_payload = safe_parse_json(attrs.get("traceloop.entity.output"))
+            raw_output = attrs.get("traceloop.entity.output")
+            output_payload = safe_parse_json(raw_output)
+            # If parsing failed but we have a string, wrap it in a dict
+            if output_payload is None and raw_output is not None:
+                output_payload = {"value": raw_output}
+        elif entity_type == "workflow":
+            raw_output = attrs.get("traceloop.entity.output")
+            output_payload = safe_parse_json(raw_output)
+            # If parsing failed but we have a string, wrap it in a dict
+            if output_payload is None and raw_output is not None:
+                output_payload = {"value": raw_output}
+            # Ensure output_payload is always a dict for workflow
+            elif isinstance(output_payload, str):
+                output_payload = {"value": output_payload}
         else:
             output_payload = None
 
@@ -112,9 +144,23 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
                 key: attrs[key] for key in attrs if key.startswith("gen_ai.prompt")
             }
         elif entity_type == "agent":
-            input_payload = safe_parse_json(attrs.get("ioa_observe.entity.input"))
+            raw_input = attrs.get("ioa_observe.entity.input")
+            input_payload = safe_parse_json(raw_input)
+            # If parsing failed but we have a string, wrap it in a dict
+            if input_payload is None and raw_input is not None:
+                input_payload = {"value": raw_input}
         elif entity_type == "tool":
-            input_payload = safe_parse_json(attrs.get("traceloop.entity.input"))
+            raw_input = attrs.get("traceloop.entity.input")
+            input_payload = safe_parse_json(raw_input)
+            # If parsing failed but we have a string, wrap it in a dict
+            if input_payload is None and raw_input is not None:
+                input_payload = {"value": raw_input}
+        elif entity_type == "workflow":
+            raw_input = attrs.get("traceloop.entity.input")
+            input_payload = safe_parse_json(raw_input)
+            # If parsing failed but we have a string, wrap it in a dict
+            if input_payload is None and raw_input is not None:
+                input_payload = {"value": raw_input}
         else:
             input_payload = None
 
@@ -123,6 +169,12 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
         if not contains_error and isinstance(output_payload, dict):
             if contains_error_like_pattern(output_payload):
                 contains_error = True
+
+        # Final safety check: ensure payloads are dictionaries or None
+        if isinstance(output_payload, str):
+            output_payload = {"value": output_payload}
+        if isinstance(input_payload, str):
+            input_payload = {"value": input_payload}
 
         span_entity = SpanEntity(
             entity_type=entity_type,

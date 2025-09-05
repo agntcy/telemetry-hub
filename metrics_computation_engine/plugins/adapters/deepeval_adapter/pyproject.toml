@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mce-deepeval-adapter"
+version = "0.1.0"
+description = "DeepEval integration adapter for Metrics Computation Engine"
+authors = [
+    {name = "AGNTCY Telemetry Hub team"},
+]
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "deepeval>=3.3.9",
+    # Note: metrics-computation-engine is expected to be available in the runtime environment
+    "metrics-computation-engine",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "flake8",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/agntcy/telemetry-hub"
+Repository = "https://github.com/agntcy/telemetry-hub"
+Issues = "https://github.com/agntcy/telemetry-hub/issues"
+
+# Register the model loader
+[project.entry-points."metrics_computation_engine.model_loaders"]
+deepeval = "mce_deepeval_adapter:load_model"
+
+# Register the DeepEval adapter
+[project.entry-points."metrics_computation_engine.adapters"]
+deepeval = "mce_deepeval_adapter.adapter:DeepEvalMetricAdapter"
+
+# Optional: Register any specific DeepEval metrics directly
+[project.entry-points."metrics_computation_engine.plugins"]
+# Uncomment these if you want to expose specific metrics directly
+# DeepEvalAnswerRelevancy = "mce_deepeval_adapter.metrics:AnswerRelevancyMetric"
+# DeepEvalRoleAdherence = "mce_deepeval_adapter.metrics:RoleAdherenceMetric"
+# DeepEvalTaskCompletion = "mce_deepeval_adapter.metrics:TaskCompletionMetric"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mce_deepeval_adapter"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.uv.sources]
+metrics-computation-engine = { path = "../../../" }

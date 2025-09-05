@@ -4,6 +4,7 @@ from metrics_computation_engine.metrics.session.agent_to_agent_interactions impo
     AgentToAgentInteractions,
 )
 from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
 
 
 @pytest.mark.asyncio
@@ -24,7 +25,12 @@ async def test_agent_to_agent_interactions():
         end_time=None,
         raw_span_data={"Events.Attributes": []},
     )
-    result = await metric.compute([span1])
+
+    traces_by_session = {
+        span1.session_id: [span1],
+    }
+    session_entities = build_session_entities_from_dict(traces_by_session)
+    result = await metric.compute(session_entities.pop())
     assert result.success
     assert result.value == Counter()
 
@@ -68,7 +74,9 @@ async def test_agent_to_agent_interactions():
         end_time=None,
         raw_span_data={"Events.Attributes": [{"agent_name": "C"}]},
     )
-    result = await metric.compute([span2, span3, span4])
+    traces_by_session = {span2.session_id: [span2, span3, span4]}
+    session_entities = build_session_entities_from_dict(traces_by_session)
+    result = await metric.compute(session_entities.pop())
     assert result.success
     assert result.value == Counter(
         {
@@ -104,11 +112,13 @@ async def test_agent_to_agent_interactions():
         end_time=None,
         raw_span_data={"Events.Attributes": [{"agent_name": "Z"}]},
     )
-    result = await metric.compute([span5, span6])
+    traces_by_session = {span5.session_id: [span5, span6]}
+    session_entities = build_session_entities_from_dict(traces_by_session)
+    result = await metric.compute(session_entities.pop())
     assert result.success
     assert result.value == Counter()  # No transition Z -> Z
 
-    # Case 4: Invalid structure triggers error
+    # Case 4: None values in Events.Attributes are handled gracefully (robustness test)
     broken_span = SpanEntity(
         entity_type="agent",
         span_id="7",
@@ -122,7 +132,9 @@ async def test_agent_to_agent_interactions():
         end_time=None,
         raw_span_data={"Events.Attributes": None},  # Invalid type
     )
-    result = await metric.compute([broken_span])
-    assert not result.success
-    assert result.value == -1
-    assert isinstance(result.error_message, Exception)
+    traces_by_session = {span2.session_id: [broken_span]}
+    session_entities = build_session_entities_from_dict(traces_by_session)
+    result = await metric.compute(session_entities.pop())
+    assert result.success  # Now gracefully handles invalid data
+    assert result.value == Counter()  # Returns empty counter instead of -1
+    assert result.error_message is None  # No error message

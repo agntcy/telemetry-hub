@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from typing import List, Optional
-
 from pydantic import BaseModel
+from datetime import datetime, timedelta, timezone
 
 
 class LLMJudgeConfig(BaseModel):
@@ -13,17 +13,99 @@ class LLMJudgeConfig(BaseModel):
 
 
 class BatchTimeRange(BaseModel):
-    start: str
-    end: str
+    start: str  # Time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)
+    end: str  # Time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)
+
+    def get_start(self) -> str:
+        return self.start
+
+    def get_end(self) -> str:
+        return self.end
 
 
 class BatchConfig(BaseModel):
     time_range: Optional[BatchTimeRange] = None
-    num_sessions: Optional[int] = 1
+    num_sessions: Optional[int] = None
     app_name: Optional[str] = None
+
+    def validate(self) -> bool:
+        # we need for at least one criterion to be set
+        if not (
+            self.has_time_range() or self.has_num_sessions() or self.has_app_name()
+        ):
+            return False
+        # if no time range but has session ids, then it's valid
+        # in this case, assign a default time range
+        # as we may iterate over session ids pagination results,
+        # date ranges must be fixed
+        if not self.has_time_range():
+            end_time = datetime.now(timezone.utc)
+            start_time = end_time - timedelta(days=7)  # default to 7 days
+            start_time_str = start_time.isoformat().replace("+00:00", "Z")
+            end_time_str = end_time.isoformat().replace("+00:00", "Z")
+            self.time_range = BatchTimeRange(start=start_time_str, end=end_time_str)
+        return True
+
+    def has_time_range(self) -> bool:
+        return self.time_range is not None
+
+    def get_time_range(self) -> BatchTimeRange:
+        return self.time_range
+
+    def has_num_sessions(self) -> bool:
+        return self.num_sessions is not None
+
+    def get_num_sessions(self) -> int:
+        return self.num_sessions
+
+    def has_app_name(self) -> bool:
+        return self.app_name is not None
+
+    def get_app_name(self) -> int:
+        return self.app_name
+
+
+class DataFetchingConfig(BaseModel):
+    batch_config: BatchConfig = BatchConfig()
+    session_ids: List[str] = []
+
+    def validate(self) -> bool:
+        # Batch Request or Session IDs
+        _batch_valid = self.batch_config.validate()
+        if not _batch_valid and len(self.session_ids) == 0:
+            return False
+        # If session_ids are provided, batch_config should not be used
+        if len(self.session_ids) > 0 and _batch_valid:
+            return False
+        if len(self.session_ids) == 0 and not _batch_valid:
+            return False
+        return True
+
+    def is_batch(self) -> bool:
+        return len(self.session_ids) == 0
+
+    def get_session_ids(self) -> List[str]:
+        return self.session_ids
+
+    def get_batch_config(self) -> BatchConfig:
+        return self.batch_config
 
 
 class MetricsConfigRequest(BaseModel):
-    metrics: List[str] = ["AgentToToolInteractions", "ToolUtilizationAccuracy"]
+    metrics: List[str] = ["AgentToToolInteractions", "GraphDeterminismScore"]
     llm_judge_config: LLMJudgeConfig = LLMJudgeConfig()
-    batch_config: BatchConfig = BatchConfig()
+    data_fetching_infos: DataFetchingConfig = DataFetchingConfig()
+
+    def validate(self) -> bool:
+        if not self.data_fetching_infos.validate():
+            return False
+        return True
+
+    def is_batch_request(self) -> bool:
+        return self.data_fetching_infos.is_batch()
+
+    def get_batch_config(self) -> BatchConfig:
+        return self.data_fetching_infos.get_batch_config()
+
+    def get_session_ids(self) -> List[str]:
+        return self.data_fetching_infos.get_session_ids()
