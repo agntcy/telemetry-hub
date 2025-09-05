@@ -1,6 +1,3 @@
-# Copyright AGNTCY Contributors (https://github.com/agntcy)
-# SPDX-License-Identifier: Apache-2.0
-
 ---
 name: CI
 
@@ -25,11 +22,11 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Check code has no lint errors
-        uses: astral-sh/ruff-action@0c50076f12c38c3d0115b7b519b54a91cb9cf0ad
+        uses: astral-sh/ruff-action@eaf0ecdd668ceea36159ff9d91882c9795d89b49
         with:
           src: "metrics_computation_engine/"
       - name: Check code is correctly formatted
-        uses: astral-sh/ruff-action@0c50076f12c38c3d0115b7b519b54a91cb9cf0ad
+        uses: astral-sh/ruff-action@eaf0ecdd668ceea36159ff9d91882c9795d89b49
         with:
           args: "format --check"
           src: "metrics_computation_engine/"
