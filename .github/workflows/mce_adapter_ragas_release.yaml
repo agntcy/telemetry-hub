@@ -7,7 +7,7 @@ name: mce-release-adapter-ragas-python
 on:
   push:
     tags:
-      - 'v*'
+      - 'mce-ragas-adapter-v*'
   workflow_dispatch:  # Allow manual triggering of the workflow
 
 concurrency:
