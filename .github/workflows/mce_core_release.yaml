@@ -7,7 +7,7 @@ name: mce-release-python-package
 on:
   push:
     tags:
-      - 'mce-v*'
+      - 'mce-core-v*'
   workflow_dispatch:  # Allow manual triggering of the workflow
 
 concurrency:
