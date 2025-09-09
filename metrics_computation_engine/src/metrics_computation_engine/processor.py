@@ -39,7 +39,7 @@ class MetricsProcessor:
         except Exception as e:
             # Return error result instead of crashing
             return MetricResult(
-                name=metric.name,
+                metric_name=metric.name,
                 value=-1,
                 error_message=str(e),
                 aggregation_level=metric.aggregation_level,
