@@ -1,4 +1,5 @@
-import os
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
 
 import pytest
 
@@ -10,7 +11,72 @@ from metrics_computation_engine.registry import MetricRegistry
 from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
 
 # Import the GoalSuccessRate directly from the plugin system
-from goal_success_rate import GoalSuccessRate
+from mce_metrics_plugin.session.goal_success_rate import GoalSuccessRate
+
+
+# Mock jury class to simulate LLM evaluation for GoalSuccessRate
+class MockGoalSuccessRateJury:
+    """Mock jury for testing GoalSuccessRate without actual LLM calls."""
+
+    def __init__(self, default_score=1, default_reasoning=None):
+        self.default_score = default_score
+        self.default_reasoning = (
+            default_reasoning or "Mock evaluation: Goal successfully achieved."
+        )
+
+    def judge(self, prompt, grading_cls):
+        """Mock judge method that returns deterministic results based on prompt content."""
+        # Analyze prompt content to return different scores for different scenarios
+        prompt_lower = prompt.lower()
+
+        # Check for successful mathematical operations first (more specific)
+        if "2 + 2" in prompt and "4" in prompt:
+            return float(
+                1
+            ), "Mock evaluation: Mathematical question correctly answered."
+
+        # Check for successful code generation
+        if "python function" in prompt_lower and "def " in prompt:
+            return float(
+                1
+            ), "Mock evaluation: Code successfully generated as requested."
+
+        # Check for travel planning success
+        if "paris" in prompt_lower and "itinerary" in prompt_lower:
+            return float(
+                1
+            ), "Mock evaluation: Travel planning request successfully fulfilled."
+
+        # Check for clear failure scenarios (put after success checks)
+        if any(
+            fail_keyword in prompt_lower
+            for fail_keyword in [
+                "error",
+                "failed",
+                "cannot",
+                "unable",
+                "sorry",
+                "apologize",
+            ]
+        ):
+            return (
+                float(0),
+                "Mock evaluation: Goal not achieved due to error or inability to fulfill request.",
+            )
+
+        # Check for incomplete responses
+        if any(
+            incomplete_keyword in prompt_lower
+            for incomplete_keyword in [
+                "partial",
+                "incomplete",
+                "more information needed",
+            ]
+        ):
+            return float(0), "Mock evaluation: Goal partially achieved but incomplete."
+
+        # Default case - return configured default as float
+        return float(self.default_score), self.default_reasoning
 
 
 def make_workflow_span(
@@ -77,22 +143,13 @@ def make_non_workflow_span(
 
 
 @pytest.mark.asyncio
-async def test_compute_with_actual_model_successful_goal():
-    """Test computation with actual model for a successful goal achievement."""
-    if not os.getenv("LLM_API_KEY"):
-        pytest.skip("LLM_API_KEY not set; skipping actual model test")
-
+async def test_compute_with_mock_jury_successful_goal():
+    """Test computation with mock jury for a successful goal achievement."""
     metric = GoalSuccessRate()
 
-    # Create LLM config and initialize model
-    llm_config = LLMJudgeConfig(
-        LLM_API_KEY=os.getenv("LLM_API_KEY", ""),
-        LLM_BASE_MODEL_URL=os.getenv("LLM_BASE_MODEL_URL", ""),
-        LLM_MODEL_NAME=os.getenv("LLM_MODEL_NAME", ""),
-    )
-
-    model = metric.create_model(llm_config)
-    metric.init_with_model(model)
+    # Use mock jury instead of real LLM
+    mock_jury = MockGoalSuccessRateJury(default_score=1)
+    metric.init_with_model(mock_jury)
 
     # Create spans with a clear successful goal achievement
     spans = [
@@ -123,15 +180,87 @@ async def test_compute_with_actual_model_successful_goal():
     assert result.aggregation_level == "session"
     assert isinstance(result.reasoning, str)
     assert len(result.reasoning) > 0
+    assert "Mock evaluation" in result.reasoning
 
 
 @pytest.mark.asyncio
-async def test_goal_success_rate_end_to_end():
-    """Test GoalSuccessRate metric end-to-end using the processor (requires LLM config)."""
+async def test_compute_with_mock_jury_failed_goal():
+    """Test computation with mock jury for a failed goal achievement."""
+    metric = GoalSuccessRate()
 
-    if not os.getenv("LLM_API_KEY"):
-        pytest.skip("LLM_API_KEY not set; skipping end-to-end test")
+    # Use mock jury that simulates failure
+    mock_jury = MockGoalSuccessRateJury(default_score=0)
+    metric.init_with_model(mock_jury)
 
+    # Create spans with a failed goal achievement
+    spans = [
+        make_workflow_span(
+            "workflow_1",
+            input_data={"inputs": {"chat_history": [{"message": "What is 2 + 2?"}]}},
+            output_data={
+                "outputs": {
+                    "messages": [
+                        {"message": "What is 2 + 2?"},
+                        {
+                            "kwargs": {
+                                "content": "Sorry, I cannot perform mathematical calculations."
+                            }
+                        },
+                    ]
+                }
+            },
+        ),
+    ]
+
+    traces_by_session = {spans[0].session_id: spans}
+    session_entities = build_session_entities_from_dict(traces_by_session)
+    result = await metric.compute(session_entities.pop())
+
+    assert result.success is True  # Computation succeeded
+    assert result.value == 0.0  # But goal failed
+    assert result.span_id == ["workflow_1"]
+    assert result.session_id == ["session1"]
+    assert result.metric_name == "GoalSuccessRate"
+    assert result.aggregation_level == "session"
+    assert isinstance(result.reasoning, str)
+    assert len(result.reasoning) > 0
+    assert "not achieved" in result.reasoning.lower()
+
+
+@pytest.mark.asyncio
+async def test_compute_no_jury():
+    """Test computation without any jury configured."""
+    metric = GoalSuccessRate()
+    # Don't initialize with any model
+
+    spans = [
+        make_workflow_span(
+            "workflow_1",
+            input_data={"inputs": {"chat_history": [{"message": "What is 2 + 2?"}]}},
+            output_data={
+                "outputs": {
+                    "messages": [
+                        {"message": "What is 2 + 2?"},
+                        {"kwargs": {"content": "2 + 2 = 4"}},
+                    ]
+                }
+            },
+        ),
+    ]
+
+    traces_by_session = {spans[0].session_id: spans}
+    session_entities = build_session_entities_from_dict(traces_by_session)
+    result = await metric.compute(session_entities.pop())
+
+    assert result.success is False
+    assert result.error_message == "No model available"
+    assert result.span_id == ["workflow_1"]
+    assert result.session_id == ["session1"]
+
+
+@pytest.mark.asyncio
+async def test_goal_success_rate_mock_end_to_end():
+    """Test GoalSuccessRate metric end-to-end using mock jury."""
     # Create test spans with workflow data
     spans = [
         make_workflow_span(
@@ -163,14 +292,23 @@ async def test_goal_success_rate_end_to_end():
         make_non_workflow_span("agent", "agent_1"),
     ]
 
-    # Set up registry and processor
+    # Set up registry and processor with mock jury
     registry = MetricRegistry()
     registry.register_metric(GoalSuccessRate, "GoalSuccessRate")
 
+    # Create a testable GoalSuccessRate that uses mock jury
+    class MockableGoalSuccessRate(GoalSuccessRate):
+        def create_model(self, llm_config):
+            return MockGoalSuccessRateJury(default_score=1)
+
+    registry = MetricRegistry()
+    registry.register_metric(MockableGoalSuccessRate, "GoalSuccessRate")
+
+    # Use dummy LLM config since we're using mock
     llm_config = LLMJudgeConfig(
-        LLM_API_KEY=os.getenv("LLM_API_KEY", ""),
-        LLM_BASE_MODEL_URL=os.getenv("LLM_BASE_MODEL_URL", ""),
-        LLM_MODEL_NAME=os.getenv("LLM_MODEL_NAME", ""),
+        LLM_API_KEY="dummy_key",
+        LLM_BASE_MODEL_URL="dummy_url",
+        LLM_MODEL_NAME="dummy_model",
     )
 
     model_handler = ModelHandler()
@@ -198,3 +336,4 @@ async def test_goal_success_rate_end_to_end():
     assert goal_success_metric.reasoning is not None
     assert len(goal_success_metric.span_id) > 0
     assert len(goal_success_metric.session_id) > 0
+    assert "Mock evaluation" in goal_success_metric.reasoning
