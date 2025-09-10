@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
@@ -12,18 +12,18 @@ class MetricResult:
     """Result of a metric computation"""
 
     metric_name: str
-    description: str
     value: Union[float, int, str, Dict[str, Any]]
-    reasoning: str
-    unit: str
     aggregation_level: str
-    span_id: List[str]
-    session_id: List[str]
-    source: str
-    entities_involved: List[str]
-    edges_involved: List[str]
-    success: bool
-    metadata: Dict[str, Any]
+    description: str = ""
+    reasoning: str = ""
+    unit: str = ""
+    span_id: List[str] = field(default_factory=list)
+    session_id: List[str] = field(default_factory=list)
+    source: str = ""
+    entities_involved: List[str] = field(default_factory=list)
+    edges_involved: List[str] = field(default_factory=list)
+    success: bool = False
+    metadata: Dict[str, Any] = field(default_factory=dict)
     # timestamp: datetime
     error_message: Optional[str] = None
 
