@@ -41,21 +41,19 @@ class GraphDeterminismScore(BaseMetric):
     async def compute(self, data):
         try:
             graphs = []
-            for session_id, session_spans in data.items():
-                # Extract only .agent and .tool events
-                filtered_events = [
-                    event.raw_span_data["SpanName"]
-                    for event in session_spans
-                    if event.raw_span_data["SpanName"].endswith(".agent")
-                    or event.raw_span_data["SpanName"].endswith(".tool")
-                ]
-                # Build edges (sequence of transitions)
-                edges = [
-                    (filtered_events[i], filtered_events[i + 1])
-                    for i in range(len(filtered_events) - 1)
-                ]
+            for session_id, session_entity in data.items():
+                filtered_events = []
+                for span in session_entity.spans:
+                    if span.entity_type in ["agent", "tool"]:
+                        filtered_events.append(span.entity_name)
+                
+                edges = []
+                for i in range(len(filtered_events) - 1):
+                    edges.append((filtered_events[i], filtered_events[i + 1]))
+                
                 graphs.append(edges)
 
+            # Create NetworkX graphs
             nx_graphs = []
             for edges in graphs:
                 G = nx.DiGraph()
@@ -73,42 +71,49 @@ class GraphDeterminismScore(BaseMetric):
 
             variance = -1
             error_message = None
+            
             if edit_distances:
                 variance = sum(edit_distances) / len(edit_distances)
-            if len(edit_distances) == 0:
-                error_message = "Not enough executions to compute variance."
+            elif len(nx_graphs) < 2:
+                error_message = "Not enough executions to compute variance (need at least 2 sessions)."
+            else:
+                error_message = "No valid graph transitions found in any session."
 
             return MetricResult(
                 metric_name=self.name,
-                description="",
+                description="Measures variance in execution paths across sessions",
                 value=variance,
-                reasoning="",
-                unit="",
+                reasoning=f"Computed edit distance variance across {len(nx_graphs)} graphs with {len(edit_distances)} pairwise comparisons",
+                unit="average_edit_distance",
                 aggregation_level=self.aggregation_level,
                 span_id=[],
                 session_id=list(data.keys()),
                 source="native",
                 entities_involved=[],
                 edges_involved=[],
-                success=True,
-                metadata={},
+                success=error_message is None,
+                metadata={
+                    "total_graphs": len(nx_graphs),
+                    "pairwise_comparisons": len(edit_distances),
+                    "edit_distances": edit_distances if edit_distances else []
+                },
                 error_message=error_message,
             )
 
         except Exception as e:
             return MetricResult(
                 metric_name=self.name,
-                description="",
+                description="Measures variance in execution paths across sessions",
                 value=-1,
-                reasoning="",
-                unit="",
+                reasoning=f"Error occurred during computation: {str(e)}",
+                unit="average_edit_distance",
                 aggregation_level=self.aggregation_level,
-                span_id="",
-                session_id=list(data.keys()),
+                span_id=[],
+                session_id=list(data.keys()) if data else [],
                 source="native",
                 entities_involved=[],
                 edges_involved=[],
                 success=False,
                 metadata={},
-                error_message=e,
+                error_message=str(e),
             )
