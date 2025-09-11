@@ -79,6 +79,8 @@ class ToolUtilizationAccuracy(BaseMetric):
             )
 
             score, reasoning = self.jury.judge(prompt, BinaryGrading)
-            return self._create_success_result(score, reasoning, span_ids=[data.span_id], session_ids=[data.session_id])
+            return self._create_success_result(
+                score, reasoning, span_ids=[data.span_id], session_ids=[data.session_id]
+            )
 
         return self._create_error_result("Please configure your LLM credentials")
