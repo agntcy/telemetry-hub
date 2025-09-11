@@ -13,30 +13,72 @@ import (
 func (h Handler) GetSessionIDS(startTime, endTime time.Time) ([]models.SessionID, error) {
 	var traces []models.SessionID
 
-	query := h.DB.Table("otel_traces").Select("splitByChar('_', SpanAttributes['session.id'])[2] as ID, SpanName, Timestamp, ScopeName, ServiceName")
-	var result *gorm.DB
-	result = query.Where("SpanName LIKE ?", "%graph%").Order("Timestamp DESC").
+	result := h.DB.
+		Table("otel_traces").
+		Select("SpanAttributes['session.id'] AS ID, SpanName, Timestamp, ScopeName, ServiceName").
+		Where("SpanAttributes['session.id'] != ''").
+		Where("Timestamp >= ? AND Timestamp <= ?", startTime, endTime).
+		Order("Timestamp DESC").
 		Find(&traces)
+
 	if result.Error != nil {
-		return traces, result.Error
+		return nil, result.Error
 	}
 	return traces, nil
-
 }
 
-func (h Handler) GetSessionIDSUnique(startTime, endTime time.Time) (sessionIDs []models.SessionUniqueID, err error) {
+func (h Handler) GetSessionIDSUnique(startTime, endTime time.Time) ([]models.SessionUniqueID, error) {
+	var sessionIDs []models.SessionUniqueID
 
-	query := h.DB.Table("otel_traces").Select("splitByChar('_', SpanAttributes['session.id'])[2] as ID, MIN(Timestamp) as StartTimestamp")
-	var result *gorm.DB
-	result = query.Where("Timestamp >= ? AND Timestamp <= ?", startTime, endTime).
-		Where("SpanName LIKE ?", "%graph%").Where("SpanAttributes['session.id'] != ''").Order("StartTimestamp DESC").Group("splitByChar('_', SpanAttributes['session.id'])[2]").
+	result := h.DB.
+		Table("otel_traces").
+		Select("SpanAttributes['session.id'] AS ID, MIN(Timestamp) AS StartTimestamp").
+		Where("SpanAttributes['session.id'] != ''").
+		Group("SpanAttributes['session.id']").
+		// Filter by the computed minimum per group (avoid alias in HAVING for portability)
+		Having("MIN(Timestamp) >= ? AND MIN(Timestamp) <= ?", startTime, endTime).
+		Order("StartTimestamp DESC").
 		Find(&sessionIDs)
 
 	if result.Error != nil {
-		return sessionIDs, result.Error
+		return nil, result.Error
 	}
 	return sessionIDs, nil
+}
 
+func (h Handler) GetSessionIDSUniqueWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) (sessionIDs []models.SessionUniqueID, total int, err error) {
+	baseQuery := h.DB.
+		Table("otel_traces").
+		Select("splitByChar('_', SpanAttributes['session.id'])[2] as ID, MIN(Timestamp) as StartTimestamp").
+		Where("has(SpanAttributes, 'session.id') = 1").
+		Where("SpanAttributes['session.id'] != ''").
+		Where("Timestamp >= ? AND Timestamp <= ?", startTime, endTime)
+
+	if nameFilter != nil && *nameFilter != "" {
+		baseQuery = baseQuery.Where("SpanAttributes['session.id'] LIKE ?", *nameFilter+"%")
+	}
+
+	// Get total count
+	var totalCount int64
+	countQuery := baseQuery.Group("splitByChar('_', SpanAttributes['session.id'])[2]")
+	if err := h.DB.Table("(?) as sub", countQuery).Count(&totalCount).Error; err != nil {
+		return sessionIDs, 0, err
+	}
+	total = int(totalCount)
+
+	// Get paginated results
+	offset := page * limit
+	result := baseQuery.
+		Group("splitByChar('_', SpanAttributes['session.id'])[2]").
+		Order("StartTimestamp DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&sessionIDs)
+
+	if result.Error != nil {
+		return sessionIDs, total, result.Error
+	}
+	return sessionIDs, total, nil
 }
 
 func (h Handler) GetTracesForSessionID(sessionID string) ([]string, error) {
