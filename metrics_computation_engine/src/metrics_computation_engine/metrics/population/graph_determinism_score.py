@@ -46,11 +46,11 @@ class GraphDeterminismScore(BaseMetric):
                 for span in session_entity.spans:
                     if span.entity_type in ["agent", "tool"]:
                         filtered_events.append(span.entity_name)
-                
+
                 edges = []
                 for i in range(len(filtered_events) - 1):
                     edges.append((filtered_events[i], filtered_events[i + 1]))
-                
+
                 graphs.append(edges)
 
             # Create NetworkX graphs
@@ -71,7 +71,7 @@ class GraphDeterminismScore(BaseMetric):
 
             variance = -1
             error_message = None
-            
+
             if edit_distances:
                 variance = sum(edit_distances) / len(edit_distances)
             elif len(nx_graphs) < 2:
@@ -95,7 +95,7 @@ class GraphDeterminismScore(BaseMetric):
                 metadata={
                     "total_graphs": len(nx_graphs),
                     "pairwise_comparisons": len(edit_distances),
-                    "edit_distances": edit_distances if edit_distances else []
+                    "edit_distances": edit_distances if edit_distances else [],
                 },
                 error_message=error_message,
             )
