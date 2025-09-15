@@ -71,7 +71,7 @@ class AgentToAgentInteractions(BaseMetric):
                 span_id=span_ids,
                 session_id=[session.session_id],
                 source="native",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=True,
                 metadata={
@@ -97,7 +97,7 @@ class AgentToAgentInteractions(BaseMetric):
                 if hasattr(session, "session_id")
                 else [],
                 source="native",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=False,
                 metadata={},

@@ -4,8 +4,6 @@
 from typing import List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
-from metrics_computation_engine.models.eval import MetricResult
-
 
 class ToolError(BaseMetric):
     """

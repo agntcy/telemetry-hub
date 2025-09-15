@@ -39,6 +39,12 @@ class GraphDeterminismScore(BaseMetric):
         return True
 
     async def compute(self, data):
+
+        print("DATA")
+        print(len(data.values()))
+
+        if len(data.values())>0:
+            app_name = next(iter(data.values())).app_name
         try:
             graphs = []
             entities_involved = []
@@ -89,7 +95,7 @@ class GraphDeterminismScore(BaseMetric):
                 unit="average_edit_distance",
                 aggregation_level=self.aggregation_level,
                 category="application",
-                app_name=session_entity.app_name,
+                app_name=app_name,
                 span_id=[],
                 session_id=list(data.keys()),
                 source="native",
@@ -113,7 +119,7 @@ class GraphDeterminismScore(BaseMetric):
                 unit="average_edit_distance",
                 aggregation_level=self.aggregation_level,
                 category="application",
-                app_name=session_entity.app_name,
+                app_name=app_name,
                 span_id=[],
                 session_id=list(data.keys()) if data else [],
                 source="native",

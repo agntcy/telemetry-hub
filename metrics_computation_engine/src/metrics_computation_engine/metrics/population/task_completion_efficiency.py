@@ -36,6 +36,9 @@ class TaskCompletionEfficiency(BaseMetric):
         return True
 
     async def compute(self, data):
+        if len(data.values())>0:
+            app_name = next(iter(data.values())).app_name
+
         try:
             graphs = []
             for eid in data.execution_id.unique():
@@ -72,7 +75,7 @@ class TaskCompletionEfficiency(BaseMetric):
                 unit="",
                 aggregation_level=self.aggregation_level,
                 category="application",
-                source_name=session_entity.app_name,
+                source_name=app_name,
                 span_id=[],
                 session_id=list(data.execution_id.unique()),
                 source="native",
@@ -91,7 +94,7 @@ class TaskCompletionEfficiency(BaseMetric):
                 unit="",
                 aggregation_level=self.aggregation_level,
                 category="application",
-                source_name=session_entity.app_name,
+                source_name=app_name,
                 span_id="",
                 session_id=list(data.execution_id.unique()),
                 source="native",
