@@ -59,9 +59,8 @@ def build_session_entities_from_dict(
 
 
 def populate_app_name(session: SessionEntity) -> None:
-    session.app_name = session.spans[0].app_name
-    print(session.app_name)
-
+    if len(session.spans) > 0:
+        session.app_name = session.spans[0].app_name
 
 def populate_timing(session: SessionEntity) -> None:
     """Compute session start and end times from spans."""

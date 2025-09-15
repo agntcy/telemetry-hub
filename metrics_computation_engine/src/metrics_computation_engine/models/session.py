@@ -33,7 +33,7 @@ class SessionEntity(BaseModel):
     # Core session metadata
     session_id: str
     spans: List[SpanEntity]
-    app_name: str = None
+    app_name: str = ""
 
     # Timing information
     start_time: Optional[str] = None

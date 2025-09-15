@@ -20,6 +20,7 @@ async def test_tool_utilization_accuracy_invalid_span():
         entity_type="agent",  # invalid entity_type
         span_id="1",
         entity_name="SomeAgent",
+        app_name="example_app",
         input_payload={"text": "Input to the tool"},
         output_payload={"text": "Tool output"},
         tool_definition={"text": "Tool definition text"},
@@ -45,6 +46,7 @@ async def test_tool_utilization_accuracy_no_jury():
         entity_type="tool",
         span_id="2",
         entity_name="ToolX",
+        app_name="example_app",
         input_payload={"text": "Input to the tool"},
         output_payload={"text": "Tool output"},
         tool_definition={"text": "Tool definition text"},
@@ -73,6 +75,7 @@ async def test_tool_utilization_accuracy_with_jury():
         entity_type="tool",
         span_id="3",
         entity_name="ToolY",
+        app_name="example_app",
         input_payload={"text": "Input to the tool"},
         output_payload={"text": "Tool output"},
         tool_definition={"text": "Tool definition text"},
