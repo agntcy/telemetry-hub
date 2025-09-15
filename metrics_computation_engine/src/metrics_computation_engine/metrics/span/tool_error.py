@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
 
+
 class ToolError(BaseMetric):
     """
     Collects the Agent to Agent Interactions counts throughout a trace.

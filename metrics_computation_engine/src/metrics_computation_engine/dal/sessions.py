@@ -62,6 +62,7 @@ def populate_app_name(session: SessionEntity) -> None:
     if len(session.spans) > 0:
         session.app_name = session.spans[0].app_name
 
+
 def populate_timing(session: SessionEntity) -> None:
     """Compute session start and end times from spans."""
     if not session.spans:

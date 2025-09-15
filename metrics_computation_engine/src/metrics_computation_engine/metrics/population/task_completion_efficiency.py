@@ -36,7 +36,7 @@ class TaskCompletionEfficiency(BaseMetric):
         return True
 
     async def compute(self, data):
-        if len(data.values())>0:
+        if len(data.values()) > 0:
             app_name = next(iter(data.values())).app_name
 
         try:
