@@ -53,7 +53,8 @@ class TaskDelegationAccuracy(BaseMetric):
             data.input_payload and data.output_payload and data.entity_name
         ):
             return self._create_error_result(
-                "Missing required data for task delegation accuracy computation"
+                category="agent",
+                error_message="Missing required data for task delegation accuracy computation",
             )
 
         if self.jury:
@@ -62,6 +63,14 @@ class TaskDelegationAccuracy(BaseMetric):
             )
 
             score, reasoning = self.jury.judge(prompt, BinaryGrading)
-            return self._create_success_result(score, reasoning)
+            return self._create_success_result(
+                score,
+                category="agent",
+                reasoning=reasoning,
+                span_ids=[data.span_id],
+                session_ids=data.session_id,
+            )
 
-        return self._create_error_result("Please configure your LLM credentials")
+        return self._create_error_result(
+            category="agent", error_message="Please configure your LLM credentials"
+        )

@@ -14,6 +14,8 @@ class MetricResult:
     metric_name: str
     value: Union[float, int, str, Dict[str, Any]]
     aggregation_level: str
+    category: str
+    app_name: str
     description: str = ""
     reasoning: str = ""
     unit: str = ""

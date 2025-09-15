@@ -30,6 +30,9 @@ def build_session_entity(session_id: str, spans: List[SpanEntity]) -> SessionEnt
 
     populate_timing(session)
     populate_entity_spans(session)
+
+    populate_app_name(session)
+
     populate_conversation_data(session)
     populate_workflow_data(session)
     populate_agent_interactions(session)  # Add this line
@@ -53,6 +56,11 @@ def build_session_entities_from_dict(
         session_entities.append(session_entity)
 
     return session_entities
+
+
+def populate_app_name(session: SessionEntity) -> None:
+    session.app_name = session.spans[0].app_name
+    print(session.app_name)
 
 
 def populate_timing(session: SessionEntity) -> None:

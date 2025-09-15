@@ -373,6 +373,9 @@ class RagasAdapter(BaseMetric):
     ) -> Tuple[bool, str, str, str]:
         data_is_appropriate: bool = True
         error_message: str = ""
+        app_name: str = ""
+        entities_involved: list = []
+        category = "application"
         span_id: str = ""
         session_id: str = ""
 
@@ -383,6 +386,8 @@ class RagasAdapter(BaseMetric):
                 # This is a SessionEntity, extract spans for processing
                 spans = data.spans
                 session_id = data.session_id
+                app_name = data.app_name
+                entities_involved = [span.entity_name for span in data.agent_spans]
 
                 if not spans:
                     data_is_appropriate = False
@@ -405,7 +410,15 @@ class RagasAdapter(BaseMetric):
             data_is_appropriate = False
             error_message = f"Unexpected aggregation level: {self.aggregation_level}"
 
-        return data_is_appropriate, error_message, span_id, session_id
+        return (
+            data_is_appropriate,
+            error_message,
+            category,
+            app_name,
+            entities_involved,
+            span_id,
+            session_id,
+        )
 
     async def compute(self, data: SpanEntity | list[SpanEntity]) -> MetricResult:
         """
@@ -422,6 +435,9 @@ class RagasAdapter(BaseMetric):
         (
             data_is_appropriate,
             error_message,
+            category,
+            app_name,
+            entities_involved,
             span_id,
             session_id,
         ) = await self._assess_input_data(data=data)
@@ -437,10 +453,12 @@ class RagasAdapter(BaseMetric):
                 reasoning="",
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category=category,
+                app_name=app_name,
                 span_id=[span_id],
                 session_id=[session_id],
                 source="",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=False,
                 metadata={},
@@ -512,10 +530,12 @@ class RagasAdapter(BaseMetric):
                 reasoning=f"RAGAS {self.name} evaluation completed",
                 unit="score",
                 aggregation_level=self.aggregation_level,
+                category=category,
+                app_name=app_name,
                 span_id=[span_id],
                 session_id=[session_id],
                 source="ragas",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 metadata=metadata,
                 success=score is not None,
@@ -537,10 +557,12 @@ class RagasAdapter(BaseMetric):
                 reasoning="",
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category=category,
+                app_name=app_name,
                 span_id=[span_id],
                 session_id=[session_id],
                 source="ragas",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 metadata={},
                 success=False,

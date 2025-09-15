@@ -40,6 +40,7 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
     for span in raw_spans:
         attrs = span.get("SpanAttributes", {})
         span_name = span.get("SpanName", "").lower()
+        app_name = span.get("ServiceName", "")
 
         if span_name.endswith(".chat"):
             entity_type = "llm"
@@ -180,6 +181,7 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
             entity_type=entity_type,
             span_id=span.get("SpanId", ""),
             entity_name=entity_name,
+            app_name=app_name,
             input_payload=input_payload,
             output_payload=output_payload,
             message=attrs.get("traceloop.entity.message"),

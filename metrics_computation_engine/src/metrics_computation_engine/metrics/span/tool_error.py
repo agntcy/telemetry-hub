@@ -52,56 +52,20 @@ class ToolError(BaseMetric):
                     yield from find(item, search)
 
         if data.entity_type not in self.required["entity_type"]:
-            return MetricResult(
-                metric_name=self.name,
-                description="",
-                reasoning="",
-                value=-1,
-                unit="",
-                aggregation_level="",
-                span_id="",
-                session_id="",
-                source="",
-                entities_involved=[],
-                edges_involved=[],
-                success=False,
-                metadata={},
-                error_message="",
+            return self._create_error_result(
+                category="agent", error_message="Entity is not a tool!"
             )
 
         results = list(find(dict(data), "status"))
 
         if len(results) > 0:
-            return MetricResult(
-                metric_name=self.name,
-                description="",
-                value=results[0],
-                reasoning="",
-                unit="",
-                aggregation_level=self.aggregation_level,
-                span_id=[span.span_id for span in data] if data else [],
-                session_id=[data[0].session_id] if data else [],
-                source="native",
-                entities_involved=[],
-                edges_involved=[],
-                success=True,
-                metadata={},
-                error_message=None,
+            return self._create_success_result(
+                results[0],
+                category="agent",
+                span_ids=[data.span_id],
+                session_ids=data.session_id,
             )
 
-        return MetricResult(
-            metric_name=self.name,
-            description="",
-            value=-1,
-            reasoning="",
-            unit="",
-            aggregation_level=self.aggregation_level,
-            span_id="",
-            session_id="",
-            source="native",
-            entities_involved=[],
-            edges_involved=[],
-            success=False,
-            metadata={},
-            error_message="",
+        return self._create_error_result(
+            category="agent", error_message="Failed to retrieve tool status."
         )

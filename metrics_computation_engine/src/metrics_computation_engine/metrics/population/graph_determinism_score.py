@@ -41,12 +41,13 @@ class GraphDeterminismScore(BaseMetric):
     async def compute(self, data):
         try:
             graphs = []
+            entities_involved = []
             for session_id, session_entity in data.items():
                 filtered_events = []
                 for span in session_entity.spans:
                     if span.entity_type in ["agent", "tool"]:
                         filtered_events.append(span.entity_name)
-
+                        entities_involved.append(span.entity_name)
                 edges = []
                 for i in range(len(filtered_events) - 1):
                     edges.append((filtered_events[i], filtered_events[i + 1]))
@@ -79,6 +80,7 @@ class GraphDeterminismScore(BaseMetric):
             else:
                 error_message = "No valid graph transitions found in any session."
 
+            # TODO: MCE allows you to query multi sessions from multiple apps, we may want to constrain this OR allow population level metrics to list involved app_names
             return MetricResult(
                 metric_name=self.name,
                 description="Measures variance in execution paths across sessions",
@@ -86,10 +88,12 @@ class GraphDeterminismScore(BaseMetric):
                 reasoning=f"Computed edit distance variance across {len(nx_graphs)} graphs with {len(edit_distances)} pairwise comparisons",
                 unit="average_edit_distance",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session_entity.app_name,
                 span_id=[],
                 session_id=list(data.keys()),
                 source="native",
-                entities_involved=[],
+                entities_involved=list(set(entities_involved)),
                 edges_involved=[],
                 success=error_message is None,
                 metadata={
@@ -108,10 +112,12 @@ class GraphDeterminismScore(BaseMetric):
                 reasoning=f"Error occurred during computation: {str(e)}",
                 unit="average_edit_distance",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session_entity.app_name,
                 span_id=[],
                 session_id=list(data.keys()) if data else [],
                 source="native",
-                entities_involved=[],
+                entities_involved=list(set(entities_involved)),
                 edges_involved=[],
                 success=False,
                 metadata={},

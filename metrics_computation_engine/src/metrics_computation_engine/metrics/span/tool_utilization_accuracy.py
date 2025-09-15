@@ -67,7 +67,10 @@ class ToolUtilizationAccuracy(BaseMetric):
             data.input_payload and data.output_payload and data.entity_name
         ):
             return self._create_error_result(
-                "Missing required data for tool utilization accuracy computation"
+                category="agent",
+                app_name=data.app_name,
+                entities_involved=[data.entity_name],
+                error_message="Missing required data for tool utilization accuracy computation",
             )
 
         if self.jury:
@@ -79,6 +82,19 @@ class ToolUtilizationAccuracy(BaseMetric):
             )
 
             score, reasoning = self.jury.judge(prompt, BinaryGrading)
-            return self._create_success_result(score, reasoning)
+            return self._create_success_result(
+                score,
+                category="agent",
+                app_name=data.app_name,
+                reasoning=reasoning,
+                entities_involved=[data.entity_name],
+                span_ids=[data.span_id],
+                session_ids=[data.session_id],
+            )
 
-        return self._create_error_result("Please configure your LLM credentials")
+        return self._create_error_result(
+            category="agent",
+            app_name=data.app_name,
+            entities_involved=[data.entity_name],
+            error_message="Please configure your LLM credentials",
+        )
