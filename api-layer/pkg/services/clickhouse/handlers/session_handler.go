@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse/models"
-	"gorm.io/gorm"
 )
 
 func (h Handler) GetSessionIDS(startTime, endTime time.Time) ([]models.SessionID, error) {
