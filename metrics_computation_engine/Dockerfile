@@ -46,7 +46,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 RUN --mount=type=cache,target=/root/.cache/uv \
   uv pip install --python /app/bin/python ./plugins/mce_metrics_plugin/
 
-FROM python:3.13-slim-bookworm AS runner
+FROM python:3.13-slim-bookworm AS mce-release
 
 # Fix git executable issues for RAGAS
 ENV GIT_PYTHON_REFRESH=quiet
