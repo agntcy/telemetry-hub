@@ -10,6 +10,7 @@ class SpanEntity(BaseModel):
     entity_type: Literal["agent", "tool", "llm", "workflow", "other"]
     span_id: str
     entity_name: str
+    app_name: str
     input_payload: Optional[Dict[str, Any]] = None
     output_payload: Optional[Dict[str, Any]] = None
     message: Optional[str] = None

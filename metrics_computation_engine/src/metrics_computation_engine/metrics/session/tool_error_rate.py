@@ -48,6 +48,9 @@ class ToolErrorRate(BaseMetric):
                 (total_tool_errors / total_tool_calls) * 100 if total_tool_calls else 0
             )
 
+            entities_involved = list(
+                set([span.entity_name for span in tool_spans if span.contains_error])
+            )
             return MetricResult(
                 metric_name=self.name,
                 description="Percentage of tool spans that encountered errors",
@@ -55,10 +58,12 @@ class ToolErrorRate(BaseMetric):
                 reasoning="",
                 unit="%",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id=error_span_ids,
                 session_id=[session.session_id],
                 source="native",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=True,
                 metadata={
@@ -77,6 +82,8 @@ class ToolErrorRate(BaseMetric):
                 reasoning="",
                 unit="%",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id="",
                 session_id=[session.session_id]
                 if hasattr(session, "session_id")

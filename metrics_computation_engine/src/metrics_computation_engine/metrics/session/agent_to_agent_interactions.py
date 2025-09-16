@@ -52,6 +52,12 @@ class AgentToAgentInteractions(BaseMetric):
                 if session.agent_spans
                 else []
             )
+            entities_involved = (
+                list(set([span.entity_name for span in session.agent_spans]))
+                if session.agent_spans
+                else []
+            )
+            print("SESSION APP NAME:", session.app_name)
 
             return MetricResult(
                 metric_name=self.name,
@@ -60,10 +66,12 @@ class AgentToAgentInteractions(BaseMetric):
                 unit="transitions",
                 reasoning="",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id=span_ids,
                 session_id=[session.session_id],
                 source="native",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=True,
                 metadata={
@@ -82,12 +90,14 @@ class AgentToAgentInteractions(BaseMetric):
                 unit="",
                 reasoning="",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id=[],
                 session_id=[session.session_id]
                 if hasattr(session, "session_id")
                 else [],
                 source="native",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=False,
                 metadata={},

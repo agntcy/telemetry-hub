@@ -64,6 +64,11 @@ class WorkflowEfficiency(BaseMetric):
                 else []
             )
 
+            entities_involved = (
+                [span.entity_name for span in session.agent_spans]
+                if session.agent_spans
+                else []
+            )
             return MetricResult(
                 metric_name=self.name,
                 description="Workflow efficiency based on agent transitions",
@@ -71,10 +76,12 @@ class WorkflowEfficiency(BaseMetric):
                 reasoning="",
                 unit="efficiency_score",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id="",
                 session_id=session.session_id,
                 source="native",
-                entities_involved=[],
+                entities_involved=list(set(entities_involved)),
                 edges_involved=[],
                 success=True,
                 metadata={
@@ -96,6 +103,8 @@ class WorkflowEfficiency(BaseMetric):
                 value=-1,
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id="",
                 session_id=session.session_id if hasattr(session, "session_id") else "",
                 source="native",

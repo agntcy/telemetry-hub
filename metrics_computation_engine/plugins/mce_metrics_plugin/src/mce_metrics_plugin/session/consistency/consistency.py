@@ -58,19 +58,30 @@ class Consistency(BaseMetric):
             else []
         )
 
+        entities_involved = (
+            [span.entity_name for span in session.agent_spans]
+            if session.agent_spans
+            else []
+        )
         prompt = CONSISTENCY_PROMPT.format(conversation=conversation)
 
         if self.jury:
             score, reasoning = self.jury.judge(prompt, BinaryGrading)
             return self._create_success_result(
                 score=score,
+                category="application",
+                app_name=session.app_name,
                 reasoning=reasoning,
                 span_ids=agent_span_ids,
+                entities_involved=entities_involved,
                 session_ids=[session.session_id],
             )
 
         return self._create_error_result(
             error_message="No model available",
+            category="application",
+            app_name=session.app_name,
+            entities_involved=entities_involved,
             span_ids=agent_span_ids,
             session_ids=[session.session_id],
         )

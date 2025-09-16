@@ -36,6 +36,9 @@ class TaskCompletionEfficiency(BaseMetric):
         return True
 
     async def compute(self, data):
+        if len(data.values()) > 0:
+            app_name = next(iter(data.values())).app_name
+
         try:
             graphs = []
             for eid in data.execution_id.unique():
@@ -64,12 +67,15 @@ class TaskCompletionEfficiency(BaseMetric):
             if len(edit_distances) == 0:
                 error_message = "Not enough executions to compute variance."
 
+            # TODO: MCE allows you to query multi sessions from multiple apps, we may want to constrain this OR allow population level metrics to list involved app_names
             return MetricResult(
                 metric_name=self.name,
                 description="",
                 value=variance,
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                source_name=app_name,
                 span_id=[],
                 session_id=list(data.execution_id.unique()),
                 source="native",
@@ -87,6 +93,8 @@ class TaskCompletionEfficiency(BaseMetric):
                 value=-1,
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                source_name=app_name,
                 span_id="",
                 session_id=list(data.execution_id.unique()),
                 source="native",

@@ -10,6 +10,7 @@ def make_dummy_span(entity_type, contains_error, span_id):
         contains_error=contains_error,
         span_id=span_id,
         entity_name="dummy_tool",
+        app_name="example_app",
         timestamp="2024-01-01T00:00:00Z",
         parent_span_id="parent",
         trace_id="trace123",

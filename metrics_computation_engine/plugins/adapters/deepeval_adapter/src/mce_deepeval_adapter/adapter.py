@@ -141,20 +141,24 @@ class DeepEvalMetricAdapter(BaseMetric):
 
         return data_is_appropriate, error_message, span_id, session_id
 
-    async def _get_relevant_session_and_span_ids(
-        self, data: Union[SpanEntity, SessionEntity]
-    ):
+    async def _get_source_data(self, data: Union[SpanEntity, SessionEntity]):
         # Handle single SpanEntity (span-level metrics)
         if isinstance(data, SpanEntity):
             span_id = [data.span_id]
             session_id = [data.session_id]
+            entities_involved = [data.entity_name]
+            app_name = data.app_name
+            category = "agent"
 
         # Handle SessionEntity (session-level metrics)
         elif isinstance(data, SessionEntity) and self.aggregation_level == "session":
             session_id = [data.session_id]
             span_id = [s.span_id for s in data.spans]
+            entities_involved = [span.entity_name for span in data.agent_spans]
+            app_name = data.spans[0].app_name
+            category = "application"
 
-        return span_id, session_id
+        return category, app_name, entities_involved, span_id, session_id
 
     async def compute(self, data: SpanEntity | SessionEntity) -> MetricResult:
         """
@@ -186,9 +190,13 @@ class DeepEvalMetricAdapter(BaseMetric):
             # Filter out None values
             metadata = {k: v for k, v in metadata.items() if v is not None}
 
-            span_id, session_id = await self._get_relevant_session_and_span_ids(
-                data=data
-            )
+            (
+                category,
+                app_name,
+                entities_involved,
+                span_id,
+                session_id,
+            ) = await self._get_source_data(data=data)
 
             logger.info(f"aggregation level: {self.aggregation_level}")
             return MetricResult(
@@ -198,10 +206,12 @@ class DeepEvalMetricAdapter(BaseMetric):
                 reasoning=metadata["reason"],
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category=category,
+                app_name=app_name,
                 span_id=span_id,
                 session_id=session_id,
                 source="deepeval",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=getattr(self.deepeval_metric, "success", score is not None),
                 metadata=metadata,
@@ -216,10 +226,12 @@ class DeepEvalMetricAdapter(BaseMetric):
                 reasoning="",
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category=category,
+                app_name=app_name,
                 span_id=[],
                 session_id=[],
                 source="deepeval",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 metadata={},
                 success=False,

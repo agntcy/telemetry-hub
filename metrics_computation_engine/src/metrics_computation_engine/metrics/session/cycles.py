@@ -73,7 +73,6 @@ class CyclesCount(BaseMetric):
             cycle_count = self.count_contiguous_cycles(events)
 
             span_ids = [span.span_id for span in agent_tool_spans]
-
             return MetricResult(
                 metric_name=self.name,
                 description="Count of contiguous cycles in agent and tool interactions",
@@ -81,10 +80,14 @@ class CyclesCount(BaseMetric):
                 unit="cycles",
                 reasoning="Count of contiguous cycles in agent and tool interactions",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id="",
                 session_id=[session.session_id],
                 source="native",
-                entities_involved=[],
+                entities_involved=list(
+                    set([span.entity_name for span in agent_tool_spans])
+                ),
                 edges_involved=[],
                 success=True,
                 metadata={
@@ -103,12 +106,16 @@ class CyclesCount(BaseMetric):
                 unit="",
                 reasoning="Count of contiguous cycles in agent and tool interactions",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id="",
                 session_id=[session.session_id]
                 if hasattr(session, "session_id")
                 else [],
                 source="native",
-                entities_involved=[],
+                entities_involved=list(
+                    set([span.entity_name for span in agent_tool_spans])
+                ),
                 edges_involved=[],
                 success=False,
                 metadata={},

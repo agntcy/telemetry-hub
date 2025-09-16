@@ -73,7 +73,11 @@ class Groundedness(BaseMetric):
                     if session.agent_spans
                     else []
                 )
-
+                entities_involved = (
+                    [span.entity_name for span in session.agent_spans]
+                    if session.agent_spans
+                    else []
+                )
                 return MetricResult(
                     metric_name=self.name,
                     description="",
@@ -81,10 +85,12 @@ class Groundedness(BaseMetric):
                     reasoning=reasoning,
                     unit="",
                     aggregation_level=self.aggregation_level,
+                    category="application",
+                    app_name=session.app_name,
                     span_id="",
                     session_id=session.session_id,
                     source="native",
-                    entities_involved=[],
+                    entities_involved=entities_involved,
                     edges_involved=[],
                     success=True,
                     metadata={"span_ids": agent_span_ids},
@@ -98,10 +104,12 @@ class Groundedness(BaseMetric):
                 reasoning="",
                 unit="",
                 aggregation_level=self.aggregation_level,
+                category="application",
+                app_name=session.app_name,
                 span_id="",
                 session_id=session.session_id,
                 source="native",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=False,
                 metadata={},
@@ -118,7 +126,7 @@ class Groundedness(BaseMetric):
                 span_id="",
                 session_id=session.session_id if hasattr(session, "session_id") else "",
                 source="native",
-                entities_involved=[],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=False,
                 metadata={},
