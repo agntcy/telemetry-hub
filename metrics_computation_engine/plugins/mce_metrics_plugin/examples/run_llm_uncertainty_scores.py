@@ -1,12 +1,14 @@
 import asyncio
 import json
-import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List
 
-from dotenv import load_dotenv
-from mce_deepeval_adapter.adapter import DeepEvalMetricAdapter
+from mce_metrics_plugin.session.llm_uncertainty_scores import (
+    LLMAverageConfidence,
+    LLMMaximumConfidence,
+    LLMMinimumConfidence,
+)
 
 from metrics_computation_engine.core.data_parser import parse_raw_spans
 from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
@@ -17,29 +19,13 @@ from metrics_computation_engine.models.requests import LLMJudgeConfig
 from metrics_computation_engine.processor import MetricsProcessor
 from metrics_computation_engine.registry import MetricRegistry
 
-RAW_TRACES_PATH: Path = (
-    Path(__file__).parent / "data" / "llm_metrics_single_session_traces.json"
-)
-ENV_FILE_PATH: Path = Path(__file__).parent / ".env"
-
-logger = setup_logger(name=__name__)
+logger = setup_logger(__name__)
 
 
-def build_llm_metrics() -> List[str]:
-    return [
-        "AnswerRelevancyMetric",
-        "CoherenceMetric",
-        "ToxicityMetric",
-        "BiasMetric",
-        "TonalityMetric",
-        "GroundednessMetric",
-        "AnswerCorrectnessMetric",
-        "GeneralStructureAndStyleMetric",
-    ]
+RAW_TRACES_PATH = Path("examples/llm_metrics_single_session_traces.json")
 
 
 async def compute():
-    load_dotenv(ENV_FILE_PATH)
     traces_by_session = json.loads(RAW_TRACES_PATH.read_text())
 
     for session_id, raw_spans in traces_by_session.items():
@@ -53,23 +39,22 @@ async def compute():
     sessions_data = {entity.session_id: entity for entity in session_entities}
 
     registry = MetricRegistry()
-    metrics = build_llm_metrics()
 
-    for metric_name in metrics:
+    for metric_class in [
+        LLMAverageConfidence,
+        LLMMinimumConfidence,
+        LLMMaximumConfidence,
+    ]:
         registry.register_metric(
-            metric_class=DeepEvalMetricAdapter, metric_name=metric_name
+            metric_class=metric_class, metric_name=metric_class.__name__
         )
 
     registered_metrics = registry.list_metrics()
     logger.info(
-        f"Following {len(registered_metrics)} metrics are registered:"
-        f" {registered_metrics}"
+        f"Following {len(registered_metrics)} metrics"
+        f" are registered: {registered_metrics}"
     )
-    llm_config = LLMJudgeConfig(
-        LLM_BASE_MODEL_URL=os.environ["MCE_LLM_BASE_MODEL_URL"],
-        LLM_MODEL_NAME=os.environ["MCE_LLM_MODEL_NAME"],
-        LLM_API_KEY=os.environ["MCE_LLM_API_KEY"],
-    )
+    llm_config = LLMJudgeConfig()
     model_handler = ModelHandler()
     processor = MetricsProcessor(
         registry=registry, model_handler=model_handler, llm_config=llm_config

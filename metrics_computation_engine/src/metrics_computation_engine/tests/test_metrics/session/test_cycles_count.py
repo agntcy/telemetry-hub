@@ -8,17 +8,36 @@ from metrics_computation_engine.dal.sessions import build_session_entities_from_
 async def test_cycles_count_no_agents_or_tools():
     """Case 1: No spans with agent/tool entity_type, should return 0 cycles."""
     metric = CyclesCount()
+
+    default_input = {
+        "gen_ai.prompt.0.content": "You are a travel agent",
+        "gen_ai.prompt.0.role": "system",
+        "gen_ai.prompt.1.content": "Help me plan a trip to Paris",
+        "gen_ai.prompt.1.role": "user",
+    }
+
+    default_output = {
+        "gen_ai.prompt.0.content": "You are a travel agent",
+        "gen_ai.prompt.0.role": "system",
+        "gen_ai.prompt.1.content": "Help me plan a trip to Paris",
+        "gen_ai.prompt.1.role": "user",
+        "gen_ai.prompt.2.content": "I'd be happy to help you plan your trip to Paris! Here's a suggested itinerary...",
+        "gen_ai.prompt.2.role": "user",
+    }
+
     spans = [
         SpanEntity(
             entity_type="llm",
             span_id="1",
             entity_name="NotRelevant",
             app_name="example_app",
-            timestamp="",
+            timestamp="2025-06-20 21:37:02.832759",
             parent_span_id=None,
             trace_id="t1",
             session_id="s1",
             start_time=None,
+            input_payload=default_input,
+            output_payload=default_output,
             end_time=None,
             raw_span_data={},
             contains_error=False,
@@ -44,7 +63,7 @@ async def test_cycles_count_with_one_cycle():
             span_id="1",
             entity_name="A",
             app_name="example_app",
-            timestamp="",
+            timestamp="2025-06-20 21:37:02.832759",
             parent_span_id=None,
             trace_id="t1",
             session_id="s1",
@@ -58,7 +77,7 @@ async def test_cycles_count_with_one_cycle():
             span_id="2",
             entity_name="B",
             app_name="example_app",
-            timestamp="",
+            timestamp="2025-06-20 21:40:02.832759",
             parent_span_id=None,
             trace_id="t1",
             session_id="s1",
@@ -72,7 +91,7 @@ async def test_cycles_count_with_one_cycle():
             span_id="3",
             entity_name="A",
             app_name="example_app",
-            timestamp="",
+            timestamp="2025-06-20 21:45:02.832759",
             parent_span_id=None,
             trace_id="t1",
             session_id="s1",

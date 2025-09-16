@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -13,6 +13,7 @@ class SpanEntity(BaseModel):
     app_name: str
     input_payload: Optional[Dict[str, Any]] = None
     output_payload: Optional[Dict[str, Any]] = None
+    expected_output: Optional[Union[str, Dict[str, Any], List[Dict[str, Any]]]] = None
     message: Optional[str] = None
     tool_definition: Optional[Dict[str, Any]] = None
     contains_error: bool

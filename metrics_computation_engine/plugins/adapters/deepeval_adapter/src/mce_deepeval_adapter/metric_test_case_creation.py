@@ -1,12 +1,15 @@
 import json
 from abc import ABCMeta, abstractmethod
-from typing import Union
+from typing import Optional, Union
 
 from deepeval.test_case import ConversationalTestCase, LLMTestCase, ToolCall, Turn
 
 from metrics_computation_engine.models.session import SessionEntity
 from metrics_computation_engine.models.span import SpanEntity
-from metrics_computation_engine.util import get_tool_definitions_from_span_attributes
+from metrics_computation_engine.util import (
+    build_chat_history_from_payload,
+    get_tool_definitions_from_span_attributes,
+)
 
 
 class AbstractTestCaseCalculator(metaclass=ABCMeta):
@@ -106,6 +109,64 @@ class LLMAnswerRelevancyTestCase(AbstractTestCaseCalculator):
         test_case = LLMTestCase(
             input=json.dumps(full_input_dict, indent=2),
             actual_output=json.dumps(data.output_payload, indent=2),
+        )
+        return test_case
+
+
+class LLMAnswerCorrectnessTestCase(AbstractTestCaseCalculator):
+    def calculate_test_case(
+        self, data: Union[SpanEntity, SessionEntity]
+    ) -> Union[ConversationalTestCase, LLMTestCase]:
+        data: SpanEntity = _make_sure_input_is_span_entity(data=data)
+        raw_span_data = data.raw_span_data
+        span_attributes = raw_span_data["SpanAttributes"]
+        tool_definitions = get_tool_definitions_from_span_attributes(
+            span_attributes=span_attributes
+        )
+        chat_payload = build_chat_history_from_payload(
+            payload=data.input_payload, prefix="gen_ai.prompt."
+        )
+        full_input_dict = {
+            "tool_definitions": tool_definitions,
+            "chat_payload": chat_payload,
+        }
+        actual_output = build_chat_history_from_payload(
+            payload=data.output_payload, prefix="gen_ai.completion."
+        )
+        expected_output: Optional[str] = ""
+        if data.expected_output:
+            expected_output = json.dumps(data.expected_output, indent=2)
+        test_case = LLMTestCase(
+            input=json.dumps(full_input_dict, indent=2),
+            actual_output=json.dumps(actual_output, indent=2),
+            expected_output=expected_output,
+        )
+        return test_case
+
+
+class LLMGeneralStructureAndStyleTestCase(AbstractTestCaseCalculator):
+    def calculate_test_case(
+        self, data: Union[SpanEntity, SessionEntity]
+    ) -> Union[ConversationalTestCase, LLMTestCase]:
+        data: SpanEntity = _make_sure_input_is_span_entity(data=data)
+        span_attributes = data.raw_span_data["SpanAttributes"]
+        tool_definitions = get_tool_definitions_from_span_attributes(
+            span_attributes=span_attributes
+        )
+        chat_payload = build_chat_history_from_payload(
+            payload=data.input_payload, prefix="gen_ai.prompt."
+        )
+        full_input_dict = {
+            "tool_definitions": tool_definitions,
+            "chat_payload": chat_payload,
+        }
+        actual_output = build_chat_history_from_payload(
+            payload=data.output_payload, prefix="gen_ai.completion."
+        )
+
+        test_case = LLMTestCase(
+            input=json.dumps(full_input_dict, indent=2),
+            actual_output=json.dumps(actual_output, indent=2),
         )
         return test_case
 
