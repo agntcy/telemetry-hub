@@ -70,7 +70,7 @@ class GoalSuccessRate(BaseMetric):
                 category="application",
                 app_name=session.app_name,
                 entities_involved=entities_involved,
-                span_ids=[span.span_id for span in session.agent_spans],
+                span_ids=[span.span_id for span in session.llm_spans],
                 session_ids=[session.session_id],
             )
 
@@ -79,6 +79,6 @@ class GoalSuccessRate(BaseMetric):
             category="application",
             app_name=session.app_name,
             entities_involved=entities_involved,
-            span_ids=[span.span_id for span in session.agent_spans],
+            span_ids=[span.span_id for span in session.llm_spans],
             session_ids=[session.session_id],
         )
