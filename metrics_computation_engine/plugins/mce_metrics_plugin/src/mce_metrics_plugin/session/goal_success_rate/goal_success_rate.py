@@ -21,7 +21,7 @@ GOAL_SUCCESS_RATE_PROMPT = """
 
 
 class GoalSuccessRate(BaseMetric):
-    REQUIRED_PARAMETERS = {"GoalSuccessRate": ["workflow_data"]}
+    REQUIRED_PARAMETERS = {"GoalSuccessRate": ["input_query", "final_response"]}
 
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()
@@ -48,15 +48,8 @@ class GoalSuccessRate(BaseMetric):
         return self.create_native_model(llm_config)
 
     async def compute(self, session: SessionEntity):
-        query = session.workflow_data.get("query", "") if session.workflow_data else ""
-        response = (
-            session.workflow_data.get("response", "") if session.workflow_data else ""
-        )
-        workflow_span_ids = (
-            [span.span_id for span in session.workflow_spans]
-            if session.workflow_spans
-            else []
-        )
+        query = session.input_query
+        response = session.final_response
 
         entities_involved = (
             [span.entity_name for span in session.agent_spans]
@@ -77,7 +70,7 @@ class GoalSuccessRate(BaseMetric):
                 category="application",
                 app_name=session.app_name,
                 entities_involved=entities_involved,
-                span_ids=workflow_span_ids,
+                span_ids=[span.span_id for span in session.agent_spans],
                 session_ids=[session.session_id],
             )
 
@@ -86,6 +79,6 @@ class GoalSuccessRate(BaseMetric):
             category="application",
             app_name=session.app_name,
             entities_involved=entities_involved,
-            span_ids=workflow_span_ids,
+            span_ids=[span.span_id for span in session.agent_spans],
             session_ids=[session.session_id],
         )
