@@ -12,7 +12,11 @@ authors = [
 
 requires-python=">3.8"
 
-dependencies = []
+dependencies = [
+    "metrics-computation-engine",
+    "pandas>=2.3.2",
+    "pydantic>=2.11.7",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -38,6 +42,9 @@ IntentRecognitionAccuracy = "mce_metrics_plugin.session.intent_recognition_accur
 ResponseCompleteness = "mce_metrics_plugin.session.response_completeness:ResponseCompleteness"
 WorkflowCohesionIndex = "mce_metrics_plugin.session.workflow_cohesion_index:WorkflowCohesionIndex"
 WorkflowEfficiency = "mce_metrics_plugin.session.workflow_efficiency:WorkflowEfficiency"
+LLMAverageConfidence = "mce_metrics_plugin.session.llm_uncertainty_scores:LLMAverageConfidence"
+LLMMaximumConfidence = "mce_metrics_plugin.session.llm_uncertainty_scores:LLMMaximumConfidence"
+LLMMinimumConfidence = "mce_metrics_plugin.session.llm_uncertainty_scores:LLMMinimumConfidence"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mce_metrics_plugin"]
