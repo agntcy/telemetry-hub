@@ -25,7 +25,9 @@ class IntentRecognitionAccuracy(BaseMetric):
     Measures how well the assistant recognizes and responds to user intents.
     """
 
-    REQUIRED_PARAMETERS = {"IntentRecognitionAccuracy": ["input_query", "final_response"]}
+    REQUIRED_PARAMETERS = {
+        "IntentRecognitionAccuracy": ["input_query", "final_response"]
+    }
 
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()

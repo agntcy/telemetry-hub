@@ -23,9 +23,7 @@ class InformationRetention(BaseMetric):
     Measures how well information is retained across multiple interactions.
     """
 
-    REQUIRED_PARAMETERS = {
-        "InformationRetention": ["conversation_data"]
-    }
+    REQUIRED_PARAMETERS = {"InformationRetention": ["conversation_data"]}
 
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()

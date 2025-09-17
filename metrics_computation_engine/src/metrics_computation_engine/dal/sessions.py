@@ -37,7 +37,7 @@ def build_session_entity(session_id: str, spans: List[SpanEntity]) -> SessionEnt
 
     populate_conversation_elements(session)
     populate_tool_calls(session)
-    
+
     populate_e2e_attributes(session)
 
     return session
@@ -75,23 +75,34 @@ def populate_timing(session: SessionEntity) -> None:
     if end_times:
         session.end_time = str(max(end_times))
 
+
 def populate_e2e_attributes(session: SessionEntity) -> None:
     if not session.llm_spans:
         return
 
     # Use the latest invocation of the LLM which should maintain the whole chat history, use to extract the query and final responses respectively
     from datetime import datetime
-    latest_span = max(session.llm_spans, key=lambda x: datetime.fromisoformat(x.timestamp)).input_payload
-    indexes = {int(key.split('.')[2]) for key in latest_span.keys() if key.startswith('gen_ai.prompt.')}
-    
+
+    latest_span = max(
+        session.llm_spans, key=lambda x: datetime.fromisoformat(x.timestamp)
+    ).input_payload
+    indexes = {
+        int(key.split(".")[2])
+        for key in latest_span.keys()
+        if key.startswith("gen_ai.prompt.")
+    }
+
     input_query, final_response = None, None
     for i in indexes:
-        if f'gen_ai.prompt.{i}.role' in latest_span.keys() and latest_span[f'gen_ai.prompt.{i}.role'].lower() == 'system':
+        if (
+            f"gen_ai.prompt.{i}.role" in latest_span.keys()
+            and latest_span[f"gen_ai.prompt.{i}.role"].lower() == "system"
+        ):
             continue
-        if f'gen_ai.prompt.{i}.content' in latest_span.keys():
+        if f"gen_ai.prompt.{i}.content" in latest_span.keys():
             if not input_query:
-                input_query = latest_span[f'gen_ai.prompt.{i}.content']
-            final_response = latest_span[f'gen_ai.prompt.{i}.content']
+                input_query = latest_span[f"gen_ai.prompt.{i}.content"]
+            final_response = latest_span[f"gen_ai.prompt.{i}.content"]
 
     session.input_query = str(input_query)
     session.final_response = str(final_response)
@@ -274,4 +285,3 @@ def populate_tool_calls(session: SessionEntity) -> None:
         )
 
     session.tool_calls = tool_calls
-
