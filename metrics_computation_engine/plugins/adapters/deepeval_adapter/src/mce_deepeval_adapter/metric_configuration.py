@@ -16,6 +16,8 @@ from deepeval.metrics import (
 from deepeval.test_case import LLMTestCaseParams
 from mce_deepeval_adapter.geval_criteria import (
     COHERENCE_CRITERIA,
+    CRITERIA_CORRECTNESS,
+    CRITERIA_GENERAL_STRUCTURE,
     EVALUATION_STEPS_GROUNDEDNESS,
     EVALUATION_STEPS_TONALITY,
 )
@@ -24,7 +26,9 @@ from mce_deepeval_adapter.metric_test_case_creation import (
     DeepEvalTestCaseConversational,
     DeepEvalTestCaseLLM,
     DeepEvalTestCaseLLMWithTools,
+    LLMAnswerCorrectnessTestCase,
     LLMAnswerRelevancyTestCase,
+    LLMGeneralStructureAndStyleTestCase,
 )
 from pydantic import BaseModel, Field
 
@@ -165,5 +169,42 @@ def build_metric_configurations() -> List[MetricConfiguration]:
                 required_input_parameters=["input_payload", "output_payload"],
             ),
             metric_class=ToxicityMetric,
+        ),
+        MetricConfiguration(
+            metric_name="AnswerCorrectnessMetric",
+            test_case_calculator=LLMAnswerCorrectnessTestCase(),
+            requirements=MetricRequirements(
+                entity_type=["llm"],
+                aggregation_level="span",
+                required_input_parameters=["input_payload", "output_payload"],
+            ),
+            metric_class=GEval,
+            metric_class_arguments=dict(
+                name="AnswerCorrectness",
+                criteria=CRITERIA_CORRECTNESS,
+                evaluation_params=[
+                    LLMTestCaseParams.INPUT,
+                    LLMTestCaseParams.ACTUAL_OUTPUT,
+                    LLMTestCaseParams.EXPECTED_OUTPUT,
+                ],
+            ),
+        ),
+        MetricConfiguration(
+            metric_name="GeneralStructureAndStyleMetric",
+            test_case_calculator=LLMGeneralStructureAndStyleTestCase(),
+            requirements=MetricRequirements(
+                entity_type=["llm"],
+                aggregation_level="span",
+                required_input_parameters=["input_payload", "output_payload"],
+            ),
+            metric_class=GEval,
+            metric_class_arguments=dict(
+                name="GeneralStructureAndStyle",
+                criteria=CRITERIA_GENERAL_STRUCTURE,
+                evaluation_params=[
+                    LLMTestCaseParams.INPUT,
+                    LLMTestCaseParams.ACTUAL_OUTPUT,
+                ],
+            ),
         ),
     ]
