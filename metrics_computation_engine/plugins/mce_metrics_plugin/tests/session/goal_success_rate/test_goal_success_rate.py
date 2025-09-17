@@ -86,19 +86,19 @@ def make_llm_span(
     output_data: dict = None,
 ):
     default_input = {
-        'gen_ai.prompt.0.content': "You are a travel agent",
-        'gen_ai.prompt.0.role': 'system',
-        'gen_ai.prompt.1.content': 'Help me plan a trip to Paris',
-        'gen_ai.prompt.1.role': 'user'
+        "gen_ai.prompt.0.content": "You are a travel agent",
+        "gen_ai.prompt.0.role": "system",
+        "gen_ai.prompt.1.content": "Help me plan a trip to Paris",
+        "gen_ai.prompt.1.role": "user",
     }
-    
+
     default_output = {
-        'gen_ai.prompt.0.content': "You are a travel agent",
-        'gen_ai.prompt.0.role': 'system',
-        'gen_ai.prompt.1.content': 'Help me plan a trip to Paris',
-        'gen_ai.prompt.1.role': 'user',
-        'gen_ai.prompt.2.content': "I'd be happy to help you plan your trip to Paris! Here's a suggested itinerary...",
-        'gen_ai.prompt.2.role': 'user'
+        "gen_ai.prompt.0.content": "You are a travel agent",
+        "gen_ai.prompt.0.role": "system",
+        "gen_ai.prompt.1.content": "Help me plan a trip to Paris",
+        "gen_ai.prompt.1.role": "user",
+        "gen_ai.prompt.2.content": "I'd be happy to help you plan your trip to Paris! Here's a suggested itinerary...",
+        "gen_ai.prompt.2.role": "user",
     }
 
     return SpanEntity(
@@ -157,18 +157,18 @@ async def test_compute_with_mock_jury_successful_goal():
         make_llm_span(
             "llm_1",
             input_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'What is 2+2?',
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "What is 2+2?",
+                "gen_ai.prompt.1.role": "user",
             },
             output_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'What is 2+2?',
-                'gen_ai.prompt.1.role': 'user',
-                'gen_ai.prompt.1.content': '4',
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "What is 2+2?",
+                "gen_ai.prompt.1.role": "user",
+                "gen_ai.prompt.1.content": "4",
+                "gen_ai.prompt.1.role": "user",
             },
         ),
     ]
@@ -203,18 +203,18 @@ async def test_compute_with_mock_jury_failed_goal():
         make_llm_span(
             "llm_1",
             input_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'What is 2+2?',
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "What is 2+2?",
+                "gen_ai.prompt.1.role": "user",
             },
             output_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'What is 2+2?',
-                'gen_ai.prompt.1.role': 'user',
-                'gen_ai.prompt.1.content': 'Sorry I cannot perform that mathematical calculation.',
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "What is 2+2?",
+                "gen_ai.prompt.1.role": "user",
+                "gen_ai.prompt.1.content": "Sorry I cannot perform that mathematical calculation.",
+                "gen_ai.prompt.1.role": "user",
             },
         ),
     ]
@@ -244,18 +244,18 @@ async def test_compute_no_jury():
         make_llm_span(
             "llm_1",
             input_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'What is 2+2?',
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "What is 2+2?",
+                "gen_ai.prompt.1.role": "user",
             },
             output_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'What is 2+2?',
-                'gen_ai.prompt.1.role': 'user',
-                'gen_ai.prompt.1.content': '2+2=4',
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "What is 2+2?",
+                "gen_ai.prompt.1.role": "user",
+                "gen_ai.prompt.1.content": "2+2=4",
+                "gen_ai.prompt.1.role": "user",
             },
         ),
     ]
@@ -278,18 +278,18 @@ async def test_goal_success_rate_mock_end_to_end():
         make_llm_span(
             "llm_1",
             input_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'Can you help me write a Python function to calculate the area of a circle?',
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "Can you help me write a Python function to calculate the area of a circle?",
+                "gen_ai.prompt.1.role": "user",
             },
             output_data={
-                'gen_ai.prompt.0.content': "You are a math assistant",
-                'gen_ai.prompt.0.role': 'system',
-                'gen_ai.prompt.1.content': 'Can you help me write a Python function to calculate the area of a circle?',
-                'gen_ai.prompt.1.role': 'user',
-                'gen_ai.prompt.1.content': "Here's a Python function to calculate the area of a circle:\n\nimport math\n\ndef circle_area(radius):\n    return math.pi * radius ** 2\n\nThis function takes the radius as input and returns the area using the formula π × r².",
-                'gen_ai.prompt.1.role': 'user'
+                "gen_ai.prompt.0.content": "You are a math assistant",
+                "gen_ai.prompt.0.role": "system",
+                "gen_ai.prompt.1.content": "Can you help me write a Python function to calculate the area of a circle?",
+                "gen_ai.prompt.1.role": "user",
+                "gen_ai.prompt.1.content": "Here's a Python function to calculate the area of a circle:\n\nimport math\n\ndef circle_area(radius):\n    return math.pi * radius ** 2\n\nThis function takes the radius as input and returns the area using the formula π × r².",
+                "gen_ai.prompt.1.role": "user",
             },
         ),
         make_non_llm_span("agent", "agent_1"),
@@ -340,4 +340,3 @@ async def test_goal_success_rate_mock_end_to_end():
     assert len(goal_success_metric.span_id) > 0
     assert len(goal_success_metric.session_id) > 0
     assert "Mock evaluation" in goal_success_metric.reasoning
-
