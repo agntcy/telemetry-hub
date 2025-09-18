@@ -226,7 +226,7 @@ class DeepEvalMetricAdapter(BaseMetric):
                 reasoning="",
                 unit="",
                 aggregation_level=self.aggregation_level,
-                category=category,
+                category="application",
                 app_name=app_name,
                 span_id=[],
                 session_id=[],

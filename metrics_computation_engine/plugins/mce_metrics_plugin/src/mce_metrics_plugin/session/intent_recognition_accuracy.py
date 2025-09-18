@@ -88,7 +88,7 @@ class IntentRecognitionAccuracy(BaseMetric):
             return self._create_success_result(
                 score=score,
                 category="application",
-                source_name=session.app_name,
+                app_name=session.app_name,
                 reasoning=reasoning,
                 entities_involved=entities_involved,
                 span_ids=workflow_span_ids,
@@ -98,7 +98,7 @@ class IntentRecognitionAccuracy(BaseMetric):
         return self._create_error_result(
             error_message="No model available",
             category="application",
-            source_name=session.app_name,
+            app_name=session.app_name,
             entities_involved=entities_involved,
             span_ids=workflow_span_ids,
             session_ids=[session.session_id],

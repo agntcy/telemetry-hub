@@ -22,25 +22,25 @@ from metrics_computation_engine.metrics.session.agent_to_tool_interactions impor
 from metrics_computation_engine.metrics.session.cycles import CyclesCount
 
 # Import MCE Plugin Metrics
-from mce_metrics_plugin.session.component_conflict_rate.component_conflict_rate import (
+from mce_metrics_plugin.session import (
     ComponentConflictRate,
 )
-from mce_metrics_plugin.session.context_preservation.context_preservation import (
+from mce_metrics_plugin.session import (
     ContextPreservation,
 )
-from mce_metrics_plugin.session.goal_success_rate.goal_success_rate import (
+from mce_metrics_plugin.session import (
     GoalSuccessRate,
 )
-from mce_metrics_plugin.session.information_retention.information_retention import (
+from mce_metrics_plugin.session import (
     InformationRetention,
 )
-from mce_metrics_plugin.session.intent_recognition_accuracy.intent_recognition_accuracy import (
+from mce_metrics_plugin.session import (
     IntentRecognitionAccuracy,
 )
-from mce_metrics_plugin.session.response_completeness.response_completeness import (
+from mce_metrics_plugin.session import (
     ResponseCompleteness,
 )
-from mce_metrics_plugin.session.workflow_cohesion_index.workflow_cohesion_index import (
+from mce_metrics_plugin.session import (
     WorkflowCohesionIndex,
 )
 
