@@ -25,7 +25,9 @@ class IntentRecognitionAccuracy(BaseMetric):
     Measures how well the assistant recognizes and responds to user intents.
     """
 
-    REQUIRED_PARAMETERS = {"IntentRecognitionAccuracy": ["workflow_data"]}
+    REQUIRED_PARAMETERS = {
+        "IntentRecognitionAccuracy": ["input_query", "final_response"]
+    }
 
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()
@@ -59,17 +61,13 @@ class IntentRecognitionAccuracy(BaseMetric):
             session: SessionEntity with pre-computed workflow data
         """
         # Extract data directly from the session entity - much cleaner now
-        query = session.workflow_data.get("query", "") if session.workflow_data else ""
-        response = (
-            session.workflow_data.get("response", "") if session.workflow_data else ""
-        )
+        query = session.input_query
+        response = session.final_response
 
-        # Get workflow span IDs for metadata
-        workflow_span_ids = (
-            [span.span_id for span in session.workflow_spans]
-            if session.workflow_spans
-            else []
-        )
+        print("SESSION:", session.session_id)
+        print("INPUT:", session.input_query)
+        print("RESPONSE:", session.final_response)
+
         entities_involved = (
             [span.entity_name for span in session.agent_spans]
             if session.agent_spans
@@ -88,18 +86,18 @@ class IntentRecognitionAccuracy(BaseMetric):
             return self._create_success_result(
                 score=score,
                 category="application",
-                source_name=session.app_name,
+                app_name=session.app_name,
                 reasoning=reasoning,
                 entities_involved=entities_involved,
-                span_ids=workflow_span_ids,
+                span_ids=[span.span_id for span in session.agent_spans],
                 session_ids=[session.session_id],
             )
 
         return self._create_error_result(
             error_message="No model available",
             category="application",
-            source_name=session.app_name,
+            app_name=session.app_name,
             entities_involved=entities_involved,
-            span_ids=workflow_span_ids,
+            span_ids=[span.span_id for span in session.agent_spans],
             session_ids=[session.session_id],
         )
