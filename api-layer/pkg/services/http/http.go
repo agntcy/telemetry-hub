@@ -67,7 +67,7 @@ type EchoResponse map[string]interface{}
 // @Produce      json
 // @Param        start_time query string true "Start time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)" example("2023-06-25T15:04:05Z")
 // @Param        end_time query string true "End time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)" example("2023-06-25T18:04:05Z")
-// @Success		 200 {array} SessionID "List of session IDs with minimum timestamps" example([{"id": "session_abc123", "start_timestamp": "2023-06-25T15:30:00Z"}, {"id": "session_def456", "start_timestamp": "2023-06-25T16:15:00Z"}])
+// @Success		 200 {array} models.SessionsResponse "list of session IDs"
 // @Failure      400 {object} string "Bad request"
 // @Failure      500 {object} string "Internal server error"
 // @Router       /traces/sessions [get]
@@ -99,7 +99,11 @@ func (hs *HttpServer) Sessions(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(sessionIDs); err != nil {
+	response := models.SessionsResponse{
+		Data:  sessionIDs,
+		Total: len(sessionIDs),
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
 		return
 	}
