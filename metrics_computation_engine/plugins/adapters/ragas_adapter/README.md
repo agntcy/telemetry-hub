@@ -1,107 +1,101 @@
-# RAGAS Adapter for Metrics Computation Engine
+# MCE Ragas Adapter
 
-This plugin provides integration between the Metrics Computation Engine and [RAGAS](https://github.com/explodinggradients/ragas) (Retrieval Augmented Generation Assessment) metrics.
-
-## Overview
-
-The RAGAS adapter enables the use of RAGAS metrics within the MCE framework, specifically designed for evaluating RAG applications and conversational AI systems.
-
-## Supported Metrics
-
-- **TopicAdherenceScore**: Measures how well a conversation stays on topic
+A Python adapter library that integrates [Ragas](https://github.com/explodinggradients/ragas) metrics as third-party plugins for the [Metric Computation Engine (MCE)](https://github.com/agntcy/telemetry-hub/tree/main/metrics_computation_engine). This adapter enables seamless use of Ragas's LLM evaluation metrics within the MCE framework for evaluating agentic applications.
 
 ## Installation
 
-### Development Setup
-
 ```bash
-# From the plugin directory
-./dev-setup.sh
+pip install mce-ragas-adapter
 ```
 
-### Manual Installation
+## Prerequisites
 
-```bash
-# Install in development mode
-uv pip install -e .
+- [Metric Computation Engine (MCE)](https://github.com/agntcy/telemetry-hub/tree/main/metrics_computation_engine) installed
+- Agentic applications instrumented with [AGNTCY's observe SDK](https://github.com/agntcy/observe)
 
-# Or install specific dependencies
-uv pip install ragas>=0.2.0 langchain-openai langchain-core
-```
+## Supported Ragas Metrics
+
+The adapter supports a wide range of Ragas metrics, including but not limited to:
+
+- **TopicAdherenceScore** - Evaluates whether the model response adheres to the intended topic from the user request.
+
+For a complete list of supported metrics, refer to the Ragas documentation. Many metrics in this library will require context which this adapter does not yet support. As we confirm compatibility of metrics, we will add it to the above list.
 
 ## Usage
 
 ### Basic Usage
 
 ```python
+import asyncio
+from mce_ragas_adapter.adapter import RagasMetricAdapter
+from metrics_computation_engine.models.requests import LLMJudgeConfig
 from metrics_computation_engine.registry import MetricRegistry
 
-# Register the RAGAS adapter
-registry = MetricRegistry()
-registry.register_metric("ragas.TopicAdherenceScore")
-
-# Use with processor
-processor = MetricsProcessor(registry=registry)
-results = await processor.compute_metrics(traces_by_session)
-```
-
-### Configuration
-
-The RAGAS adapter requires LLM configuration:
-
-```python
-from metrics_computation_engine.models.requests import LLMJudgeConfig
-
+# Initialize LLM configuration
 llm_config = LLMJudgeConfig(
-    LLM_MODEL_NAME="gpt-4o-mini",
-    LLM_API_KEY="your-api-key",
-    LLM_BASE_MODEL_URL="https://api.openai.com/v1"
+    LLM_BASE_MODEL_URL="https://api.openai.com/v1",
+    LLM_MODEL_NAME="gpt-4o",
+    LLM_API_KEY="your-api-key-here"
 )
+
+# Create registry and register Ragas metrics
+registry = MetricRegistry()
+
+# Method 1: Direct registration with metric name
+registry.register_metric(RagasMetricAdapter, "TopicAdherenceScore")
+
+# Method 2: Using get_metric_class helper with prefix
+from metrics_computation_engine.util import get_metric_class
+metric, metric_name = get_metric_class("ragas.TopicAdherenceScore")
+registry.register_metric(metric, metric_name)
 ```
 
-## Metric Details
+### Using with MCE REST API
 
-### TopicAdherenceScore
+When using the MCE as a service, include Ragas metrics in your API request:
 
-- **Type**: Session-level metric
-- **Aggregation Level**: session
-- **Required Entity Types**: llm
-- **Description**: Evaluates how well a multi-turn conversation maintains focus on specified reference topics
-- **Output**: Float score between 0.0 and 1.0
+```json
+{
+  "metrics": [
+    "ragas.TopicAdherenceScore"
+  ],
+  "llm_judge_config": {
+    "LLM_API_KEY": "your-api-key",
+    "LLM_MODEL_NAME": "gpt-4o",
+    "LLM_BASE_MODEL_URL": "https://api.openai.com/v1"
+  },
+  "batch_config": {
+    "num_sessions": 10
+  }
+}
+```
 
-## Dependencies
+## Configuration
 
-- `ragas>=0.2.0`: Core RAGAS library
-- `langchain-openai`: LLM integration
-- `langchain-core`: Core LangChain functionality
+### Environment Variables
 
-## Development
-
-### Running Tests
+Set up your environment variables for LLM access:
 
 ```bash
-pytest tests/
+# .env file
+LLM_BASE_MODEL_URL=https://api.openai.com/v1
+LLM_MODEL_NAME=gpt-4o
+LLM_API_KEY=sk-your-openai-api-key
 ```
 
-### Code Formatting
+## Supported Aggregation Levels
 
-```bash
-black src/ tests/
-```
+The adapter maps Ragas metrics to different aggregation levels:
 
-### Type Checking
-
-```bash
-mypy src/
-```
+- **Span Level**: Evaluate individual agent interactions or tool calls
+- **Session Level**: Evaluate complete conversation sessions
 
 ## Contributing
 
-1. Follow the existing code style and patterns
-2. Add tests for new functionality
-3. Update documentation as needed
-4. Ensure all tests pass before submitting
+Contributions are welcome! Please follow these steps to contribute:
 
-## License
-
-Apache License 2.0 - see the main project LICENSE file for details.
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Commit your changes (`git commit -am 'Add new feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Create a new Pull Request.

@@ -20,7 +20,8 @@ class OpikMetricAdapter(BaseMetric):
     Adapter to integrate Opik metrics as 3rd party plugins into the MCE.
     """
 
-    REQUIRED_PARAMETERS = {"Hallucination": ["input_payload", "output_payload"]}
+    REQUIRED_PARAMETERS = {"Hallucination": ["input_payload", "output_payload"],
+                           "Sentiment": ["output_payload"]}
 
     def __init__(self, opik_metric_name: str):
         super().__init__()
@@ -30,6 +31,7 @@ class OpikMetricAdapter(BaseMetric):
         self.aggregation_level: AggregationLevel = "span"
         self.model = None
         self.required = {"entity_type": ["llm"]}
+        self.type = "judge"
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME
@@ -42,7 +44,11 @@ class OpikMetricAdapter(BaseMetric):
             opik_metric_cls = getattr(module, self.opik_metric_name, None)
             if opik_metric_cls is None:
                 return False
-            self.opik_metric = opik_metric_cls(model=model)
+            if 'heuristics' in str(opik_metric_cls):
+                self.type = 'heuristics'
+                self.opik_metric = opik_metric_cls()
+            else:
+                self.opik_metric = opik_metric_cls(model=model)
             return True
         except Exception:
             return False
@@ -83,10 +89,7 @@ class OpikMetricAdapter(BaseMetric):
             elif isinstance(data.input_payload, dict):
                 # Try to extract input from common keys
                 params["input"] = (
-                    data.input_payload.get("input")
-                    or data.input_payload.get("question")
-                    or data.input_payload.get("query")
-                    or str(data.input_payload)
+                    str(data.input_payload)
                 )
             else:
                 params["input"] = str(data.input_payload)
@@ -97,10 +100,7 @@ class OpikMetricAdapter(BaseMetric):
             elif isinstance(data.output_payload, dict):
                 # Try to extract output from common keys
                 params["output"] = (
-                    data.output_payload.get("output")
-                    or data.output_payload.get("answer")
-                    or data.output_payload.get("response")
-                    or str(data.output_payload)
+                    str(data.output_payload)
                 )
             else:
                 params["output"] = str(data.output_payload)
@@ -184,7 +184,10 @@ class OpikMetricAdapter(BaseMetric):
                     **opik_params
                 )
             else:
-                result: score_result.ScoreResult = self.opik_metric.score(**opik_params)
+                if self.type == 'heuristics':
+                    result: score_result.ScoreResult = self.opik_metric.score(output=opik_params['output'])
+                else:
+                    result: score_result.ScoreResult = self.opik_metric.score(**opik_params)
 
             # Extract metadata from the result
             metadata = {

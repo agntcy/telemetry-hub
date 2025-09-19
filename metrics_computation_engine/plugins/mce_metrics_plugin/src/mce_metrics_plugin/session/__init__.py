@@ -13,7 +13,7 @@ from .intent_recognition_accuracy import IntentRecognitionAccuracy
 from .response_completeness import ResponseCompleteness
 from .workflow_cohesion_index import WorkflowCohesionIndex
 from .workflow_efficiency import WorkflowEfficiency
-from .uncertainty_scores import (
+from .llm_uncertainty_scores import (
     LLMAverageConfidence,
     LLMMaximumConfidence,
     LLMMinimumConfidence,
