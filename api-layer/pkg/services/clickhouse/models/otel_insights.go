@@ -51,3 +51,9 @@ type AGPMetrics struct {
 	Attributes map[string]string `json:"span_attributes"`
 	Timestamp  string            `json:"timestamp"`
 }
+
+// SessionsResponse represents the paginated response for /traces/sessions endpoint
+type SessionsResponse struct {
+	Data  []SessionUniqueID `json:"data"`
+	Total int               `json:"total"`
+}

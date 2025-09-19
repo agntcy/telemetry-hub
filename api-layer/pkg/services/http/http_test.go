@@ -344,10 +344,10 @@ func TestSessions(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
-		var response []models.SessionUniqueID
+		var response models.SessionsResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, expectedSessions, response)
+		assert.Equal(t, expectedSessions, response.Data)
 
 		mockDataService.AssertExpectations(t)
 	})
