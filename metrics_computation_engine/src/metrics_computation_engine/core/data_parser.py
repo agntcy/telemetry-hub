@@ -172,9 +172,9 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
                 contains_error = True
 
         # Final safety check: ensure payloads are dictionaries or None
-        if isinstance(output_payload, str):
+        if isinstance(output_payload, str) or isinstance(output_payload, list):
             output_payload = {"value": output_payload}
-        if isinstance(input_payload, str):
+        if isinstance(input_payload, str) or isinstance(input_payload, list):
             input_payload = {"value": input_payload}
 
         span_entity = SpanEntity(

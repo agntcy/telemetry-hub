@@ -63,7 +63,7 @@ class ComponentConflictRate(BaseMetric):
         prompt = COMPONENT_CONFLICT_RATE_PROMPT.format(conversation=conversation)
 
         if self.jury:
-            score, reasoning = self.jury.judge(prompt, BinaryGrading)
+            score, reasoning = await self.jury.judge(prompt, BinaryGrading)
 
             return self._create_success_result(
                 score=score,

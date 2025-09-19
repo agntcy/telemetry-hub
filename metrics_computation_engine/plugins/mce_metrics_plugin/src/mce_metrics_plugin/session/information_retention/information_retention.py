@@ -76,7 +76,7 @@ class InformationRetention(BaseMetric):
         prompt = INFORMATION_RETENTION_PROMPT.format(responses=responses)
 
         if self.jury:
-            score, reasoning = self.jury.judge(prompt, BinaryGrading)
+            score, reasoning = await self.jury.judge(prompt, BinaryGrading)
             return self._create_success_result(
                 score=score,
                 category="application",

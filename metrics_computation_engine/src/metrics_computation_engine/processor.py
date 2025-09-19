@@ -30,20 +30,22 @@ class MetricsProcessor:
         self.dataset = dataset
         self.llm_config = llm_config
         self.model_handler = model_handler
+        self.semaphore = asyncio.Semaphore(10)
 
     async def _safe_compute(self, metric: BaseMetric, data: Any) -> MetricResult:
         """Safely compute metric with error handling"""
-        try:
-            result = await metric.compute(data)
-            return result
-        except Exception as e:
-            # Return error result instead of crashing
-            return MetricResult(
-                metric_name=metric.name,
-                value=-1,
-                error_message=str(e),
-                aggregation_level=metric.aggregation_level,
-            )
+        async with self.semaphore:
+            try:
+                result = await metric.compute(data)
+                return result
+            except Exception as e:
+                # Return error result instead of crashing
+                return MetricResult(
+                    metric_name=metric.name,
+                    value=-1,
+                    error_message=str(e),
+                    aggregation_level=metric.aggregation_level,
+                )
 
     async def _initialize_metric(self, metric_name: str, metric_class) -> BaseMetric:
         """Initialize a metric with its required model"""

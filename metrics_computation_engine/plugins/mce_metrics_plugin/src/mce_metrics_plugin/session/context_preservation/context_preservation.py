@@ -66,7 +66,7 @@ class ContextPreservation(BaseMetric):
         prompt = CONTEXT_PRESERVATION_PROMPT.format(conversation=conversation)
 
         if self.jury:
-            score, reasoning = self.jury.judge(prompt, BinaryGrading)
+            score, reasoning = await self.jury.judge(prompt, BinaryGrading)
             return self._create_success_result(
                 score=score,
                 category="application",

@@ -65,7 +65,7 @@ class Groundedness(BaseMetric):
                 )
 
                 prompt = GROUNDEDNESS_PROMPT.format(conversation=conversation)
-                score, reasoning = self.jury.judge(prompt, BinaryGrading)
+                score, reasoning = await self.jury.judge(prompt, BinaryGrading)
 
                 # Get relevant span IDs for metadata
                 agent_span_ids = (

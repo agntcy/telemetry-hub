@@ -49,7 +49,7 @@ class Jury:
 
         return {"metric_score": cons_score, "score_reasoning": feedback}
 
-    def judge(self, prompt: str, response_format: Any = None, mode="default"):
+    async def judge(self, prompt: str, response_format: Any = None, mode="default"):
         query_params = {"response_format": {"type": "json_object"}}
         judge_prompt = self.augment_prompt_with_schema(prompt, response_format)
 

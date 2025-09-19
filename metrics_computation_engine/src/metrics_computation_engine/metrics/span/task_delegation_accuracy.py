@@ -62,7 +62,7 @@ class TaskDelegationAccuracy(BaseMetric):
                 agent_input=data.input_payload, agent_output=data.output_payload
             )
 
-            score, reasoning = self.jury.judge(prompt, BinaryGrading)
+            score, reasoning = await self.jury.judge(prompt, BinaryGrading)
             return self._create_success_result(
                 score,
                 category="agent",
