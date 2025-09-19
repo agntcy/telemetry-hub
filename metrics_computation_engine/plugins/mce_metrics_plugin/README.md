@@ -5,7 +5,7 @@ A comprehensive collection of extended MCE Evaluation Metrics for the [Metric Co
 ## Features
 
 - **Advanced LLM-as-a-Judge Evaluations**: Sophisticated prompting techniques for qualitative assessment
-- **Session-Level Analysis**: Comprehensive evaluation of complete agent interactions  
+- **Session-Level Analysis**: Comprehensive evaluation of complete agent interactions
 - **Workflow Assessment**: Metrics focused on agent workflow efficiency and cohesion
 - **Contextual Understanding**: Evaluation of context preservation and information retention
 - **Goal-Oriented Metrics**: Assessment of goal achievement and intent recognition
@@ -24,7 +24,7 @@ pip install mce_metrics_plugin
 
 ## Available Metrics
 
-All metrics operate at the **session level**, providing comprehensive evaluation throughout agent workflows. 
+All metrics operate at the **session level**, providing comprehensive evaluation throughout agent workflows.
 
 ### MCE Plugin Evaluation Metrics (MCE Plugin)
 
@@ -74,7 +74,7 @@ from mce_metrics_plugin.session import (
 async def evaluate_with_plugin():
     # Setup registry and register metrics
     registry = MetricRegistry()
-    
+
     # Register plugin metrics directly by class
     session_metrics = [
         GoalSuccessRate,
@@ -85,17 +85,17 @@ async def evaluate_with_plugin():
         InformationRetention,
         IntentRecognitionAccuracy,
     ]
-    
+
     for metric in session_metrics:
         registry.register_metric(metric)
-    
+
     # Configure LLM for judge-based metrics
     llm_config = LLMJudgeConfig(
         LLM_BASE_MODEL_URL="https://api.openai.com/v1",
         LLM_MODEL_NAME="gpt-4o",
         LLM_API_KEY="your-api-key-here"
     )
-    
+
     # Process metrics
     model_handler = ModelHandler()
     processor = MetricsProcessor(
@@ -103,10 +103,10 @@ async def evaluate_with_plugin():
         registry=registry,
         llm_config=llm_config
     )
-    
+
     # Load your session data
     # traces_by_session = load_your_session_data()
-    
+
     results = await processor.compute_metrics(traces_by_session)
     return results
 ```
@@ -183,7 +183,7 @@ class YourCustomMetric(BaseMetric):
         super().__init__()
         self.name = "YourCustomMetric"
         self.aggregation_level = "session"
-    
+
     async def compute(self, data: SessionEntity) -> MetricResult:
         # Implement your metric logic
         pass

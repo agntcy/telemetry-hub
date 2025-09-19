@@ -20,8 +20,10 @@ class OpikMetricAdapter(BaseMetric):
     Adapter to integrate Opik metrics as 3rd party plugins into the MCE.
     """
 
-    REQUIRED_PARAMETERS = {"Hallucination": ["input_payload", "output_payload"],
-                           "Sentiment": ["output_payload"]}
+    REQUIRED_PARAMETERS = {
+        "Hallucination": ["input_payload", "output_payload"],
+        "Sentiment": ["output_payload"],
+    }
 
     def __init__(self, opik_metric_name: str):
         super().__init__()
@@ -44,8 +46,8 @@ class OpikMetricAdapter(BaseMetric):
             opik_metric_cls = getattr(module, self.opik_metric_name, None)
             if opik_metric_cls is None:
                 return False
-            if 'heuristics' in str(opik_metric_cls):
-                self.type = 'heuristics'
+            if "heuristics" in str(opik_metric_cls):
+                self.type = "heuristics"
                 self.opik_metric = opik_metric_cls()
             else:
                 self.opik_metric = opik_metric_cls(model=model)
@@ -88,9 +90,7 @@ class OpikMetricAdapter(BaseMetric):
                 params["input"] = data.input_payload
             elif isinstance(data.input_payload, dict):
                 # Try to extract input from common keys
-                params["input"] = (
-                    str(data.input_payload)
-                )
+                params["input"] = str(data.input_payload)
             else:
                 params["input"] = str(data.input_payload)
 
@@ -99,9 +99,7 @@ class OpikMetricAdapter(BaseMetric):
                 params["output"] = data.output_payload
             elif isinstance(data.output_payload, dict):
                 # Try to extract output from common keys
-                params["output"] = (
-                    str(data.output_payload)
-                )
+                params["output"] = str(data.output_payload)
             else:
                 params["output"] = str(data.output_payload)
 
@@ -184,10 +182,14 @@ class OpikMetricAdapter(BaseMetric):
                     **opik_params
                 )
             else:
-                if self.type == 'heuristics':
-                    result: score_result.ScoreResult = self.opik_metric.score(output=opik_params['output'])
+                if self.type == "heuristics":
+                    result: score_result.ScoreResult = self.opik_metric.score(
+                        output=opik_params["output"]
+                    )
                 else:
-                    result: score_result.ScoreResult = self.opik_metric.score(**opik_params)
+                    result: score_result.ScoreResult = self.opik_metric.score(
+                        **opik_params
+                    )
 
             # Extract metadata from the result
             metadata = {

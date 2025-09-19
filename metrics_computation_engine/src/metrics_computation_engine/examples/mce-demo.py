@@ -16,7 +16,7 @@ from metrics_computation_engine.core.data_parser import parse_raw_spans
 from metrics_computation_engine.metrics.session import (
     AgentToAgentInteractions,
     AgentToToolInteractions,
-    CyclesCount
+    CyclesCount,
 )
 
 # Import MCE Plugin Metrics

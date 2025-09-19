@@ -87,8 +87,8 @@ class DeepEvalTestCaseConversational(AbstractTestCaseCalculator):
         turns = []
         for element in data.conversation_elements:
             role = element.role
-            if role not in ['user', 'assistant']:
-                role = 'assistant'
+            if role not in ["user", "assistant"]:
+                role = "assistant"
             turns.append(Turn(role=role, content=element.content))
 
         return ConversationalTestCase(chatbot_role=chatbot_role, turns=turns)

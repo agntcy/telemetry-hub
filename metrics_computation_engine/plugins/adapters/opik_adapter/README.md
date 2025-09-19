@@ -19,7 +19,7 @@ The adapter supports a wide range of Opik metrics, including but not limited to:
 
 - **Hallucination** - Evaluates whether the model response contains hallucinations
 - **Usefulness** - Evaluates the usefulness of a model response
-- **Sentiment** - Measures the sentiment of a model response 
+- **Sentiment** - Measures the sentiment of a model response
 
 For a complete list of supported metrics, refer to the Opik documentation. Many metrics in this library will require which this adapter does not yet support. As we confirm compatibility of metrics, we will add it to the above list.
 
