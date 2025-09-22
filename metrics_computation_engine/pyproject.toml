@@ -27,7 +27,6 @@ dependencies = [
     "click>=8.0.0",
     "python-dotenv>=1.0.0",
     "requests>=2.28.0",
-    "deepeval>=0.20.0",
     "openai==1.99.9",
     "anthropic>=0.20.0",
     "google-generativeai>=0.3.0",
@@ -42,11 +41,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Testing dependencies
 test = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "httpx>=0.24.0",
 ]
+
+# Development dependencies
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -54,6 +56,37 @@ dev = [
     "black>=23.0.0",
     "isort>=5.12.0",
     "flake8>=6.0.0",
+]
+
+# Individual adapter options
+deepeval = [
+    "mce-deepeval-adapter>=0.1.0",
+]
+ragas = [
+    "mce-ragas-adapter>=0.1.0",
+]
+opik = [
+    "mce-opik-adapter>=0.1.0",
+]
+
+# Individual plugin option
+metrics-plugin = [
+    "mce_metrics_plugin>=0.1.0",
+]
+
+# Combined options
+adapters = [
+    "mce-deepeval-adapter>=0.1.0",
+    "mce-ragas-adapter>=0.1.0",
+    "mce-opik-adapter>=0.1.0",
+]
+
+# Everything - complete evaluation platform
+all = [
+    "mce-deepeval-adapter>=0.1.0",
+    "mce-ragas-adapter>=0.1.0",
+    "mce-opik-adapter>=0.1.0",
+    "mce_metrics_plugin>=0.1.0",
 ]
 
 [project.scripts]
