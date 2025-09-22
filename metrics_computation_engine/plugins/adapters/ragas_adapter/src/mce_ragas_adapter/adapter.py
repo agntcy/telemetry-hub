@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any, Tuple
+from typing import Any, Tuple, Dict
 import importlib
 
 # These imports will be available in the runtime environment
@@ -18,6 +18,7 @@ from .model_loader import (
     MODEL_PROVIDER_NAME,
     load_model,
 )
+from .metric_configuration import MetricConfiguration, build_metric_configuration_map
 
 # Set up logger using MCE's standard pattern
 logger = setup_logger(__name__)
@@ -30,6 +31,10 @@ class RagasAdapter(BaseMetric):
 
     def __init__(self, ragas_metric_name: str, mode: str = "precision"):
         super().__init__()
+        
+        metric_configuration_map: Dict[str, MetricConfiguration] = (
+            build_metric_configuration_map()
+        )
 
         # Handle extended naming convention where the full dotted name might be passed
         if "." in ragas_metric_name and ragas_metric_name.count(".") >= 2:
@@ -65,12 +70,25 @@ class RagasAdapter(BaseMetric):
             self.ragas_metric_name = ragas_metric_name
             self.mode = mode
 
-        # Validate final mode
-        valid_modes = ["precision", "recall", "f1"]
-        if self.mode not in valid_modes:
+        # Get metric configuration from centralized system
+        if self.ragas_metric_name not in metric_configuration_map:
+            supported_metrics = sorted(metric_configuration_map.keys())
             raise ValueError(
-                f"Invalid mode '{self.mode}'. Must be one of: {valid_modes}"
+                f"Supported metrics are {supported_metrics},"
+                f" but `{self.ragas_metric_name}` was given."
             )
+
+        self.metric_configuration: MetricConfiguration = metric_configuration_map[
+            self.ragas_metric_name
+        ]
+
+        # Validate mode support if specified in configuration
+        if self.metric_configuration.mode_support:
+            if self.mode not in self.metric_configuration.mode_support:
+                raise ValueError(
+                    f"Invalid mode '{self.mode}' for metric '{self.ragas_metric_name}'. "
+                    f"Must be one of: {self.metric_configuration.mode_support}"
+                )
 
         self.name = (
             f"{self.ragas_metric_name}_{self.mode}"
@@ -80,20 +98,16 @@ class RagasAdapter(BaseMetric):
         self.ragas_metric = None
         self.model = None
 
+        # Use configuration from centralized system
+        self.aggregation_level: AggregationLevel = (
+            self.metric_configuration.requirements.aggregation_level
+        )
+        self.required = {"entity_type": self.metric_configuration.requirements.entity_type}
+
         # Debug: Log final configuration
         logger.info(
             f"RagasAdapter final config: metric='{self.ragas_metric_name}', mode='{self.mode}', name='{self.name}'"
         )
-
-        # Mapping of RAGAS metrics to their data conversion methods
-        self.RAGAS_METRIC_MAP = {
-            "TopicAdherenceScore": self.create_ragas_multi_turn_sample,
-        }
-
-        # For TopicAdherenceScore, we need session-level data (conversation flow)
-        if self.ragas_metric_name == "TopicAdherenceScore":
-            self.aggregation_level: AggregationLevel = "session"
-            self.required = {"entity_type": ["llm"]}
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME
@@ -166,207 +180,6 @@ class RagasAdapter(BaseMetric):
         except Exception:
             return False
 
-    def create_ragas_multi_turn_sample(self, data: list[SpanEntity]):
-        """
-        Convert SpanEntity list to RAGAS MultiTurnSample format.
-        Enhanced with NumPy compatibility fixes for RAGAS v0.3.2.
-        """
-        try:
-            from ragas.dataset_schema import MultiTurnSample
-            from ragas.messages import HumanMessage, AIMessage
-        #            from ragas.messages import HumanMessage, AIMessage, ToolMessage, ToolCall
-        except ImportError:
-            raise ImportError(
-                "RAGAS library not installed. Please install with: pip install ragas"
-            )
-
-        # Sort spans by timestamp to maintain conversation order
-        sorted_spans = sorted(data, key=lambda span: span.timestamp)
-        llm_spans = [span for span in sorted_spans if span.entity_type == "llm"]
-
-        logger.info(
-            f"RAGAS DEBUG: Total spans: {len(data)}, LLM spans: {len(llm_spans)}"
-        )
-
-        # Debug: Show all entity types present
-        entity_types = [span.entity_type for span in sorted_spans]
-        logger.info(f"RAGAS DEBUG: Entity types found: {set(entity_types)}")
-
-        if not llm_spans:
-            logger.warning("RAGAS DEBUG: No LLM spans found in the data")
-            # Let's also check what spans we do have
-            for i, span in enumerate(sorted_spans[:3]):
-                logger.warning(
-                    f"RAGAS DEBUG: Span {i} - type: {span.entity_type}, has input: {bool(span.input_payload)}, has output: {bool(span.output_payload)}"
-                )
-            raise ValueError("No LLM spans found in the data")
-
-        # Extract conversation flow from LLM spans
-        conversation_messages = []
-        reference_topics = []
-
-        for i, span in enumerate(llm_spans):
-            input_payload = span.input_payload
-            output_payload = span.output_payload
-
-            logger.info(f"RAGAS DEBUG: === Span {i} Analysis ===")
-            logger.info(
-                f"RAGAS DEBUG: Span {i} input_keys: {list(input_payload.keys()) if input_payload else 'None'}"
-            )
-            logger.info(
-                f"RAGAS DEBUG: Span {i} output_keys: {list(output_payload.keys()) if output_payload else 'None'}"
-            )
-
-            # Show sample input payload content
-            if input_payload:
-                logger.info(f"RAGAS DEBUG: Span {i} input payload sample:")
-                for key, value in list(input_payload.items())[:10]:  # First 10 items
-                    value_preview = (
-                        str(value)[:100] + "..."
-                        if len(str(value)) > 100
-                        else str(value)
-                    )
-                    logger.info(f"RAGAS DEBUG:   {key}: {value_preview}")
-
-            # Show sample output payload content
-            if output_payload:
-                logger.info(f"RAGAS DEBUG: Span {i} output payload sample:")
-                for key, value in list(output_payload.items())[:10]:  # First 10 items
-                    value_preview = (
-                        str(value)[:100] + "..."
-                        if len(str(value)) > 100
-                        else str(value)
-                    )
-                    logger.info(f"RAGAS DEBUG:   {key}: {value_preview}")
-
-            if not input_payload or not output_payload:
-                logger.info(f"RAGAS DEBUG: Span {i} skipped - missing payload")
-                continue
-
-            # Extract number of turns in the conversation
-            try:
-                prompt_keys = [
-                    key
-                    for key in input_payload.keys()
-                    if key.startswith("gen_ai.prompt")
-                ]
-                logger.info(f"RAGAS DEBUG: Span {i} found prompt keys: {prompt_keys}")
-
-                num_turns = len(
-                    set([message_key.split(".")[2] for message_key in prompt_keys])
-                )
-                logger.info(f"RAGAS DEBUG: Span {i} extracted num_turns: {num_turns}")
-            except Exception as e:
-                logger.info(f"RAGAS DEBUG: Span {i} failed to extract turns: {e}")
-                num_turns = 1
-
-            # Build conversation from input payload
-            messages_found_this_span = 0
-            logger.info(
-                f"RAGAS DEBUG: Span {i} building conversation for {num_turns} turns"
-            )
-
-            for n in range(num_turns):
-                role_key = f"gen_ai.prompt.{n}.role"
-                content_key = f"gen_ai.prompt.{n}.content"
-
-                logger.info(
-                    f"RAGAS DEBUG: Span {i} turn {n} - looking for keys: {role_key}, {content_key}"
-                )
-
-                has_role = role_key in input_payload
-                has_content = content_key in input_payload
-                logger.info(
-                    f"RAGAS DEBUG: Span {i} turn {n} - has_role: {has_role}, has_content: {has_content}"
-                )
-
-                if has_role and has_content:
-                    role = input_payload[role_key]
-                    content = input_payload[content_key]
-
-                    if role == "user":
-                        conversation_messages.append(HumanMessage(content=content))
-                        messages_found_this_span += 1
-                        logger.info(
-                            f"RAGAS DEBUG: Span {i} turn {n} - added HumanMessage"
-                        )
-                    elif role == "assistant":
-                        conversation_messages.append(AIMessage(content=content))
-                        messages_found_this_span += 1
-                        logger.info(f"RAGAS DEBUG: Span {i} turn {n} - added AIMessage")
-                    else:
-                        logger.info(
-                            f"RAGAS DEBUG: Span {i} turn {n} - unknown role '{role}', skipped"
-                        )
-
-            # Add AI response from output payload
-            completion_key = "gen_ai.completion.0.content"
-            logger.info(
-                f"RAGAS DEBUG: Span {i} looking for completion key: {completion_key}"
-            )
-            logger.info(
-                f"RAGAS DEBUG: Span {i} has completion: {completion_key in output_payload}"
-            )
-
-            if completion_key in output_payload:
-                ai_response = output_payload[completion_key]
-                logger.info(
-                    f"RAGAS DEBUG: Span {i} found completion: '{str(ai_response)[:50]}...'"
-                )
-                conversation_messages.append(AIMessage(content=ai_response))
-                messages_found_this_span += 1
-                logger.info(f"RAGAS DEBUG: Span {i} - added completion AIMessage")
-
-            logger.info(
-                f"RAGAS DEBUG: Span {i} extracted {messages_found_this_span} messages total"
-            )
-
-        # For TopicAdherenceScore, we need reference topics
-        # These could be extracted from metadata or configured
-        # For now, using a default set - in real implementation, this should be configurable
-        reference_topics = ["technology", "science", "business", "math"]
-
-        # Validate conversation messages to prevent NumPy type errors
-        if not conversation_messages:
-            raise ValueError("No conversation messages found in the data")
-
-        # Ensure all message content is properly typed as strings
-        validated_messages = []
-        for msg in conversation_messages:
-            if hasattr(msg, "content") and msg.content:
-                # Ensure content is a proper string type
-                validated_content = str(msg.content).strip()
-                if validated_content:
-                    if isinstance(msg, HumanMessage):
-                        validated_messages.append(
-                            HumanMessage(content=validated_content)
-                        )
-                    elif isinstance(msg, AIMessage):
-                        validated_messages.append(AIMessage(content=validated_content))
-
-        if not validated_messages:
-            raise ValueError("No valid messages found after validation")
-
-        # Ensure reference topics are proper string types
-        validated_reference_topics = [
-            str(topic).strip() for topic in reference_topics if topic
-        ]
-
-        logger.info(
-            f"RAGAS DEBUG: Final - Original messages: {len(conversation_messages)}, Validated messages: {len(validated_messages)}"
-        )
-        for i, msg in enumerate(validated_messages[:3]):  # Show first 3 messages
-            logger.info(
-                f"RAGAS DEBUG: Message {i}: {type(msg).__name__} - {str(msg.content)[:100]}..."
-            )
-
-        logger.debug(
-            f"Creating MultiTurnSample with {len(validated_messages)} messages and {len(validated_reference_topics)} topics"
-        )
-
-        return MultiTurnSample(
-            user_input=validated_messages, reference_topics=validated_reference_topics
-        )
 
     async def _assess_input_data(
         self, data: SpanEntity | list[SpanEntity] | Any
@@ -466,12 +279,9 @@ class RagasAdapter(BaseMetric):
             )
 
         try:
-            # Extract spans from SessionEntity
-            spans_data = data.spans
-
-            # Convert data to RAGAS format using the correct method from RAGAS_METRIC_MAP
-            conversion_method = self.RAGAS_METRIC_MAP[self.ragas_metric_name]
-            sample = conversion_method(data=spans_data)
+            # Convert data to RAGAS format using the centralized test case calculator
+            test_case_calculator = self.metric_configuration.test_case_calculator
+            sample = test_case_calculator.calculate_test_case(data=data)
 
             # DEBUG: RAGAS metric inspection
             logger.info(f"DEBUG: RAGAS metric type: {type(self.ragas_metric)}")

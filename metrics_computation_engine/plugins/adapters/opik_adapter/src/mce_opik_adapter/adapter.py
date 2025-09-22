@@ -1,4 +1,4 @@
-from typing import Tuple, Any
+from typing import Tuple, Any, Dict
 import importlib
 
 from opik.evaluation.metrics import score_result
@@ -13,6 +13,7 @@ from .model_loader import (
     MODEL_PROVIDER_NAME,
     load_model,
 )
+from .metric_configuration import MetricConfiguration, build_metric_configuration_map
 
 
 class OpikMetricAdapter(BaseMetric):
@@ -20,16 +21,33 @@ class OpikMetricAdapter(BaseMetric):
     Adapter to integrate Opik metrics as 3rd party plugins into the MCE.
     """
 
-    REQUIRED_PARAMETERS = {"Hallucination": ["input_payload", "output_payload"]}
-
     def __init__(self, opik_metric_name: str):
         super().__init__()
+        
+        metric_configuration_map: Dict[str, MetricConfiguration] = (
+            build_metric_configuration_map()
+        )
+        
+        if opik_metric_name not in metric_configuration_map:
+            supported_metrics = sorted(metric_configuration_map.keys())
+            raise ValueError(
+                f"Supported metrics are {supported_metrics},"
+                f" but `{opik_metric_name}` was given."
+            )
+
         self.opik_metric_name = opik_metric_name
         self.name = opik_metric_name
         self.opik_metric = None
-        self.aggregation_level: AggregationLevel = "span"
         self.model = None
-        self.required = {"entity_type": ["llm"]}
+        
+        # Use configuration from centralized system
+        self.metric_configuration: MetricConfiguration = metric_configuration_map[
+            opik_metric_name
+        ]
+        self.aggregation_level: AggregationLevel = (
+            self.metric_configuration.requirements.aggregation_level
+        )
+        self.required = {"entity_type": self.metric_configuration.requirements.entity_type}
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME
@@ -67,55 +85,6 @@ class OpikMetricAdapter(BaseMetric):
         except Exception:
             return False
 
-    def extract_opik_parameters(self, data: SpanEntity) -> dict:
-        """
-        Extract parameters from SpanEntity and map them to Opik metric requirements.
-        This method should be customized based on your data structure and the specific
-        Opik metric being used.
-        """
-        # Basic extraction - you may need to customize this based on your data format
-        params = {}
-
-        # Most Opik metrics expect these basic parameters
-        if hasattr(data, "input_payload") and data.input_payload:
-            if isinstance(data.input_payload, str):
-                params["input"] = data.input_payload
-            elif isinstance(data.input_payload, dict):
-                # Try to extract input from common keys
-                params["input"] = (
-                    data.input_payload.get("input")
-                    or data.input_payload.get("question")
-                    or data.input_payload.get("query")
-                    or str(data.input_payload)
-                )
-            else:
-                params["input"] = str(data.input_payload)
-
-        if hasattr(data, "output_payload") and data.output_payload:
-            if isinstance(data.output_payload, str):
-                params["output"] = data.output_payload
-            elif isinstance(data.output_payload, dict):
-                # Try to extract output from common keys
-                params["output"] = (
-                    data.output_payload.get("output")
-                    or data.output_payload.get("answer")
-                    or data.output_payload.get("response")
-                    or str(data.output_payload)
-                )
-            else:
-                params["output"] = str(data.output_payload)
-
-        # For metrics that need context (like Hallucination)
-        if hasattr(data, "context") and data.context:
-            params["context"] = (
-                data.context if isinstance(data.context, list) else [str(data.context)]
-            )
-
-        # For metrics that need expected output
-        if hasattr(data, "expected_output") and data.expected_output:
-            params["expected_output"] = str(data.expected_output)
-
-        return params
 
     async def _assess_input_data(self, data: SpanEntity) -> Tuple[bool, str, str, str]:
         data_is_appropriate: bool = True
@@ -175,8 +144,9 @@ class OpikMetricAdapter(BaseMetric):
             )
 
         try:
-            # Extract parameters for Opik metric
-            opik_params = self.extract_opik_parameters(data)
+            # Extract parameters for Opik metric using centralized test case calculator
+            test_case_calculator = self.metric_configuration.test_case_calculator
+            opik_params = test_case_calculator.calculate_test_case(data)
 
             # Use async version if available, otherwise fallback to sync
             if hasattr(self.opik_metric, "ascore"):
