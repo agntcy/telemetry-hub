@@ -36,6 +36,10 @@ class RagasAdapter(BaseMetric):
             build_metric_configuration_map()
         )
 
+        metric_configuration_map: Dict[str, MetricConfiguration] = (
+            build_metric_configuration_map()
+        )
+
         # Handle extended naming convention where the full dotted name might be passed
         if "." in ragas_metric_name and ragas_metric_name.count(".") >= 2:
             # Parse "ragas.TopicAdherenceScore.f1" format
@@ -179,7 +183,6 @@ class RagasAdapter(BaseMetric):
             )
         except Exception:
             return False
-
 
     async def _assess_input_data(
         self, data: SpanEntity | list[SpanEntity] | Any

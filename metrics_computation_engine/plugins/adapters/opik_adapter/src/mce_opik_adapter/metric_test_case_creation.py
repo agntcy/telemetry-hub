@@ -86,16 +86,13 @@ class OpikSessionTestCase(AbstractTestCaseCalculator):
 
         # Session-level parameter extraction
         params = {}
-        
+
         # Extract conversation-level information
         if hasattr(data, "conversation_elements") and data.conversation_elements:
             # Convert conversation elements to a suitable format
             conversation = []
             for element in data.conversation_elements:
-                conversation.append({
-                    "role": element.role,
-                    "content": element.content
-                })
+                conversation.append({"role": element.role, "content": element.content})
             params["conversation"] = conversation
 
         # Extract session-level metrics
@@ -109,15 +106,19 @@ class OpikSessionTestCase(AbstractTestCaseCalculator):
         if hasattr(data, "tool_calls") and data.tool_calls:
             tools_used = []
             for tool_call in data.tool_calls:
-                tools_used.append({
-                    "name": tool_call.name,
-                    "description": tool_call.description,
-                    "input_parameters": tool_call.input_parameters,
-                    "output": tool_call.output
-                })
+                tools_used.append(
+                    {
+                        "name": tool_call.name,
+                        "description": tool_call.description,
+                        "input_parameters": tool_call.input_parameters,
+                        "output": tool_call.output,
+                    }
+                )
             params["tools_used"] = tools_used
 
-        logger.info(f"Opik session test case parameters extracted: {list(params.keys())}")
+        logger.info(
+            f"Opik session test case parameters extracted: {list(params.keys())}"
+        )
         return params
 
 

@@ -10,16 +10,12 @@ logger = setup_logger(__name__)
 
 class AbstractTestCaseCalculator(metaclass=ABCMeta):
     @abstractmethod
-    def calculate_test_case(
-        self, data: Union[SpanEntity, SessionEntity]
-    ) -> any:
+    def calculate_test_case(self, data: Union[SpanEntity, SessionEntity]) -> any:
         """abstract method for calculating test cases"""
 
 
 class RagasMultiTurnTestCase(AbstractTestCaseCalculator):
-    def calculate_test_case(
-        self, data: Union[SpanEntity, SessionEntity]
-    ) -> any:
+    def calculate_test_case(self, data: Union[SpanEntity, SessionEntity]) -> any:
         """
         Convert SessionEntity data to RAGAS MultiTurnSample format.
         """

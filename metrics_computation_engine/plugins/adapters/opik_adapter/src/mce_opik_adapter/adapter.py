@@ -85,7 +85,6 @@ class OpikMetricAdapter(BaseMetric):
         except Exception:
             return False
 
-
     async def _assess_input_data(self, data: SpanEntity) -> Tuple[bool, str, str, str]:
         data_is_appropriate: bool = True
         error_message: str = ""
