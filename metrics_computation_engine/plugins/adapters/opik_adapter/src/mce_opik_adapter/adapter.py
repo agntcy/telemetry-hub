@@ -23,11 +23,11 @@ class OpikMetricAdapter(BaseMetric):
 
     def __init__(self, opik_metric_name: str):
         super().__init__()
-        
+
         metric_configuration_map: Dict[str, MetricConfiguration] = (
             build_metric_configuration_map()
         )
-        
+
         if opik_metric_name not in metric_configuration_map:
             supported_metrics = sorted(metric_configuration_map.keys())
             raise ValueError(
@@ -39,7 +39,7 @@ class OpikMetricAdapter(BaseMetric):
         self.name = opik_metric_name
         self.opik_metric = None
         self.model = None
-        
+
         # Use configuration from centralized system
         self.metric_configuration: MetricConfiguration = metric_configuration_map[
             opik_metric_name
@@ -47,7 +47,9 @@ class OpikMetricAdapter(BaseMetric):
         self.aggregation_level: AggregationLevel = (
             self.metric_configuration.requirements.aggregation_level
         )
-        self.required = {"entity_type": self.metric_configuration.requirements.entity_type}
+        self.required = {
+            "entity_type": self.metric_configuration.requirements.entity_type
+        }
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME

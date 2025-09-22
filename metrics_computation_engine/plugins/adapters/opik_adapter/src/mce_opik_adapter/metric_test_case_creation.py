@@ -132,16 +132,16 @@ class OpikHallucinationTestCase(AbstractTestCaseCalculator):
         """
         # Ensure we have SpanEntity data
         data = _make_sure_input_is_span_entity(data=data)
-        
+
         params = {}
-        
+
         # Extract input (user query/question)
         if hasattr(data, "input_payload") and data.input_payload:
             if isinstance(data.input_payload, dict):
                 # Look for various input keys
                 params["input"] = (
                     data.input_payload.get("input")
-                    or data.input_payload.get("question") 
+                    or data.input_payload.get("question")
                     or data.input_payload.get("query")
                     or data.input_payload.get("prompt")
                     or str(data.input_payload)
@@ -170,7 +170,7 @@ class OpikHallucinationTestCase(AbstractTestCaseCalculator):
                 context = data.context
             else:
                 context = [str(data.context)]
-        
+
         # Also check if context is embedded in input_payload
         if isinstance(data.input_payload, dict):
             embedded_context = (

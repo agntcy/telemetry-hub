@@ -31,7 +31,7 @@ class RagasAdapter(BaseMetric):
 
     def __init__(self, ragas_metric_name: str, mode: str = "precision"):
         super().__init__()
-        
+
         metric_configuration_map: Dict[str, MetricConfiguration] = (
             build_metric_configuration_map()
         )
@@ -106,7 +106,9 @@ class RagasAdapter(BaseMetric):
         self.aggregation_level: AggregationLevel = (
             self.metric_configuration.requirements.aggregation_level
         )
-        self.required = {"entity_type": self.metric_configuration.requirements.entity_type}
+        self.required = {
+            "entity_type": self.metric_configuration.requirements.entity_type
+        }
 
         # Debug: Log final configuration
         logger.info(
