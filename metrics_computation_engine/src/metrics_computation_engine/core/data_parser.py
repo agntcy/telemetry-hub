@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+from datetime import datetime
 from typing import Any, Dict, List
 
 from metrics_computation_engine.models.span import SpanEntity
@@ -38,9 +39,13 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
     tool_definitions_by_name: Dict[str, Dict[str, Any]] = {}
 
     for span in raw_spans:
-        attrs = span.get("SpanAttributes", {})
-        span_name = span.get("SpanName", "").lower()
-        app_name = span.get("ServiceName", "")
+        attrs = span.get("tags", {})
+        span_name = span.get("operationName", "").lower()
+        app_name = span.get("serviceName", "")
+        
+        # Transform agent spans to have .agent suffix for consistent detection
+        if attrs.get("traceloop.association.properties.langgraph_node") == "agent":
+            span_name = span_name.replace(".task", ".agent")
 
         if span_name.endswith(".chat"):
             entity_type = "llm"
@@ -88,12 +93,18 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
             tool_definitions_by_name.get(entity_name) if entity_type == "tool" else None
         )
 
-        start_time_str = attrs.get("ioa_start_time")
-        duration_ns = span.get("Duration")
+        start_time_str = span.get("startTime")
+        duration_ns = span.get("durationMicros", 0) * 1000  # Convert microseconds to nanoseconds
 
         if start_time_str and duration_ns:
             try:
-                start_time_float = float(start_time_str)
+                # Handle ISO 8601 timestamps (e.g., "2025-09-19T00:00:12.324507Z")
+                if 'T' in start_time_str and 'Z' in start_time_str:
+                    dt = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                    start_time_float = dt.timestamp()
+                else:
+                    # Fallback for numeric timestamps
+                    start_time_float = float(start_time_str)
                 end_time_str = str(start_time_float + duration_ns / 1e9)
             except Exception:
                 end_time_str = None
@@ -177,9 +188,30 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
         if isinstance(input_payload, str):
             input_payload = {"value": input_payload}
 
+        # Convert start_time to float for timing calculations
+        start_time_float_str = None
+        if start_time_str:
+            try:
+                if 'T' in start_time_str and 'Z' in start_time_str:
+                    dt = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                    start_time_float_str = str(dt.timestamp())
+                else:
+                    start_time_float_str = start_time_str
+            except Exception:
+                start_time_float_str = start_time_str
+
+        # Add backward compatibility for adapters expecting old field names
+        enhanced_span_data = span.copy()
+        if "tags" in enhanced_span_data and "SpanAttributes" not in enhanced_span_data:
+            enhanced_span_data["SpanAttributes"] = enhanced_span_data["tags"]
+        if "operationName" in enhanced_span_data and "SpanName" not in enhanced_span_data:
+            enhanced_span_data["SpanName"] = enhanced_span_data["operationName"]
+        if "serviceName" in enhanced_span_data and "ServiceName" not in enhanced_span_data:
+            enhanced_span_data["ServiceName"] = enhanced_span_data["serviceName"]
+
         span_entity = SpanEntity(
             entity_type=entity_type,
-            span_id=span.get("SpanId", ""),
+            span_id=span.get("spanId", ""),
             entity_name=entity_name,
             app_name=app_name,
             input_payload=input_payload,
@@ -187,13 +219,13 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
             message=attrs.get("traceloop.entity.message"),
             tool_definition=tool_definition,
             contains_error=contains_error,
-            timestamp=span.get("Timestamp", ""),
-            parent_span_id=span.get("ParentSpanId"),
-            trace_id=span.get("TraceId"),
+            timestamp=span.get("startTime", ""),
+            parent_span_id=span.get("parentId"),
+            trace_id=span.get("traceId"),
             session_id=attrs.get("session.id") or attrs.get("execution.id"),
-            start_time=start_time_str,
+            start_time=start_time_float_str,
             end_time=end_time_str,
-            raw_span_data=span,
+            raw_span_data=enhanced_span_data,
         )
 
         span_entities.append(span_entity)

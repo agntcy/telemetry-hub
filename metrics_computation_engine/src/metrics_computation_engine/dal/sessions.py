@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import ast
+import json
 from typing import Dict, List
 from collections import Counter
 
@@ -267,13 +268,40 @@ def populate_tool_calls(session: SessionEntity) -> None:
             continue
 
         name = span.entity_name
+        
+        # Handle different input parameter formats
+        input_str = span.input_payload["input_str"]
         try:
-            input_parameters = ast.literal_eval(span.input_payload["input_str"])
+            # Try parsing as Python literal (dict/list)
+            input_parameters = ast.literal_eval(input_str)
         except (ValueError, SyntaxError):
-            continue
+            try:
+                # Try parsing as JSON
+                input_parameters = json.loads(input_str)
+            except (ValueError, TypeError):
+                # Fallback: treat as simple string parameter
+                # For tools like tavily_search that take a query string
+                input_parameters = {"query": input_str}
 
         description = span.tool_definition["description"]
-        output = span.output_payload["output"]["kwargs"]
+        
+        # Handle different output payload structures
+        output_data = span.output_payload["output"]
+        if isinstance(output_data, dict):
+            # Check if it has a kwargs structure (new format)
+            if "kwargs" in output_data:
+                kwargs_data = output_data["kwargs"]
+                if isinstance(kwargs_data, dict):
+                    output = kwargs_data
+                else:
+                    # kwargs is not a dict, wrap it
+                    output = {"content": kwargs_data}
+            else:
+                # Use the entire output_data (direct format)
+                output = output_data
+        else:
+            # Fallback: wrap non-dict output in a dict structure
+            output = {"content": str(output_data)}
 
         tool_calls.append(
             ToolCall(
