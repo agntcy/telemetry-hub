@@ -189,9 +189,17 @@ class MetricsProcessor:
         return True
 
     def _get_metric_requirements(self, metric_class, metric_name: str) -> list:
-        """Get required parameters from class without instantiation"""
-        required_params_dict = getattr(metric_class, "REQUIRED_PARAMETERS", {})
+        """Get required parameters using centralized configuration or fallback"""
 
+        # NEW: Use lightweight interface if available (for adapters with centralized config)
+        if hasattr(metric_class, "get_requirements"):
+            try:
+                return metric_class.get_requirements(metric_name)
+            except Exception:
+                pass  # Fall back to old approach
+
+        # FALLBACK: Use old hardcoded approach
+        required_params_dict = getattr(metric_class, "REQUIRED_PARAMETERS", {})
         if isinstance(required_params_dict, dict):
             return required_params_dict.get(metric_name, [])
 
