@@ -48,22 +48,46 @@ func (cs *ClickhouseService) GetSessionIDSUnique(startTime, endTime time.Time) (
 	return cs.Handlers.GetSessionIDSUnique(startTime, endTime)
 }
 
-// AddMetric implements the DataService interface
+// GetTracesBySessionID implements the DataService interface
+func (cs *ClickhouseService) GetTracesBySessionID(sessionID string) ([]models.OtelTraces, error) {
+	return cs.Handlers.GetTracesBySessionID(sessionID)
+}
+
+// GetExecutionGraphBySessionID implements the DataService interface
+func (cs *ClickhouseService) GetExecutionGraphBySessionID(sessionID string) (string, time.Time, error) {
+	return cs.Handlers.GetExecutionGraphBySessionID(sessionID)
+}
+
+func (cs *ClickhouseService) GetCallGraph(sessionID string) ([]models.CallGraph, error) {
+	return cs.Handlers.GetCallGraph(sessionID)
+}
+
+// GetTraceBySpanNameSessionIDAndAgent implements the DataService interface
+func (cs *ClickhouseService) GetTraceBySpanNameSessionIDAndAgent(spanName string, sessionID string, agentName string) (models.OtelTraces, error) {
+	return cs.Handlers.GetTraceBySpanNameSessionIDAndAgent(spanName, sessionID, agentName)
+}
+
+// GetSessionIDSUniqueWithPagination implements the DataService interface
+func (cs *ClickhouseService) GetSessionIDSUniqueWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) ([]models.SessionUniqueID, int, error) {
+	return cs.Handlers.GetSessionIDSUniqueWithPagination(startTime, endTime, page, limit, nameFilter)
+}
+
+// GetTracesBySessionIDs implements the DataService interface
+func (cs *ClickhouseService) GetTracesBySessionIDs(sessionIDs []string) (map[string][]models.OtelTraces, []string, error) {
+	return cs.Handlers.GetTracesBySessionIDs(sessionIDs)
+}
+
+// AddMetric implements the MetricsService interface
 func (cs *ClickhouseService) AddMetric(metric models.Metric) (models.Metric, error) {
 	return cs.Handlers.AddMetric(metric)
 }
 
-// GetMetricsBySessionIDAndScope implements the DataService interface
+// GetMetricsBySessionIDAndScope implements the MetricsService interface
 func (cs *ClickhouseService) GetMetricsBySessionIdAndScope(sessionID string, scope string) ([]models.Metric, error) {
 	return cs.Handlers.GetMetricsBySessionIdAndScope(sessionID, scope)
 }
 
-// GetMetricsBySpanIdAndScope implements the DataService interface
+// GetMetricsBySpanIdAndScope implements the MetricsService interface
 func (cs *ClickhouseService) GetMetricsBySpanIdAndScope(spanID string, scope string) ([]models.Metric, error) {
 	return cs.Handlers.GetMetricsBySpanIdAndScope(spanID, scope)
-}
-
-// GetTracesBySessionID implements the DataService interface
-func (cs *ClickhouseService) GetTracesBySessionID(sessionID string) ([]models.OtelTraces, error) {
-	return cs.Handlers.GetTracesBySessionID(sessionID)
 }
