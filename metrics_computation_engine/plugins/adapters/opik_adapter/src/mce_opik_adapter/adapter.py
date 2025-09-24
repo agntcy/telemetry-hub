@@ -1,4 +1,4 @@
-from typing import Tuple, Any, Dict
+from typing import Tuple, Any, Dict, List
 import importlib
 
 from opik.evaluation.metrics import score_result
@@ -53,6 +53,19 @@ class OpikMetricAdapter(BaseMetric):
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME
+
+    @classmethod
+    def get_requirements(cls, metric_name: str) -> List[str]:
+        """Get required parameters from centralized configuration"""
+        from .metric_configuration import build_metric_configuration_map
+
+        try:
+            config_map = build_metric_configuration_map()
+            if metric_name in config_map:
+                return config_map[metric_name].requirements.required_input_parameters
+            return []
+        except Exception:
+            return []
 
     def init_with_model(self, model: Any) -> bool:
         self.model = model
