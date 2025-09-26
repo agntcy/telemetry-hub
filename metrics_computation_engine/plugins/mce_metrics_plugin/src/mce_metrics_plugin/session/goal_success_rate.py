@@ -20,7 +20,7 @@ GOAL_SUCCESS_RATE_PROMPT = """
         0: the Assistant fails to achieve the goal specified by the user.
 
     QUERY: {query}
-    Ground Truth: {ground_truth}
+    GROUND TRUTH EXPECTED RESPONSE: {ground_truth}
     RESPONSE to evaluate: {response}
 """
 
@@ -61,7 +61,6 @@ class GoalSuccessRate(BaseMetric):
             if session.agent_spans
             else []
         )
-
         ground_truth = session.ground_truth
         prompt = GOAL_SUCCESS_RATE_PROMPT.format(
             query=query, response=response, ground_truth=ground_truth
