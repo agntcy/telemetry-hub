@@ -116,7 +116,7 @@ def populate_ground_truth(session: SessionEntity) -> None:
     try:
         session.ground_truth = get_annotations_results_by_session(session.session_id)
     except Exception as e:
-        logger.info("Unable to query for ground truth data.")
+        logger.info(f"Unable to query for ground truth data with error: {e}")
         # Keep default value
         pass
 
