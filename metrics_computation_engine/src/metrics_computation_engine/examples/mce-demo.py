@@ -13,35 +13,21 @@ from metrics_computation_engine.core.data_parser import parse_raw_spans
 
 
 # Import MCE Native Metrics
-from metrics_computation_engine.metrics.session.agent_to_agent_interactions import (
+from metrics_computation_engine.metrics.session import (
     AgentToAgentInteractions,
-)
-from metrics_computation_engine.metrics.session.agent_to_tool_interactions import (
     AgentToToolInteractions,
+    CyclesCount,
 )
-from metrics_computation_engine.metrics.session.cycles import CyclesCount
 
 # Import MCE Plugin Metrics
-from mce_metrics_plugin.session.component_conflict_rate.component_conflict_rate import (
-    ComponentConflictRate,
-)
-from mce_metrics_plugin.session.context_preservation.context_preservation import (
-    ContextPreservation,
-)
-from mce_metrics_plugin.session.goal_success_rate.goal_success_rate import (
+from mce_metrics_plugin.session import (
     GoalSuccessRate,
-)
-from mce_metrics_plugin.session.information_retention.information_retention import (
-    InformationRetention,
-)
-from mce_metrics_plugin.session.intent_recognition_accuracy.intent_recognition_accuracy import (
-    IntentRecognitionAccuracy,
-)
-from mce_metrics_plugin.session.response_completeness.response_completeness import (
-    ResponseCompleteness,
-)
-from mce_metrics_plugin.session.workflow_cohesion_index.workflow_cohesion_index import (
+    ContextPreservation,
     WorkflowCohesionIndex,
+    ComponentConflictRate,
+    ResponseCompleteness,
+    InformationRetention,
+    IntentRecognitionAccuracy,
 )
 
 # Import 3rd party adapters
