@@ -34,20 +34,9 @@ The current supported metrics are listed in the table below, along with their ag
 | :---------: | :---------- |
 | **Graph Determinism Score** | Measures variance in execution patterns across multiple sessions |
 
-### 🆕 Custom Evaluation Metrics (MCE Plugin)
-| Metric Name | Aggregation level | Description |
-| :---------: | :---------------: | :---------- |
-| **Component Conflict Rate** | Session | Evaluates if components contradict or interfere with each other |
-| **Goal Success Rate** | Session | Measures if responses achieve user's specified goals |
-| **Response Completeness** | Session | Evaluates how completely responses address user queries |
-| **Workflow Efficiency** | Session | Measures efficiency using agent transition patterns |
-| **Context Preservation** | Session | Evaluates maintenance of context throughout conversations |
-| **Information Retention** | Session | Assesses how well information is retained across interactions |
-| **Intent Recognition Accuracy** | Session | Measures accuracy of understanding user intents |
-| **Consistency** | Session | Evaluates consistency across responses and actions |
-| **Workflow Cohesion Index** | Session | Measures how cohesively workflow components work together |
+### Native Metrics Plugin
 
-The **Custom Evaluation Metrics** from the MCE Plugin provide advanced LLM as a Judge based evaluations for comprehensive agent performance assessment. These metrics use sophisticated prompting techniques to evaluate qualitative aspects of agent interactions and outcomes.
+The MCE includes a comprehensive **native metrics plugin** that provides 13 advanced session-level and span-level metrics for AI agent evaluation. These metrics use LLM-as-a-Judge techniques and confidence analysis for comprehensive assessment. See the complete list in the installation section below.
 
 ## Third-party Integrations
 
@@ -61,7 +50,7 @@ Each adapter automatically converts MCE data formats to framework-specific schem
 
 ## Prerequisites
 
-- **Python 3.10 or higher**
+- **Python 3.11 or higher**
 - **[uv](https://docs.astral.sh/uv/) package manager** for dependency management
 - **LLM API Key** (OpenAI, or custom endpoint) for LLM-based metrics
 - **Instrumentation**: Agentic apps must be instrumented with [AGNTCY's observe SDK](https://github.com/agntcy/observe) as the MCE relies on its observability data schema
@@ -185,35 +174,85 @@ Once deployed, you can generate traces from an agentic app instrumented with our
 
 The server provides automatic OpenAPI documentation at `http://localhost:8000/docs` when running.
 
-### Manual installation for module usage.
+### Installation
 
-To install MCE manually, you will need:
-- Python 3.10 or higher
-- [uv](https://docs.astral.sh/uv/) package manager
+#### Quick Start
+For standard installation and available options, see the [main installation guide](../README.md#python-package-installation).
 
-1. **Install uv** (if not installed)
-  If you are installing in the OS:
+#### Development Installation
+
+For development or when installing from source:
+
+**Requirements:**
+- Python 3.11 or higher
+- [uv](https://docs.astral.sh/uv/) package manager (recommended) or pip
+
+1. **Install uv** (if not installed):
     ```bash
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-    or
-
-    If you are installing in a virtual environment (mamba, conda):
-    ```bash
-    pip install uv
-    ```
-2. **Install the package**:
+2. **Install from source**:
    ```bash
    chmod +x install.sh
    ./install.sh
    ```
+
+#### Post-Installation Setup
 
 3. **Set up environment variables**:
    ```bash
    cp .env.example .env
    # Edit .env with your API keys and configuration
    ```
+
+#### Legacy Installation (Still Supported)
+
+**Previous method:**
+```bash
+pip install metrics-computation-engine mce_metrics_plugin mce-deepeval-adapter mce-ragas-adapter mce-opik-adapter
+```
+
+**New simplified method:** See the [main installation guide](../README.md#python-package-installation) for the recommended approach.
+
+### Native Metrics Plugin - Complete List
+
+The `[metrics-plugin]` option provides **13 advanced session-level metrics** for comprehensive AI agent evaluation:
+
+#### 🤖 LLM-as-a-Judge Evaluation Session Metrics (10)
+1. **ComponentConflictRate** - Evaluates if components contradict or interfere with each other
+2. **Consistency** - Evaluates consistency across responses and actions
+3. **ContextPreservation** - Evaluates maintenance of context throughout conversations
+4. **GoalSuccessRate** - Measures if responses achieve user's specified goals
+5. **Groundedness** - Evaluates how well responses are grounded in verifiable data and avoid hallucinations
+6. **InformationRetention** - Assesses how well information is retained across interactions
+7. **IntentRecognitionAccuracy** - Measures accuracy of understanding user intents
+8. **ResponseCompleteness** - Evaluates how completely responses address user queries
+9. **WorkflowCohesionIndex** - Measures how cohesively workflow components work together
+10. **WorkflowEfficiency** - Measures efficiency using agent transition patterns
+
+#### 📊 LLM Confidence/Uncertainty Metrics (3)
+11. **LLMAverageConfidence** - Computes average confidence from LLM token probabilities
+12. **LLMMaximumConfidence** - Finds maximum confidence score in a session
+13. **LLMMinimumConfidence** - Finds minimum confidence score in a session
+
+**Usage Example:**
+```python
+{
+    "metrics": [
+        "GoalSuccessRate",
+        "Groundedness",
+        "ContextPreservation",
+        "LLMAverageConfidence"
+    ],
+    "llm_judge_config": {
+        "LLM_BASE_MODEL_URL": "https://api.openai.com/v1",
+        "LLM_API_KEY": "your_api_key",
+        "LLM_MODEL_NAME": "gpt-4o"
+    },
+    "session_ids": ["session_123"]
+}
+```
 
 ## Environment Configuration
 

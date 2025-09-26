@@ -23,9 +23,7 @@ class InformationRetention(BaseMetric):
     Measures how well information is retained across multiple interactions.
     """
 
-    REQUIRED_PARAMETERS = {
-        "InformationRetention": ["conversation_data", "workflow_data"]
-    }
+    REQUIRED_PARAMETERS = {"InformationRetention": ["conversation_data"]}
 
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()
@@ -52,19 +50,9 @@ class InformationRetention(BaseMetric):
         return self.create_native_model(llm_config)
 
     async def compute(self, session: SessionEntity):
-        # Use workflow responses if available, fallback to conversation data
         responses = ""
-        workflow_span_ids = []
 
-        if session.workflow_data and session.workflow_data.get("responses"):
-            responses = session.workflow_data["responses"]
-            workflow_span_ids = (
-                [span.span_id for span in session.workflow_spans]
-                if session.workflow_spans
-                else []
-            )
-        elif session.conversation_data:
-            # Fallback to conversation data if no workflow responses
+        if session.conversation_data:
             responses = session.conversation_data.get("conversation", "")
 
         entities_involved = (
@@ -83,7 +71,7 @@ class InformationRetention(BaseMetric):
                 app_name=session.app_name,
                 reasoning=reasoning,
                 entities_involved=entities_involved,
-                span_ids=workflow_span_ids,
+                span_ids=[span.span_id for span in session.agent_spans],
                 session_ids=[session.session_id],
             )
 
@@ -92,6 +80,6 @@ class InformationRetention(BaseMetric):
             category="application",
             app_name=session.app_name,
             entities_involved=entities_involved,
-            span_ids=workflow_span_ids,
+            span_ids=[span.span_id for span in session.agent_spans],
             session_ids=[session.session_id],
         )

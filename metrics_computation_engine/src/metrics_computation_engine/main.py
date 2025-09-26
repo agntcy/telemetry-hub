@@ -41,15 +41,16 @@ app = FastAPI(
 model_handler = None
 
 
-def start_server(host: str, port: int, reload: bool, log_level: str):
+def start_server(host: str, port: int, reload: bool, log_level: str, workers: int):
     global model_handler
     model_handler = ModelHandler()
     uvicorn.run(
-        app,
+        "metrics_computation_engine.main:app",
         host=host,
         port=port,
         reload=reload,
         log_level=log_level,
+        workers=workers,
     )
 
 

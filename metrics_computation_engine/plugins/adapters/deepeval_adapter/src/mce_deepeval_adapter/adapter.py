@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.metrics.base import BaseMetric
@@ -47,6 +47,19 @@ class DeepEvalMetricAdapter(BaseMetric):
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME
+
+    @classmethod
+    def get_requirements(cls, metric_name: str) -> List[str]:
+        """Get required parameters from centralized configuration"""
+        from .metric_configuration import build_metric_configuration_map
+
+        try:
+            config_map = build_metric_configuration_map()
+            if metric_name in config_map:
+                return config_map[metric_name].requirements.required_input_parameters
+            return []
+        except Exception:
+            return []
 
     def init_with_model(self, model: Any) -> bool:
         try:

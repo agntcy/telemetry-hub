@@ -14,7 +14,6 @@ from metrics_computation_engine.models.session import (
 from metrics_computation_engine.transformers import (
     DataPipeline,
     EntityFilter,
-    WorkflowDataExtractor,
     ConversationDataExtractor,
 )
 from metrics_computation_engine.logger import setup_logger
@@ -34,12 +33,12 @@ def build_session_entity(session_id: str, spans: List[SpanEntity]) -> SessionEnt
     populate_app_name(session)
 
     populate_conversation_data(session)
-    populate_workflow_data(session)
     populate_agent_interactions(session)  # Add this line
 
     populate_conversation_elements(session)
     populate_tool_calls(session)
-    populate_workflow_interactions(session)
+
+    populate_e2e_attributes(session)
 
     return session
 
@@ -77,15 +76,45 @@ def populate_timing(session: SessionEntity) -> None:
         session.end_time = str(max(end_times))
 
 
+def populate_e2e_attributes(session: SessionEntity) -> None:
+    if not session.llm_spans:
+        return
+
+    # Use the latest invocation of the LLM which should maintain the whole chat history, use to extract the query and final responses respectively
+    from datetime import datetime
+
+    latest_span = max(
+        session.llm_spans, key=lambda x: datetime.fromisoformat(x.timestamp)
+    ).input_payload
+    indexes = {
+        int(key.split(".")[2])
+        for key in latest_span.keys()
+        if key.startswith("gen_ai.prompt.")
+    }
+
+    input_query, final_response = None, None
+    for i in indexes:
+        if (
+            f"gen_ai.prompt.{i}.role" in latest_span.keys()
+            and latest_span[f"gen_ai.prompt.{i}.role"].lower() == "system"
+        ):
+            continue
+        if f"gen_ai.prompt.{i}.content" in latest_span.keys():
+            if not input_query:
+                input_query = latest_span[f"gen_ai.prompt.{i}.content"]
+            final_response = latest_span[f"gen_ai.prompt.{i}.content"]
+
+    session.input_query = str(input_query)
+    session.final_response = str(final_response)
+
+
 def populate_entity_spans(session: SessionEntity) -> None:
     """Populate entity-specific spans using filters."""
     agent_filter = EntityFilter(["agent"])
     llm_filter = EntityFilter(["llm"])
-    workflow_filter = EntityFilter(["workflow"])
     tool_filter = EntityFilter(["tool"])  # Add this line
 
     session.agent_spans = agent_filter.transform(session.spans)
-    session.workflow_spans = workflow_filter.transform(session.spans)
     session.tool_spans = tool_filter.transform(session.spans)
     session.llm_spans = llm_filter.transform(session.spans)
 
@@ -105,26 +134,6 @@ def populate_conversation_data(session: SessionEntity) -> None:
 
     result = pipeline.process(session.spans)
     session.conversation_data = {"conversation": result.get("conversation", "")}
-
-
-def populate_workflow_data(session: SessionEntity) -> None:
-    """Extract workflow query and response using the transformer pipeline."""
-    if not session.workflow_spans:
-        session.workflow_data = {"query": "", "response": ""}
-        return
-
-    pipeline = DataPipeline(
-        [
-            EntityFilter(["workflow"]),
-            WorkflowDataExtractor(),
-        ]
-    )
-
-    result = pipeline.process(session.spans)
-    session.workflow_data = {
-        "query": result.get("query", ""),
-        "response": result.get("response", ""),
-    }
 
 
 def populate_agent_interactions(session: SessionEntity) -> None:
@@ -222,7 +231,7 @@ def populate_conversation_elements(session: SessionEntity) -> None:
                 content = "\n".join(content_segments)
 
             conversation_elements.append(
-                ConversationElement(role=role, content=content)
+                ConversationElement(role=str(role), content=str(content))
             )
 
     # Add the final response
@@ -232,8 +241,8 @@ def populate_conversation_elements(session: SessionEntity) -> None:
     ):
         conversation_elements.append(
             ConversationElement(
-                role=output_payload["gen_ai.completion.0.role"],
-                content=output_payload["gen_ai.completion.0.content"],
+                role=str(output_payload["gen_ai.completion.0.role"]),
+                content=str(output_payload["gen_ai.completion.0.content"]),
             )
         )
 
@@ -276,48 +285,3 @@ def populate_tool_calls(session: SessionEntity) -> None:
         )
 
     session.tool_calls = tool_calls
-
-
-def populate_workflow_interactions(session: SessionEntity) -> None:
-    """Extract user input and final response for DeepEval metrics."""
-    # Get LLM spans sorted by timestamp
-    sorted_spans = sorted(session.spans, key=lambda span: span.timestamp)
-    llm_spans = [span for span in sorted_spans if span.entity_type == "llm"]
-
-    if not llm_spans:
-        session.user_input = ""
-        session.final_response = ""
-        return
-
-    try:
-        # Extract user input from first LLM span
-        first_span = llm_spans[0]
-        input_payload = first_span.input_payload
-
-        if input_payload:
-            num_turns = len(
-                set(
-                    [
-                        message_key.split(".")[2]
-                        for message_key in input_payload.keys()
-                        if "gen_ai.prompt" in message_key
-                    ]
-                )
-            )
-            user_input_key = f"gen_ai.prompt.{num_turns - 1}.content"
-            session.user_input = input_payload.get(user_input_key, "")
-        else:
-            session.user_input = ""
-
-        # Extract final response
-        response_span = llm_spans[-2] if len(llm_spans) >= 2 else llm_spans[-1]
-        output_payload = response_span.output_payload
-
-        if output_payload and "gen_ai.completion.0.content" in output_payload:
-            session.final_response = output_payload["gen_ai.completion.0.content"]
-        else:
-            session.final_response = ""
-
-    except (KeyError, IndexError, AttributeError):
-        session.user_input = ""
-        session.final_response = ""

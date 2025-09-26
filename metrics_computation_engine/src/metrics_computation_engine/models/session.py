@@ -35,19 +35,21 @@ class SessionEntity(BaseModel):
     spans: List[SpanEntity]
     app_name: str = ""
 
+    # End-to-End results
+    input_query: str = ""
+    final_response: str = ""
+
     # Timing information
     start_time: Optional[str] = None
     end_time: Optional[str] = None
 
     # Entity-specific spans (used by metrics for filtering)
     agent_spans: Optional[List[SpanEntity]] = None
-    workflow_spans: Optional[List[SpanEntity]] = None
     tool_spans: Optional[List[SpanEntity]] = None
     llm_spans: Optional[List[SpanEntity]] = None
 
     # Data extracted by transformers (used by metrics)
     conversation_data: Optional[Dict[str, Any]] = None
-    workflow_data: Optional[Dict[str, Any]] = None
 
     # Agent interaction data (needed by AgentToAgentInteractions)
     agent_transitions: Optional[List[str]] = None
