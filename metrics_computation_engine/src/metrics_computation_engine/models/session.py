@@ -38,6 +38,7 @@ class SessionEntity(BaseModel):
     # End-to-End results
     input_query: str = ""
     final_response: str = ""
+    ground_truth: str = "No ground truth available"
 
     # Timing information
     start_time: Optional[str] = None

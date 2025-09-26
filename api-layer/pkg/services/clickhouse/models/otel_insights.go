@@ -23,11 +23,14 @@ type ResponseLatencyPerAgent struct {
 }
 
 type CallGraph struct {
+	AgentID      string `json:"agent_id"`
+	ServiceName  string `json:"service_name"`
 	PreviousSpan string `json:"previous_span"`
 	CurrentSpan  string `json:"current_span"`
 	NextSpan     string `json:"next_span"`
 	Timestamp    string `json:"timestamp"`
 }
+
 
 type SessionID struct {
 	ID          string `json:"id"`
@@ -54,6 +57,16 @@ type AGPMetrics struct {
 
 // SessionsResponse represents the paginated response for /traces/sessions endpoint
 type SessionsResponse struct {
-	Data  []SessionUniqueID `json:"data"`
-	Total int               `json:"total"`
+	Data    []SessionUniqueID `json:"data"`
+	HasNext bool              `json:"has_next"`
+	HasPrev bool              `json:"has_prev"`
+	Limit   int               `json:"limit"`
+	Page    int               `json:"page"`
+	Total   int               `json:"total"`
+}
+
+// SessionSpansResponse represents the response for /traces/session/spans endpoint
+type SessionSpansResponse struct {
+	Data               map[string][]OtelTraces `json:"data"`
+	NotFoundSessionIds []string                `json:"notfound_session_ids"`
 }

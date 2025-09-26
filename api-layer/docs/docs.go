@@ -15,6 +15,1683 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/annotation-datasets": {
+            "get": {
+                "description": "Get annotation datasets with optional filtering and pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "annotation-datasets"
+                ],
+                "summary": "Get annotation datasets",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tags (comma separated)",
+                        "name": "tags",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by dataset name (case insensitive LIKE search)",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of datasets",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new annotation dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "annotation-datasets"
+                ],
+                "summary": "Create annotation dataset",
+                "parameters": [
+                    {
+                        "description": "Dataset to create",
+                        "name": "dataset",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationDatasetCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Dataset created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationDatasetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Dataset name already exists",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-datasets/{dataset-id}": {
+            "get": {
+                "description": "Get annotation dataset by ID with item count",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "annotation-datasets"
+                ],
+                "summary": "Get annotation dataset by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "dataset-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dataset details",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationDatasetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete annotation dataset and all its items",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "annotation-datasets"
+                ],
+                "summary": "Delete annotation dataset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "dataset-id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Dataset deleted successfully"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-datasets/{dataset-id}/import": {
+            "post": {
+                "description": "Import items into an annotation dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "annotation-datasets"
+                ],
+                "summary": "Import items into dataset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "dataset-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Items to import",
+                        "name": "items",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.AnnotationDatasetItemCreate"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Import completed",
+                        "schema": {
+                            "$ref": "#/definitions/models.ImportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-datasets/{dataset-id}/items": {
+            "get": {
+                "description": "Get items from an annotation dataset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "annotation-datasets"
+                ],
+                "summary": "Get dataset items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Dataset ID",
+                        "name": "dataset-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma separated list of item IDs (max 50)",
+                        "name": "item_ids",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dataset items",
+                        "schema": {
+                            "$ref": "#/definitions/models.DatasetItemsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Dataset not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-groups": {
+            "get": {
+                "description": "Get annotation groups with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Get annotation groups",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of annotation groups",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new annotation group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Create annotation group",
+                "parameters": [
+                    {
+                        "description": "Annotation group to create",
+                        "name": "annotation_group",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationGroupCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Annotation group created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationGroupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict - annotation type is discontinued",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-groups/{id1}/consensus/{id2}": {
+            "get": {
+                "description": "Get specific consensus report by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Group Consensus"
+                ],
+                "summary": "Get consensus report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id1",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Consensus Report ID",
+                        "name": "id2",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Consensus report details",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationConsensusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Group or report not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete consensus report by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Group Consensus"
+                ],
+                "summary": "Delete consensus report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id1",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Consensus Report ID",
+                        "name": "id2",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Consensus report deleted successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-groups/{id1}/items/{id2}": {
+            "delete": {
+                "description": "Delete annotation group item by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Delete annotation group item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id1",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Annotation Group Item ID",
+                        "name": "id2",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annotation group item deleted successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Annotation group item not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Cannot delete - annotation group item is still in use by annotations",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-groups/{id}": {
+            "get": {
+                "description": "Get annotation group by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Get annotation group by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annotation group details",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationGroupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update annotation group by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Update annotation group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Annotation group updates",
+                        "name": "annotation_group",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationGroupUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated annotation group",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationGroupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete annotation group by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Delete annotation group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annotation group deleted successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Annotation group not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Cannot delete - annotation group is still in use by consensus reports or group items",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-groups/{id}/consensus": {
+            "get": {
+                "description": "Get consensus reports for an annotation group with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Group Consensus"
+                ],
+                "summary": "Get consensus reports",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of consensus reports",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-groups/{id}/consensus/compute": {
+            "post": {
+                "description": "Compute consensus for an annotation group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Group Consensus"
+                ],
+                "summary": "Compute consensus",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Consensus method (default: majority)",
+                        "name": "method",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Consensus computed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationConsensusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-groups/{id}/items": {
+            "get": {
+                "description": "Get annotation group items with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Get annotation group items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of annotation group items",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create annotation group items for a specific group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Groups"
+                ],
+                "summary": "Create annotation group items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Annotation group items to create",
+                        "name": "items",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationGroupItemCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Annotation group items created successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.AnnotationGroupItemResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict - annotation group is discontinued",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-types": {
+            "get": {
+                "description": "Get annotation types with optional group filter and pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Types"
+                ],
+                "summary": "Get annotation types",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by annotation group ID",
+                        "name": "group_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of annotation types",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new annotation type",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Types"
+                ],
+                "summary": "Create annotation type",
+                "parameters": [
+                    {
+                        "description": "Annotation type to create",
+                        "name": "annotation_type",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationTypeCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Annotation type created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationTypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotation-types/{id}": {
+            "get": {
+                "description": "Get annotation type by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Types"
+                ],
+                "summary": "Get annotation type by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Type ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annotation type details",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationTypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update annotation type by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Types"
+                ],
+                "summary": "Update annotation type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Type ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Annotation type updates",
+                        "name": "annotation_type",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationTypeUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated annotation type",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationTypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete annotation type by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotation Types"
+                ],
+                "summary": "Delete annotation type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation Type ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annotation type deleted successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Annotation type not found",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Cannot delete - annotation type is still in use by annotations or groups",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotations": {
+            "get": {
+                "description": "Get annotations with optional filters and pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotations"
+                ],
+                "summary": "Get annotations",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by annotation group ID",
+                        "name": "group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by session ID",
+                        "name": "session_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by reviewer ID",
+                        "name": "reviewer_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of annotations",
+                        "schema": {
+                            "$ref": "#/definitions/models.PaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new annotation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotations"
+                ],
+                "summary": "Create annotation",
+                "parameters": [
+                    {
+                        "description": "Annotation to create",
+                        "name": "annotation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Annotation created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict - annotation type is discontinued or annotation group is discontinued",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/annotations/{id}": {
+            "get": {
+                "description": "Get annotation by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotations"
+                ],
+                "summary": "Get annotation by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annotation details",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update annotation by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotations"
+                ],
+                "summary": "Update annotation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Annotation updates",
+                        "name": "annotation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated annotation",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnnotationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete annotation by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Annotations"
+                ],
+                "summary": "Delete annotation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Annotation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annotation deleted successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/mce/metrics": {
+            "get": {
+                "description": "Get list of available metrics from MCE server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCE"
+                ],
+                "summary": "Get available metrics",
+                "responses": {
+                    "200": {
+                        "description": "List of available metrics",
+                        "schema": {
+                            "$ref": "#/definitions/http.MCEMetricsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "MCE endpoints disabled",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "MCE server unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/mce/metrics/compute": {
+            "post": {
+                "description": "Compute metrics based on provided configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCE"
+                ],
+                "summary": "Compute metrics",
+                "parameters": [
+                    {
+                        "description": "Metrics computation configuration",
+                        "name": "config",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.MCEComputeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Computed metrics results",
+                        "schema": {
+                            "$ref": "#/definitions/http.MCEComputeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "MCE endpoints disabled",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "MCE server unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/mce/status": {
+            "get": {
+                "description": "Get status information from MCE server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCE"
+                ],
+                "summary": "Get MCE server status",
+                "responses": {
+                    "200": {
+                        "description": "Server status",
+                        "schema": {
+                            "$ref": "#/definitions/http.MCEStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "MCE endpoints disabled",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "MCE server unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/metrics/session": {
             "post": {
                 "description": "Write session metrics to the server",
@@ -25,7 +1702,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "APIs"
+                    "Metrics"
                 ],
                 "summary": "Write session metrics",
                 "parameters": [
@@ -71,7 +1748,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "APIs"
+                    "Metrics"
                 ],
                 "summary": "Get metrics by session ID",
                 "parameters": [
@@ -119,7 +1796,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "APIs"
+                    "Metrics"
                 ],
                 "summary": "Write span metrics",
                 "parameters": [
@@ -165,7 +1842,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "APIs"
+                    "Metrics"
                 ],
                 "summary": "Get metrics by span ID",
                 "parameters": [
@@ -205,7 +1882,7 @@ const docTemplate = `{
         },
         "/traces/session/{session_id}": {
             "get": {
-                "description": "Get traces by session ID",
+                "description": "Get traces by session ID (upcoming deprecation)",
                 "consumes": [
                     "application/json"
                 ],
@@ -213,9 +1890,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "APIs"
+                    "Traces"
                 ],
-                "summary": "Get traces by session ID",
+                "summary": "Get traces by session ID (upcoming deprecation)",
                 "parameters": [
                     {
                         "type": "string",
@@ -239,13 +1916,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/http.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/http.ErrorResponse"
                         }
                     }
                 }
@@ -253,7 +1930,7 @@ const docTemplate = `{
         },
         "/traces/sessions": {
             "get": {
-                "description": "Get sessions by start and end time",
+                "description": "Get sessions by start and end time with optional pagination and filtering",
                 "consumes": [
                     "application/json"
                 ],
@@ -261,47 +1938,112 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "APIs"
+                    "Traces"
                 ],
                 "summary": "Get sessions",
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "\"2023-06-25T15:04:05Z\"",
-                        "description": "Start time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)",
+                        "default": "2025-07-27T11:30:00Z",
+                        "description": "Start time in ISO 8601 UTC format",
                         "name": "start_time",
                         "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "example": "\"2023-06-25T18:04:05Z\"",
-                        "description": "End time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)",
+                        "default": "2025-07-28T11:30:00Z",
+                        "description": "End time in ISO 8601 UTC format",
                         "name": "end_time",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "example": 0,
+                        "description": "Page number for pagination",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "example": 50,
+                        "description": "Number of items per page (max: 1000)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"session_abc\"",
+                        "description": "Filter sessions by ID prefix (optional)",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of session IDs with metadata",
+                        "schema": {
+                            "$ref": "#/definitions/models.SessionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/traces/sessions/spans": {
+            "get": {
+                "description": "Get span traces for multiple session IDs (comma-separated)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Traces"
+                ],
+                "summary": "Get span traces by multiple session IDs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"session_abc123,session_def456,session_ghi789\"",
+                        "description": "Comma-separated list of session IDs (max 50)",
+                        "name": "session_ids",
                         "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of session IDs with minimum timestamps\" example([{\"id\": \"session_abc123\", \"start_timestamp\": \"2023-06-25T15:30:00Z\"}, {\"id\": \"session_def456\", \"start_timestamp\": \"2023-06-25T16:15:00Z\"}])",
+                        "description": "Map of session IDs to their traces with not found session information",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/http.SessionID"
-                            }
+                            "$ref": "#/definitions/models.SessionSpansResponse"
                         }
                     },
                     "400": {
                         "description": "Bad request",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/http.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/http.ErrorResponse"
                         }
                     }
                 }
@@ -309,6 +2051,35 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "http.BatchConfig": {
+            "type": "object",
+            "properties": {
+                "app_name": {
+                    "type": "string",
+                    "example": "my_app"
+                },
+                "num_sessions": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "time_range": {
+                    "$ref": "#/definitions/http.BatchTimeRange"
+                }
+            }
+        },
+        "http.BatchTimeRange": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string",
+                    "example": "2023-07-24T23:59:59Z"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "2023-07-24T00:00:00Z"
+                }
+            }
+        },
         "http.CreateMetric": {
             "type": "object",
             "required": [
@@ -342,6 +2113,173 @@ const docTemplate = `{
                 }
             }
         },
+        "http.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "http.LLMJudgeConfig": {
+            "type": "object",
+            "properties": {
+                "CUSTOM_API_KEY": {
+                    "type": "string",
+                    "example": ""
+                },
+                "LLM_BASE_MODEL_URL": {
+                    "type": "string",
+                    "example": "https://api.openai.com/v1"
+                },
+                "LLM_MODEL_NAME": {
+                    "type": "string",
+                    "example": "gpt-4"
+                },
+                "OPENAI_API_KEY": {
+                    "type": "string",
+                    "example": "sk-..."
+                }
+            }
+        },
+        "http.MCEComputeRequest": {
+            "type": "object",
+            "properties": {
+                "batch_config": {
+                    "$ref": "#/definitions/http.BatchConfig"
+                },
+                "llm_judge_config": {
+                    "$ref": "#/definitions/http.LLMJudgeConfig"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "AgentToToolInteractions",
+                        "GraphDeterminismScore"
+                    ]
+                }
+            }
+        },
+        "http.MCEComputeResponse": {
+            "type": "object",
+            "properties": {
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "AgentToToolInteractions",
+                        "GraphDeterminismScore"
+                    ]
+                },
+                "results": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "http.MCEMetricInfo": {
+            "type": "object",
+            "properties": {
+                "aggregation_level": {
+                    "type": "string",
+                    "example": "session"
+                },
+                "class": {
+                    "type": "string",
+                    "example": "AgentToToolInteractions"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Collects the Agent to Tool Interactions counts throughout a trace."
+                },
+                "module": {
+                    "type": "string",
+                    "example": "metrics_computation_engine.metrics.session.agent_to_tool_interactions"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "AgentToToolInteractions"
+                },
+                "required_parameters": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.MCEMetricsCollection": {
+            "type": "object",
+            "properties": {
+                "native": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/http.MCEMetricInfo"
+                    }
+                },
+                "plugins": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/http.MCEMetricInfo"
+                    }
+                }
+            }
+        },
+        "http.MCEMetricsResponse": {
+            "type": "object",
+            "properties": {
+                "metrics": {
+                    "$ref": "#/definitions/http.MCEMetricsCollection"
+                },
+                "native_metrics": {
+                    "type": "integer",
+                    "example": 7
+                },
+                "plugin_metrics": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "total_metrics": {
+                    "type": "integer",
+                    "example": 9
+                }
+            }
+        },
+        "http.MCEStatusResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Metric Computation Engine is running"
+                },
+                "service": {
+                    "type": "string",
+                    "example": "metrics_computation_engine"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2023-07-24T15:04:05.123456"
+                }
+            }
+        },
         "http.Metric": {
             "type": "object",
             "properties": {
@@ -369,17 +2307,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "trace_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "http.SessionID": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "start_timestamp": {
                     "type": "string"
                 }
             }
@@ -487,18 +2414,720 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "models.AnnotationConsensusResponse": {
+            "type": "object",
+            "properties": {
+                "annotation_statistics": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "annotation_type_statistics": {
+                    "type": "array",
+                    "items": {}
+                },
+                "consensus_values": {
+                    "type": "array",
+                    "items": {}
+                },
+                "creation_date": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "no_consensus_values": {
+                    "type": "array",
+                    "items": {}
+                },
+                "quality_score": {
+                    "type": "number"
+                },
+                "reviewers_quality_score": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "reviewers_stats": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.AnnotationCreate": {
+            "type": "object",
+            "properties": {
+                "annotation_type_id": {
+                    "type": "string"
+                },
+                "annotation_value": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "expected_output": {
+                    "type": "string"
+                },
+                "group_item_id": {
+                    "type": "string"
+                },
+                "input": {
+                    "type": "string"
+                },
+                "input_type": {
+                    "description": "json, text, image ...",
+                    "type": "string"
+                },
+                "observation_id": {
+                    "type": "string"
+                },
+                "observation_kind": {
+                    "description": "session, llm, agent, tool ...",
+                    "type": "string"
+                },
+                "observation_type": {
+                    "description": "session, trace, span",
+                    "type": "string"
+                },
+                "output": {
+                    "type": "string"
+                },
+                "output_type": {
+                    "description": "json, text, image ...",
+                    "type": "string"
+                },
+                "reviewer_id": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationDatasetCreate": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.AnnotationDatasetItem": {
+            "type": "object",
+            "properties": {
+                "creation_date": {
+                    "type": "string"
+                },
+                "dataset_id": {
+                    "type": "string"
+                },
+                "expected_output": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "input": {
+                    "type": "string"
+                },
+                "output": {
+                    "type": "string"
+                },
+                "session_date": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.AnnotationDatasetItemCreate": {
+            "type": "object",
+            "required": [
+                "expected_output",
+                "input",
+                "output",
+                "session_id"
+            ],
+            "properties": {
+                "expected_output": {
+                    "type": "string"
+                },
+                "input": {
+                    "type": "string"
+                },
+                "output": {
+                    "type": "string"
+                },
+                "session_date": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.AnnotationDatasetResponse": {
+            "type": "object",
+            "properties": {
+                "count_items": {
+                    "type": "integer"
+                },
+                "creation_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.AnnotationGroupCreate": {
+            "type": "object",
+            "properties": {
+                "annotation_type_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "max_report": {
+                    "type": "integer"
+                },
+                "max_reviews": {
+                    "type": "integer"
+                },
+                "min_reviews": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationGroupItemCreate": {
+            "type": "object",
+            "properties": {
+                "session_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.AnnotationGroupItemResponse": {
+            "type": "object",
+            "properties": {
+                "creation_date": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationGroupResponse": {
+            "type": "object",
+            "properties": {
+                "annotation_type_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "discontinued": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "max_report": {
+                    "type": "integer"
+                },
+                "max_reviews": {
+                    "type": "integer"
+                },
+                "min_reviews": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationGroupUpdate": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "discontinued": {
+                    "type": "boolean"
+                },
+                "max_report": {
+                    "type": "integer"
+                },
+                "max_reviews": {
+                    "type": "integer"
+                },
+                "min_reviews": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationResponse": {
+            "type": "object",
+            "properties": {
+                "acceptance": {
+                    "type": "integer"
+                },
+                "acceptance_date": {
+                    "type": "string"
+                },
+                "acceptance_id": {
+                    "type": "string"
+                },
+                "annotation_type_id": {
+                    "type": "string"
+                },
+                "annotation_value": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "creation_date": {
+                    "type": "string"
+                },
+                "expected_output": {
+                    "type": "string"
+                },
+                "group_item_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "input": {
+                    "type": "string"
+                },
+                "input_type": {
+                    "type": "string"
+                },
+                "observation_id": {
+                    "type": "string"
+                },
+                "observation_kind": {
+                    "type": "string"
+                },
+                "observation_type": {
+                    "type": "string"
+                },
+                "output": {
+                    "type": "string"
+                },
+                "output_type": {
+                    "type": "string"
+                },
+                "reviewer_id": {
+                    "type": "string"
+                },
+                "session_id": {
+                    "type": "string"
+                },
+                "update_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationTypeCreate": {
+            "type": "object",
+            "properties": {
+                "categorical_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "numerical_max": {
+                    "type": "number"
+                },
+                "numerical_min": {
+                    "type": "number"
+                },
+                "type": {
+                    "description": "numerical, categorical, boolean",
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationTypeResponse": {
+            "type": "object",
+            "properties": {
+                "categorical_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "creation_date": {
+                    "type": "string"
+                },
+                "discontinued": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "numerical_max": {
+                    "type": "number"
+                },
+                "numerical_min": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "update_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationTypeUpdate": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "discontinued": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnnotationUpdate": {
+            "type": "object",
+            "properties": {
+                "acceptance": {
+                    "type": "integer"
+                },
+                "acceptance_id": {
+                    "type": "string"
+                },
+                "annotation_value": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "expected_output": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.DatasetItemsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/models.AnnotationDatasetItem"
+                    }
+                },
+                "notfound_item_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.ImportResponse": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.ImportStatus"
+                }
+            }
+        },
+        "models.ImportStatus": {
+            "type": "object",
+            "properties": {
+                "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.OtelTraces": {
+            "type": "object",
+            "properties": {
+                "duration": {
+                    "type": "integer"
+                },
+                "eventsAttributes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "eventsName": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "eventsTimestamp": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "linksAttributes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "linksSpanId": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "linksTraceId": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "linksTraceState": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parentSpanId": {
+                    "type": "string"
+                },
+                "resourceAttributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "scopeName": {
+                    "type": "string"
+                },
+                "scopeVersion": {
+                    "type": "string"
+                },
+                "serviceName": {
+                    "type": "string"
+                },
+                "spanAttributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "spanId": {
+                    "type": "string"
+                },
+                "spanKind": {
+                    "type": "string"
+                },
+                "spanName": {
+                    "type": "string"
+                },
+                "statusCode": {
+                    "type": "string"
+                },
+                "statusMessage": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "traceId": {
+                    "type": "string"
+                },
+                "traceState": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PaginatedResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "has_next": {
+                    "type": "boolean"
+                },
+                "has_prev": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.SessionSpansResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/models.OtelTraces"
+                        }
+                    }
+                },
+                "notfound_session_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.SessionUniqueID": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "start_timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SessionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SessionUniqueID"
+                    }
+                },
+                "has_next": {
+                    "type": "boolean"
+                },
+                "has_prev": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
-	Host:             "",
-	BasePath:         "",
-	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Version:          "1.0",
+	Host:             "localhost:8080",
+	BasePath:         "/",
+	Schemes:          []string{"http"},
+	Title:            "API-Layer API",
+	Description:      "This service is a part of the API-Layer project. It helps to understand if the service is alive and running.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -16,7 +16,9 @@ GOAL_SUCCESS_RATE_PROMPT = """
         1: the response is accurate and correspond to what the user asked for in the goal.
         0: the Assistant fails to achieve the goal specified by the user.
 
-    QUERY: {query} Optional Reference Answer (Score 1): {ground_truth} RESPONSE to evaluate: {response}
+    QUERY: {query}
+    Optional Reference Answer (Score 1): {ground_truth}
+    RESPONSE to evaluate: {response}
 """
 
 
@@ -56,8 +58,8 @@ class GoalSuccessRate(BaseMetric):
             if session.agent_spans
             else []
         )
-        ground_truth = "No ground truth available"  # TODO: Add dataset lookup
 
+        ground_truth = session.ground_truth
         prompt = GOAL_SUCCESS_RATE_PROMPT.format(
             query=query, response=response, ground_truth=ground_truth
         )

@@ -17,6 +17,9 @@ from metrics_computation_engine.transformers import (
     ConversationDataExtractor,
 )
 from metrics_computation_engine.logger import setup_logger
+from metrics_computation_engine.dal.annotations import (
+    get_annotations_results_by_session,
+)
 
 logger = setup_logger(__name__)
 
@@ -33,12 +36,13 @@ def build_session_entity(session_id: str, spans: List[SpanEntity]) -> SessionEnt
     populate_app_name(session)
 
     populate_conversation_data(session)
-    populate_agent_interactions(session)  # Add this line
+    populate_agent_interactions(session)
 
     populate_conversation_elements(session)
     populate_tool_calls(session)
 
     populate_e2e_attributes(session)
+    populate_ground_truth(session)
 
     return session
 
@@ -106,6 +110,15 @@ def populate_e2e_attributes(session: SessionEntity) -> None:
 
     session.input_query = str(input_query)
     session.final_response = str(final_response)
+
+
+def populate_ground_truth(session: SessionEntity) -> None:
+    try:
+        session.ground_truth = get_annotations_results_by_session(session.session_id)
+    except Exception as e:
+        logger.info(f"Unable to query for ground truth data with error: {e}")
+        # Keep default value
+        pass
 
 
 def populate_entity_spans(session: SessionEntity) -> None:

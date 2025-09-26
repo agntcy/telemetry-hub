@@ -1,4 +1,25 @@
+basePath: /
 definitions:
+  http.BatchConfig:
+    properties:
+      app_name:
+        example: my_app
+        type: string
+      num_sessions:
+        example: 10
+        type: integer
+      time_range:
+        $ref: '#/definitions/http.BatchTimeRange'
+    type: object
+  http.BatchTimeRange:
+    properties:
+      end:
+        example: "2023-07-24T23:59:59Z"
+        type: string
+      start:
+        example: "2023-07-24T00:00:00Z"
+        type: string
+    type: object
   http.CreateMetric:
     properties:
       app_id:
@@ -23,6 +44,121 @@ definitions:
     - span_id
     - trace_id
     type: object
+  http.ErrorResponse:
+    properties:
+      error:
+        type: boolean
+      reason:
+        type: string
+      status:
+        type: integer
+    type: object
+  http.LLMJudgeConfig:
+    properties:
+      CUSTOM_API_KEY:
+        example: ""
+        type: string
+      LLM_BASE_MODEL_URL:
+        example: https://api.openai.com/v1
+        type: string
+      LLM_MODEL_NAME:
+        example: gpt-4
+        type: string
+      OPENAI_API_KEY:
+        example: sk-...
+        type: string
+    type: object
+  http.MCEComputeRequest:
+    properties:
+      batch_config:
+        $ref: '#/definitions/http.BatchConfig'
+      llm_judge_config:
+        $ref: '#/definitions/http.LLMJudgeConfig'
+      metrics:
+        example:
+        - AgentToToolInteractions
+        - GraphDeterminismScore
+        items:
+          type: string
+        type: array
+    type: object
+  http.MCEComputeResponse:
+    properties:
+      metrics:
+        example:
+        - AgentToToolInteractions
+        - GraphDeterminismScore
+        items:
+          type: string
+        type: array
+      results:
+        additionalProperties: true
+        type: object
+    type: object
+  http.MCEMetricInfo:
+    properties:
+      aggregation_level:
+        example: session
+        type: string
+      class:
+        example: AgentToToolInteractions
+        type: string
+      description:
+        example: Collects the Agent to Tool Interactions counts throughout a trace.
+        type: string
+      module:
+        example: metrics_computation_engine.metrics.session.agent_to_tool_interactions
+        type: string
+      name:
+        example: AgentToToolInteractions
+        type: string
+      required_parameters:
+        items:
+          type: string
+        type: array
+      source:
+        type: string
+    type: object
+  http.MCEMetricsCollection:
+    properties:
+      native:
+        additionalProperties:
+          $ref: '#/definitions/http.MCEMetricInfo'
+        type: object
+      plugins:
+        additionalProperties:
+          $ref: '#/definitions/http.MCEMetricInfo'
+        type: object
+    type: object
+  http.MCEMetricsResponse:
+    properties:
+      metrics:
+        $ref: '#/definitions/http.MCEMetricsCollection'
+      native_metrics:
+        example: 7
+        type: integer
+      plugin_metrics:
+        example: 2
+        type: integer
+      total_metrics:
+        example: 9
+        type: integer
+    type: object
+  http.MCEStatusResponse:
+    properties:
+      message:
+        example: Metric Computation Engine is running
+        type: string
+      service:
+        example: metrics_computation_engine
+        type: string
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: 2023-07-24T15:04:05.123456
+        type: string
+    type: object
   http.Metric:
     properties:
       app_id:
@@ -42,13 +178,6 @@ definitions:
       timestamp:
         type: string
       trace_id:
-        type: string
-    type: object
-  http.SessionID:
-    properties:
-      id:
-        type: string
-      start_timestamp:
         type: string
     type: object
   http.Trace:
@@ -120,9 +249,1602 @@ definitions:
       traceState:
         type: string
     type: object
+  models.AnnotationConsensusResponse:
+    properties:
+      annotation_statistics:
+        additionalProperties: true
+        type: object
+      annotation_type_statistics:
+        items: {}
+        type: array
+      consensus_values:
+        items: {}
+        type: array
+      creation_date:
+        type: string
+      group_id:
+        type: string
+      id:
+        type: string
+      method:
+        type: string
+      no_consensus_values:
+        items: {}
+        type: array
+      quality_score:
+        type: number
+      reviewers_quality_score:
+        additionalProperties: true
+        type: object
+      reviewers_stats:
+        additionalProperties: true
+        type: object
+      valid:
+        type: boolean
+    type: object
+  models.AnnotationCreate:
+    properties:
+      annotation_type_id:
+        type: string
+      annotation_value:
+        type: string
+      comment:
+        type: string
+      expected_output:
+        type: string
+      group_item_id:
+        type: string
+      input:
+        type: string
+      input_type:
+        description: json, text, image ...
+        type: string
+      observation_id:
+        type: string
+      observation_kind:
+        description: session, llm, agent, tool ...
+        type: string
+      observation_type:
+        description: session, trace, span
+        type: string
+      output:
+        type: string
+      output_type:
+        description: json, text, image ...
+        type: string
+      reviewer_id:
+        type: string
+      session_id:
+        type: string
+    type: object
+  models.AnnotationDatasetCreate:
+    properties:
+      name:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    type: object
+  models.AnnotationDatasetItem:
+    properties:
+      creation_date:
+        type: string
+      dataset_id:
+        type: string
+      expected_output:
+        type: string
+      id:
+        type: string
+      input:
+        type: string
+      output:
+        type: string
+      session_date:
+        type: string
+      session_id:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  models.AnnotationDatasetItemCreate:
+    properties:
+      expected_output:
+        type: string
+      input:
+        type: string
+      output:
+        type: string
+      session_date:
+        type: string
+      session_id:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    required:
+    - expected_output
+    - input
+    - output
+    - session_id
+    type: object
+  models.AnnotationDatasetResponse:
+    properties:
+      count_items:
+        type: integer
+      creation_date:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  models.AnnotationGroupCreate:
+    properties:
+      annotation_type_ids:
+        items:
+          type: string
+        type: array
+      comment:
+        type: string
+      max_report:
+        type: integer
+      max_reviews:
+        type: integer
+      min_reviews:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.AnnotationGroupItemCreate:
+    properties:
+      session_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  models.AnnotationGroupItemResponse:
+    properties:
+      creation_date:
+        type: string
+      group_id:
+        type: string
+      id:
+        type: string
+      session_id:
+        type: string
+    type: object
+  models.AnnotationGroupResponse:
+    properties:
+      annotation_type_ids:
+        items:
+          type: string
+        type: array
+      comment:
+        type: string
+      discontinued:
+        type: boolean
+      id:
+        type: string
+      max_report:
+        type: integer
+      max_reviews:
+        type: integer
+      min_reviews:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.AnnotationGroupUpdate:
+    properties:
+      comment:
+        type: string
+      discontinued:
+        type: boolean
+      max_report:
+        type: integer
+      max_reviews:
+        type: integer
+      min_reviews:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.AnnotationResponse:
+    properties:
+      acceptance:
+        type: integer
+      acceptance_date:
+        type: string
+      acceptance_id:
+        type: string
+      annotation_type_id:
+        type: string
+      annotation_value:
+        type: string
+      comment:
+        type: string
+      creation_date:
+        type: string
+      expected_output:
+        type: string
+      group_item_id:
+        type: string
+      id:
+        type: string
+      input:
+        type: string
+      input_type:
+        type: string
+      observation_id:
+        type: string
+      observation_kind:
+        type: string
+      observation_type:
+        type: string
+      output:
+        type: string
+      output_type:
+        type: string
+      reviewer_id:
+        type: string
+      session_id:
+        type: string
+      update_date:
+        type: string
+    type: object
+  models.AnnotationTypeCreate:
+    properties:
+      categorical_list:
+        items:
+          type: string
+        type: array
+      comment:
+        type: string
+      name:
+        type: string
+      numerical_max:
+        type: number
+      numerical_min:
+        type: number
+      type:
+        description: numerical, categorical, boolean
+        type: string
+    type: object
+  models.AnnotationTypeResponse:
+    properties:
+      categorical_list:
+        items:
+          type: string
+        type: array
+      comment:
+        type: string
+      creation_date:
+        type: string
+      discontinued:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+      numerical_max:
+        type: number
+      numerical_min:
+        type: number
+      type:
+        type: string
+      update_date:
+        type: string
+    type: object
+  models.AnnotationTypeUpdate:
+    properties:
+      comment:
+        type: string
+      discontinued:
+        type: boolean
+      name:
+        type: string
+    type: object
+  models.AnnotationUpdate:
+    properties:
+      acceptance:
+        type: integer
+      acceptance_id:
+        type: string
+      annotation_value:
+        type: string
+      comment:
+        type: string
+      expected_output:
+        type: string
+    type: object
+  models.DatasetItemsResponse:
+    properties:
+      data:
+        additionalProperties:
+          $ref: '#/definitions/models.AnnotationDatasetItem'
+        type: object
+      notfound_item_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  models.ImportResponse:
+    properties:
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/models.ImportStatus'
+    type: object
+  models.ImportStatus:
+    properties:
+      state:
+        type: string
+    type: object
+  models.OtelTraces:
+    properties:
+      duration:
+        type: integer
+      eventsAttributes:
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        type: array
+      eventsName:
+        items:
+          type: string
+        type: array
+      eventsTimestamp:
+        items:
+          type: string
+        type: array
+      linksAttributes:
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        type: array
+      linksSpanId:
+        items:
+          type: string
+        type: array
+      linksTraceId:
+        items:
+          type: string
+        type: array
+      linksTraceState:
+        items:
+          type: string
+        type: array
+      parentSpanId:
+        type: string
+      resourceAttributes:
+        additionalProperties:
+          type: string
+        type: object
+      scopeName:
+        type: string
+      scopeVersion:
+        type: string
+      serviceName:
+        type: string
+      spanAttributes:
+        additionalProperties:
+          type: string
+        type: object
+      spanId:
+        type: string
+      spanKind:
+        type: string
+      spanName:
+        type: string
+      statusCode:
+        type: string
+      statusMessage:
+        type: string
+      timestamp:
+        type: string
+      traceId:
+        type: string
+      traceState:
+        type: string
+    type: object
+  models.PaginatedResponse:
+    properties:
+      data: {}
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.SessionSpansResponse:
+    properties:
+      data:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/models.OtelTraces'
+          type: array
+        type: object
+      notfound_session_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  models.SessionUniqueID:
+    properties:
+      id:
+        type: string
+      start_timestamp:
+        type: string
+    type: object
+  models.SessionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.SessionUniqueID'
+        type: array
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+host: localhost:8080
 info:
   contact: {}
+  description: This service is a part of the API-Layer project. It helps to understand
+    if the service is alive and running.
+  title: API-Layer API
+  version: "1.0"
 paths:
+  /annotation-datasets:
+    get:
+      consumes:
+      - application/json
+      description: Get annotation datasets with optional filtering and pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Number of items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Filter by tags (comma separated)
+        in: query
+        name: tags
+        type: string
+      - description: Filter by dataset name (case insensitive LIKE search)
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of datasets
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get annotation datasets
+      tags:
+      - annotation-datasets
+    post:
+      consumes:
+      - application/json
+      description: Create a new annotation dataset
+      parameters:
+      - description: Dataset to create
+        in: body
+        name: dataset
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationDatasetCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Dataset created successfully
+          schema:
+            $ref: '#/definitions/models.AnnotationDatasetResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "409":
+          description: Dataset name already exists
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Create annotation dataset
+      tags:
+      - annotation-datasets
+  /annotation-datasets/{dataset-id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete annotation dataset and all its items
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: dataset-id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Dataset deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Delete annotation dataset
+      tags:
+      - annotation-datasets
+    get:
+      consumes:
+      - application/json
+      description: Get annotation dataset by ID with item count
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: dataset-id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dataset details
+          schema:
+            $ref: '#/definitions/models.AnnotationDatasetResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get annotation dataset by ID
+      tags:
+      - annotation-datasets
+  /annotation-datasets/{dataset-id}/import:
+    post:
+      consumes:
+      - application/json
+      description: Import items into an annotation dataset
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: dataset-id
+        required: true
+        type: string
+      - description: Items to import
+        in: body
+        name: items
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.AnnotationDatasetItemCreate'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Import completed
+          schema:
+            $ref: '#/definitions/models.ImportResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Import items into dataset
+      tags:
+      - annotation-datasets
+  /annotation-datasets/{dataset-id}/items:
+    get:
+      consumes:
+      - application/json
+      description: Get items from an annotation dataset
+      parameters:
+      - description: Dataset ID
+        in: path
+        name: dataset-id
+        required: true
+        type: string
+      - description: Comma separated list of item IDs (max 50)
+        in: query
+        name: item_ids
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dataset items
+          schema:
+            $ref: '#/definitions/models.DatasetItemsResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Dataset not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get dataset items
+      tags:
+      - annotation-datasets
+  /annotation-groups:
+    get:
+      consumes:
+      - application/json
+      description: Get annotation groups with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Number of items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of annotation groups
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get annotation groups
+      tags:
+      - Annotation Groups
+    post:
+      consumes:
+      - application/json
+      description: Create a new annotation group
+      parameters:
+      - description: Annotation group to create
+        in: body
+        name: annotation_group
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationGroupCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Annotation group created successfully
+          schema:
+            $ref: '#/definitions/models.AnnotationGroupResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "409":
+          description: Conflict - annotation type is discontinued
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Create annotation group
+      tags:
+      - Annotation Groups
+  /annotation-groups/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete annotation group by ID
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Annotation group deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Annotation group not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "409":
+          description: Cannot delete - annotation group is still in use by consensus
+            reports or group items
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Delete annotation group
+      tags:
+      - Annotation Groups
+    get:
+      consumes:
+      - application/json
+      description: Get annotation group by ID
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Annotation group details
+          schema:
+            $ref: '#/definitions/models.AnnotationGroupResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get annotation group by ID
+      tags:
+      - Annotation Groups
+    put:
+      consumes:
+      - application/json
+      description: Update annotation group by ID
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Annotation group updates
+        in: body
+        name: annotation_group
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationGroupUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated annotation group
+          schema:
+            $ref: '#/definitions/models.AnnotationGroupResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Update annotation group
+      tags:
+      - Annotation Groups
+  /annotation-groups/{id}/consensus:
+    get:
+      consumes:
+      - application/json
+      description: Get consensus reports for an annotation group with pagination
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Number of items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of consensus reports
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get consensus reports
+      tags:
+      - Annotation Group Consensus
+  /annotation-groups/{id}/consensus/compute:
+    post:
+      consumes:
+      - application/json
+      description: Compute consensus for an annotation group
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Consensus method (default: majority)'
+        in: query
+        name: method
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Consensus computed successfully
+          schema:
+            $ref: '#/definitions/models.AnnotationConsensusResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Compute consensus
+      tags:
+      - Annotation Group Consensus
+  /annotation-groups/{id}/items:
+    get:
+      consumes:
+      - application/json
+      description: Get annotation group items with pagination
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Number of items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of annotation group items
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get annotation group items
+      tags:
+      - Annotation Groups
+    post:
+      consumes:
+      - application/json
+      description: Create annotation group items for a specific group
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Annotation group items to create
+        in: body
+        name: items
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationGroupItemCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Annotation group items created successfully
+          schema:
+            items:
+              $ref: '#/definitions/models.AnnotationGroupItemResponse'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "409":
+          description: Conflict - annotation group is discontinued
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Create annotation group items
+      tags:
+      - Annotation Groups
+  /annotation-groups/{id1}/consensus/{id2}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete consensus report by ID
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id1
+        required: true
+        type: string
+      - description: Consensus Report ID
+        in: path
+        name: id2
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Consensus report deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete consensus report
+      tags:
+      - Annotation Group Consensus
+    get:
+      consumes:
+      - application/json
+      description: Get specific consensus report by ID
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id1
+        required: true
+        type: string
+      - description: Consensus Report ID
+        in: path
+        name: id2
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Consensus report details
+          schema:
+            $ref: '#/definitions/models.AnnotationConsensusResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Group or report not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get consensus report
+      tags:
+      - Annotation Group Consensus
+  /annotation-groups/{id1}/items/{id2}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete annotation group item by ID
+      parameters:
+      - description: Annotation Group ID
+        in: path
+        name: id1
+        required: true
+        type: string
+      - description: Annotation Group Item ID
+        in: path
+        name: id2
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Annotation group item deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Annotation group item not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "409":
+          description: Cannot delete - annotation group item is still in use by annotations
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Delete annotation group item
+      tags:
+      - Annotation Groups
+  /annotation-types:
+    get:
+      consumes:
+      - application/json
+      description: Get annotation types with optional group filter and pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Number of items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Filter by annotation group ID
+        in: query
+        name: group_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of annotation types
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get annotation types
+      tags:
+      - Annotation Types
+    post:
+      consumes:
+      - application/json
+      description: Create a new annotation type
+      parameters:
+      - description: Annotation type to create
+        in: body
+        name: annotation_type
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationTypeCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Annotation type created successfully
+          schema:
+            $ref: '#/definitions/models.AnnotationTypeResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Create annotation type
+      tags:
+      - Annotation Types
+  /annotation-types/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete annotation type by ID
+      parameters:
+      - description: Annotation Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Annotation type deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Annotation type not found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "409":
+          description: Cannot delete - annotation type is still in use by annotations
+            or groups
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Delete annotation type
+      tags:
+      - Annotation Types
+    get:
+      consumes:
+      - application/json
+      description: Get annotation type by ID
+      parameters:
+      - description: Annotation Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Annotation type details
+          schema:
+            $ref: '#/definitions/models.AnnotationTypeResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get annotation type by ID
+      tags:
+      - Annotation Types
+    put:
+      consumes:
+      - application/json
+      description: Update annotation type by ID
+      parameters:
+      - description: Annotation Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Annotation type updates
+        in: body
+        name: annotation_type
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationTypeUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated annotation type
+          schema:
+            $ref: '#/definitions/models.AnnotationTypeResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Update annotation type
+      tags:
+      - Annotation Types
+  /annotations:
+    get:
+      consumes:
+      - application/json
+      description: Get annotations with optional filters and pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Number of items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Filter by annotation group ID
+        in: query
+        name: group_id
+        type: string
+      - description: Filter by session ID
+        in: query
+        name: session_id
+        type: string
+      - description: Filter by reviewer ID
+        in: query
+        name: reviewer_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of annotations
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get annotations
+      tags:
+      - Annotations
+    post:
+      consumes:
+      - application/json
+      description: Create a new annotation
+      parameters:
+      - description: Annotation to create
+        in: body
+        name: annotation
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Annotation created successfully
+          schema:
+            $ref: '#/definitions/models.AnnotationResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "409":
+          description: Conflict - annotation type is discontinued or annotation group
+            is discontinued
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Create annotation
+      tags:
+      - Annotations
+  /annotations/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete annotation by ID
+      parameters:
+      - description: Annotation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Annotation deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete annotation
+      tags:
+      - Annotations
+    get:
+      consumes:
+      - application/json
+      description: Get annotation by ID
+      parameters:
+      - description: Annotation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Annotation details
+          schema:
+            $ref: '#/definitions/models.AnnotationResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get annotation by ID
+      tags:
+      - Annotations
+    put:
+      consumes:
+      - application/json
+      description: Update annotation by ID
+      parameters:
+      - description: Annotation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Annotation updates
+        in: body
+        name: annotation
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnnotationUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated annotation
+          schema:
+            $ref: '#/definitions/models.AnnotationResponse'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Update annotation
+      tags:
+      - Annotations
+  /mce/metrics:
+    get:
+      consumes:
+      - application/json
+      description: Get list of available metrics from MCE server
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of available metrics
+          schema:
+            $ref: '#/definitions/http.MCEMetricsResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: MCE endpoints disabled
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "502":
+          description: MCE server unavailable
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get available metrics
+      tags:
+      - MCE
+  /mce/metrics/compute:
+    post:
+      consumes:
+      - application/json
+      description: Compute metrics based on provided configuration
+      parameters:
+      - description: Metrics computation configuration
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/http.MCEComputeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Computed metrics results
+          schema:
+            $ref: '#/definitions/http.MCEComputeResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: MCE endpoints disabled
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "502":
+          description: MCE server unavailable
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Compute metrics
+      tags:
+      - MCE
+  /mce/status:
+    get:
+      consumes:
+      - application/json
+      description: Get status information from MCE server
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Server status
+          schema:
+            $ref: '#/definitions/http.MCEStatusResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: MCE endpoints disabled
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "502":
+          description: MCE server unavailable
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get MCE server status
+      tags:
+      - MCE
   /metrics/session:
     post:
       consumes:
@@ -152,7 +1874,7 @@ paths:
             type: string
       summary: Write session metrics
       tags:
-      - APIs
+      - Metrics
   /metrics/session/{session_id}:
     get:
       consumes:
@@ -187,7 +1909,7 @@ paths:
             type: string
       summary: Get metrics by session ID
       tags:
-      - APIs
+      - Metrics
   /metrics/span:
     post:
       consumes:
@@ -217,7 +1939,7 @@ paths:
             type: string
       summary: Write span metrics
       tags:
-      - APIs
+      - Metrics
   /metrics/span/{span_id}:
     get:
       consumes:
@@ -252,12 +1974,12 @@ paths:
             type: string
       summary: Get metrics by span ID
       tags:
-      - APIs
+      - Metrics
   /traces/session/{session_id}:
     get:
       consumes:
       - application/json
-      description: Get traces by session ID
+      description: Get traces by session ID (upcoming deprecation)
       parameters:
       - description: Session ID
         example: '"session_abc123"'
@@ -279,52 +2001,98 @@ paths:
         "400":
           description: Bad request
           schema:
-            type: string
+            $ref: '#/definitions/http.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            type: string
-      summary: Get traces by session ID
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get traces by session ID (upcoming deprecation)
       tags:
-      - APIs
+      - Traces
   /traces/sessions:
     get:
       consumes:
       - application/json
-      description: Get sessions by start and end time
+      description: Get sessions by start and end time with optional pagination and
+        filtering
       parameters:
-      - description: Start time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)
-        example: '"2023-06-25T15:04:05Z"'
+      - default: "2025-07-27T11:30:00Z"
+        description: Start time in ISO 8601 UTC format
         in: query
         name: start_time
         required: true
         type: string
-      - description: End time in ISO 8601 UTC format (e.g. 2023-06-25T15:04:05Z)
-        example: '"2023-06-25T18:04:05Z"'
+      - default: "2025-07-28T11:30:00Z"
+        description: End time in ISO 8601 UTC format
         in: query
         name: end_time
+        required: true
+        type: string
+      - default: 0
+        description: Page number for pagination
+        example: 0
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: 'Number of items per page (max: 1000)'
+        example: 50
+        in: query
+        name: limit
+        type: integer
+      - description: Filter sessions by ID prefix (optional)
+        example: '"session_abc"'
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Paginated list of session IDs with metadata
+          schema:
+            $ref: '#/definitions/models.SessionsResponse'
+        "400":
+          description: Bad request - invalid parameters
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get sessions
+      tags:
+      - Traces
+  /traces/sessions/spans:
+    get:
+      consumes:
+      - application/json
+      description: Get span traces for multiple session IDs (comma-separated)
+      parameters:
+      - description: Comma-separated list of session IDs (max 50)
+        example: '"session_abc123,session_def456,session_ghi789"'
+        in: query
+        name: session_ids
         required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: 'List of session IDs with minimum timestamps" example([{"id":
-            "session_abc123", "start_timestamp": "2023-06-25T15:30:00Z"}, {"id": "session_def456",
-            "start_timestamp": "2023-06-25T16:15:00Z"}])'
+          description: Map of session IDs to their traces with not found session information
           schema:
-            items:
-              $ref: '#/definitions/http.SessionID'
-            type: array
+            $ref: '#/definitions/models.SessionSpansResponse'
         "400":
           description: Bad request
           schema:
-            type: string
+            $ref: '#/definitions/http.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            type: string
-      summary: Get sessions
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get span traces by multiple session IDs
       tags:
-      - APIs
+      - Traces
+schemes:
+- http
 swagger: "2.0"

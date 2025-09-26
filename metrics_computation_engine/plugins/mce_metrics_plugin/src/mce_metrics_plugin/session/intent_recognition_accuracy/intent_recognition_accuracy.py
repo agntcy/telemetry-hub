@@ -63,10 +63,7 @@ class IntentRecognitionAccuracy(BaseMetric):
         # Extract data directly from the session entity - much cleaner now
         query = session.input_query
         response = session.final_response
-
-        print("SESSION:", session.session_id)
-        print("INPUT:", session.input_query)
-        print("RESPONSE:", session.final_response)
+        ground_truth = session.ground_truth
 
         entities_involved = (
             [span.entity_name for span in session.agent_spans]
@@ -74,7 +71,6 @@ class IntentRecognitionAccuracy(BaseMetric):
             else []
         )
         # TODO: Add ground truth lookup once dataset is available
-        ground_truth = "No ground truth available"
 
         # Format the prompt
         prompt = INTENT_RECOGNITION_ACCURACY_PROMPT.format(
