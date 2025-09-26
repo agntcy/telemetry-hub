@@ -75,7 +75,11 @@ class OpikMetricAdapter(BaseMetric):
             opik_metric_cls = getattr(module, self.opik_metric_name, None)
             if opik_metric_cls is None:
                 return False
-            self.opik_metric = opik_metric_cls(model=model)
+            if "heuristics" in str(opik_metric_cls):
+                self.type = "heuristics"
+                self.opik_metric = opik_metric_cls()
+            else:
+                self.opik_metric = opik_metric_cls(model=model)
             return True
         except Exception:
             return False
@@ -168,7 +172,14 @@ class OpikMetricAdapter(BaseMetric):
                     **opik_params
                 )
             else:
-                result: score_result.ScoreResult = self.opik_metric.score(**opik_params)
+                if self.type == "heuristics":
+                    result: score_result.ScoreResult = self.opik_metric.score(
+                        output=opik_params["output"]
+                    )
+                else:
+                    result: score_result.ScoreResult = self.opik_metric.score(
+                        **opik_params
+                    )
 
             # Extract metadata from the result
             metadata = {

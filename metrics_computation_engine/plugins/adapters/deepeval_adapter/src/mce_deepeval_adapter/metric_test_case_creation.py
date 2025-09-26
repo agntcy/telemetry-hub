@@ -86,7 +86,10 @@ class DeepEvalTestCaseConversational(AbstractTestCaseCalculator):
         # Convert SessionEntity conversation elements to DeepEval Turn format
         turns = []
         for element in data.conversation_elements:
-            turns.append(Turn(role=element.role, content=element.content))
+            role = element.role
+            if role not in ["user", "assistant"]:
+                role = "assistant"
+            turns.append(Turn(role=role, content=element.content))
 
         return ConversationalTestCase(chatbot_role=chatbot_role, turns=turns)
 

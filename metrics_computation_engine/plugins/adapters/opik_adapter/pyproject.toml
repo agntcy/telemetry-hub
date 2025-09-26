@@ -25,6 +25,8 @@ classifiers = [
 ]
 dependencies = [
     "opik>=1.8.27",  # Adjust version as needed
+    "nltk",
+    "rouge-score",
     # Note: metrics-computation-engine is expected to be available in the runtime environment
 ]
 
