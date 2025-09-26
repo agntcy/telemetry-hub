@@ -17,7 +17,9 @@ from metrics_computation_engine.transformers import (
     ConversationDataExtractor,
 )
 from metrics_computation_engine.logger import setup_logger
-from metrics_computation_engine.dal.annotations import get_annotations_results_by_session
+from metrics_computation_engine.dal.annotations import (
+    get_annotations_results_by_session,
+)
 
 logger = setup_logger(__name__)
 
@@ -109,8 +111,10 @@ def populate_e2e_attributes(session: SessionEntity) -> None:
     session.input_query = str(input_query)
     session.final_response = str(final_response)
 
+
 def populate_ground_truth(session: SessionEntity) -> None:
     session.ground_truth = get_annotations_results_by_session(session.session_id)
+
 
 def populate_entity_spans(session: SessionEntity) -> None:
     """Populate entity-specific spans using filters."""

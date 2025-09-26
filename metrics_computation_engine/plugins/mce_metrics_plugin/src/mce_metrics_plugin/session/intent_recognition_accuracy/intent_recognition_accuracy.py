@@ -71,7 +71,6 @@ class IntentRecognitionAccuracy(BaseMetric):
             else []
         )
         # TODO: Add ground truth lookup once dataset is available
-        
 
         # Format the prompt
         prompt = INTENT_RECOGNITION_ACCURACY_PROMPT.format(
