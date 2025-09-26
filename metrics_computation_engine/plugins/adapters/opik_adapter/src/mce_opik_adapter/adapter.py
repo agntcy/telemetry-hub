@@ -20,6 +20,7 @@ class OpikMetricAdapter(BaseMetric):
     """
     Adapter to integrate Opik metrics as 3rd party plugins into the MCE.
     """
+
     def __init__(self, opik_metric_name: str):
         super().__init__()
 
