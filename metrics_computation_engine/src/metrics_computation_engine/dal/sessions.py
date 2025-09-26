@@ -244,7 +244,7 @@ def populate_conversation_elements(session: SessionEntity) -> None:
                 content = "\n".join(content_segments)
 
             conversation_elements.append(
-                ConversationElement(role=role, content=content)
+                ConversationElement(role=str(role), content=str(content))
             )
 
     # Add the final response
@@ -254,8 +254,8 @@ def populate_conversation_elements(session: SessionEntity) -> None:
     ):
         conversation_elements.append(
             ConversationElement(
-                role=output_payload["gen_ai.completion.0.role"],
-                content=output_payload["gen_ai.completion.0.content"],
+                role=str(output_payload["gen_ai.completion.0.role"]),
+                content=str(output_payload["gen_ai.completion.0.content"]),
             )
         )
 
