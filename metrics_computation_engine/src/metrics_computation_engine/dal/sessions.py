@@ -113,7 +113,12 @@ def populate_e2e_attributes(session: SessionEntity) -> None:
 
 
 def populate_ground_truth(session: SessionEntity) -> None:
-    session.ground_truth = get_annotations_results_by_session(session.session_id)
+    try:
+        session.ground_truth = get_annotations_results_by_session(session.session_id)
+    except Exception as e:
+        logger.info("Unable to query for ground truth data.")
+        # Keep default value
+        pass
 
 
 def populate_entity_spans(session: SessionEntity) -> None:
