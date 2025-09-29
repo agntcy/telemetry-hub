@@ -36,8 +36,9 @@ class TaskCompletionEfficiency(BaseMetric):
         return True
 
     async def compute(self, data):
-        if len(data.values()) > 0:
-            app_name = next(iter(data.values())).app_name
+        app_name = None
+        if len(data.sessions) > 0:
+            app_name = next(iter(data.sessions)).app_name
 
         try:
             graphs = []

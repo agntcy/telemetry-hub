@@ -1,13 +1,14 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import logging
 
 
 def setup_logger(
     name: str,
-    level: int = logging.INFO,
-    formatter_str: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level: int = os.getenv("LOG_LEVEL", logging.INFO),
+    formatter_str: str = "%(asctime)s.%(msecs)03d %(levelname)9s [%(filename)25s:%(lineno)4d - %(funcName)20s] [%(threadName)s] %(message)s",
 ) -> logging.Logger:
     """
     Set up a logger with the specified name, level, and formatter.
@@ -29,10 +30,10 @@ def setup_logger(
         Configured logger.
     """
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(os.environ.get("LOG_LEVEL", level).upper())
 
     ch = logging.StreamHandler()
-    ch.setLevel(level)
+    ch.setLevel(os.environ.get("LOG_LEVEL", level).upper())
 
     formatter = logging.Formatter(formatter_str)
     ch.setFormatter(formatter)

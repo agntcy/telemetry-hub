@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 from itertools import combinations
 from typing import List, Optional
 
@@ -8,6 +9,9 @@ import networkx as nx
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
+from metrics_computation_engine.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 class GraphDeterminismScore(BaseMetric):
@@ -39,17 +43,21 @@ class GraphDeterminismScore(BaseMetric):
         return True
 
     async def compute(self, data):
-        print("DATA")
-        print(len(data.values()))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"DATA: {type(data)}, {len(data.sessions)}")
 
-        if len(data.values()) > 0:
-            app_name = next(iter(data.values())).app_name
+        app_name = None
+        if len(data.sessions) > 0:
+            app_name = next(iter(data.sessions)).app_name
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"{app_name}")
         try:
             graphs = []
             entities_involved = []
-            for session_id, session_entity in data.items():
+            for session in data.sessions:
                 filtered_events = []
-                for span in session_entity.spans:
+                for span in session.spans:
                     if span.entity_type in ["agent", "tool"]:
                         filtered_events.append(span.entity_name)
                         entities_involved.append(span.entity_name)
@@ -96,7 +104,7 @@ class GraphDeterminismScore(BaseMetric):
                 category="application",
                 app_name=app_name,
                 span_id=[],
-                session_id=list(data.keys()),
+                session_id=data.session_ids,
                 source="native",
                 entities_involved=list(set(entities_involved)),
                 edges_involved=[],

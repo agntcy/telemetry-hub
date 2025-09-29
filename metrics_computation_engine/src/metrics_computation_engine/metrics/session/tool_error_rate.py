@@ -4,7 +4,7 @@
 from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 
 class ToolErrorRate(BaseMetric):
@@ -48,22 +48,19 @@ class ToolErrorRate(BaseMetric):
                 (total_tool_errors / total_tool_calls) * 100 if total_tool_calls else 0
             )
 
-            entities_involved = list(
-                set([span.entity_name for span in tool_spans if span.contains_error])
-            )
             return MetricResult(
                 metric_name=self.name,
-                description="Percentage of tool spans that encountered errors",
                 value=tool_error_rate,
-                reasoning="",
-                unit="%",
                 aggregation_level=self.aggregation_level,
                 category="application",
                 app_name=session.app_name,
+                description="Percentage of tool spans that encountered errors",
+                reasoning="",
+                unit="%",
                 span_id=error_span_ids,
                 session_id=[session.session_id],
                 source="native",
-                entities_involved=entities_involved,
+                entities_involved=[],
                 edges_involved=[],
                 success=True,
                 metadata={
@@ -77,13 +74,13 @@ class ToolErrorRate(BaseMetric):
         except Exception as e:
             return MetricResult(
                 metric_name=self.name,
-                description="Failed to calculate tool error rate",
                 value=-1,
-                reasoning="",
-                unit="%",
                 aggregation_level=self.aggregation_level,
                 category="application",
-                app_name=session.app_name,
+                app_name=session.app_name if hasattr(session, "app_name") else "unknown",
+                description="Failed to calculate tool error rate",
+                reasoning="",
+                unit="%",
                 span_id="",
                 session_id=[session.session_id]
                 if hasattr(session, "session_id")

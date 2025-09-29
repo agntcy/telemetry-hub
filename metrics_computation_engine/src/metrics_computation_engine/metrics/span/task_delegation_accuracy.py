@@ -54,6 +54,7 @@ class TaskDelegationAccuracy(BaseMetric):
         ):
             return self._create_error_result(
                 category="agent",
+                app_name=data.app_name,
                 error_message="Missing required data for task delegation accuracy computation",
             )
 
@@ -66,11 +67,14 @@ class TaskDelegationAccuracy(BaseMetric):
             return self._create_success_result(
                 score,
                 category="agent",
+                app_name=data.app_name,
                 reasoning=reasoning,
                 span_ids=[data.span_id],
                 session_ids=data.session_id,
             )
 
         return self._create_error_result(
-            category="agent", error_message="Please configure your LLM credentials"
+            category="agent",
+            app_name=data.app_name,
+            error_message="Please configure your LLM credentials"
         )

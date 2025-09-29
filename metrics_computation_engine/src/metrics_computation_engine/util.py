@@ -5,7 +5,7 @@ from dataclasses import asdict
 from typing import Any, Dict, List, Tuple, Optional
 from fastapi import HTTPException
 
-from metrics_computation_engine.dal.traces import (
+from metrics_computation_engine.dal.api_client import (
     get_all_session_ids,
     get_traces_by_session,
     get_traces_by_session_ids,
@@ -24,6 +24,8 @@ from metrics_computation_engine.metrics.session import (
     AgentToToolInteractions,
     CyclesCount,
     ToolErrorRate,
+    PassiveEvalApp,
+    PassiveEvalAgents,
 )
 
 from metrics_computation_engine.processor import MetricsProcessor
@@ -44,6 +46,8 @@ NATIVE_METRICS = {
     "ToolErrorRate": ToolErrorRate,
     "ToolUtilizationAccuracy": ToolUtilizationAccuracy,
     "GraphDeterminismScore": GraphDeterminismScore,
+    "PassiveEvalApp": PassiveEvalApp,
+    "PassiveEvalAgents": PassiveEvalAgents,
 }
 
 # Cache for all available metrics (native + plugins)
@@ -307,6 +311,7 @@ def get_all_available_metrics():
                 "source": "native",
             }
         except Exception as e:
+            logger.error(f"{name=} {metric_class=} {e}")
             # Fallback if instance creation fails
             metrics[name] = {
                 "name": name,

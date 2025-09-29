@@ -1,7 +1,7 @@
 import pytest
 from metrics_computation_engine.metrics.session.cycles import CyclesCount
-from metrics_computation_engine.models.span import SpanEntity
-from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
+from metrics_computation_engine.entities.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 
 @pytest.mark.asyncio
@@ -44,9 +44,11 @@ async def test_cycles_count_no_agents_or_tools():
         )
     ]
 
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(
+        session_id=spans[0].session_id,
+        spans=spans
+    )
+    result = await metric.compute(session_entity)
     assert result.success
     assert result.value == 0
 
@@ -115,9 +117,11 @@ async def test_cycles_count_with_one_cycle():
             contains_error=False,
         ),
     ]
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(
+        session_id=spans[0].session_id,
+        spans=spans
+    )
+    result = await metric.compute(session_entity)
     assert result.success
     assert result.value == 1
 
@@ -127,9 +131,11 @@ async def test_cycles_count_invalid_input_handling():
     """Case 3: Compute should gracefully handle unexpected data without crashing."""
     metric = CyclesCount()
 
-    traces_by_session = {"abc": []}  # no spans at all
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(
+        session_id="abc",
+        spans=[]  # no spans at all
+    )
+    result = await metric.compute(session_entity)
 
     assert result.success
     assert result.value == 0
