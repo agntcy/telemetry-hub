@@ -57,8 +57,7 @@ class AgentToAgentInteractions(BaseMetric):
                 if session.agent_spans
                 else []
             )
-            print("SESSION APP NAME:", session.app_name)
-
+            
             return MetricResult(
                 metric_name=self.name,
                 description="Agent to agent interaction transition counts",
