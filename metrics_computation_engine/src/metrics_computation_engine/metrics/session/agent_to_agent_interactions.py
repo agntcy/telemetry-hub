@@ -57,7 +57,7 @@ class AgentToAgentInteractions(BaseMetric):
                 if session.agent_spans
                 else []
             )
-            
+
             return MetricResult(
                 metric_name=self.name,
                 description="Agent to agent interaction transition counts",

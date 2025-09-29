@@ -285,7 +285,16 @@ def format_return(results):
 
         formatted_results[metric_category] = [asdict(r) for r in metric_data]
 
-    return stringify_keys(formatted_results)
+    formatted_results = stringify_keys(formatted_results)
+
+    valid_metrics = []
+    for aggregation_level in "span", "session", "population":
+        for metric_result in formatted_results[f"{aggregation_level}_metrics"]:
+            valid_metrics.append(metric_result["metric_name"])
+
+    formatted_results["metrics"] = list(set(valid_metrics))
+
+    return formatted_results
 
 
 def clear_metrics_cache():
@@ -455,8 +464,8 @@ async def compute(
     # Process metrics
     processor = MetricsProcessor(registry, model_handler, llm_config=llm_judge_config)
     results = await processor.compute_metrics(traces_by_session)
-
-    return {"metrics": registry.list_metrics(), "results": format_return(results)}
+    results = format_return(results)
+    return {"metrics": results["metrics"], "results": results}
 
 
 async def compute_from_request(config_request: MetricsConfigRequest):

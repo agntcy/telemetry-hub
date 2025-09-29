@@ -195,7 +195,7 @@ async def compute_metrics(config: MetricsConfigRequest):
         for metric in config.metrics:
             try:
                 metric_cls, metric_name = get_metric_class(metric)
-                logger.info(f"Metric Name: {metric_name} - {metric_cls}")
+                logger.info(f"Registering metric: {metric_name} - {metric_cls}")
                 registry.register_metric(
                     metric_class=metric_cls, metric_name=metric_name
                 )
@@ -219,10 +219,12 @@ async def compute_metrics(config: MetricsConfigRequest):
         results = await processor.compute_metrics(sessions_data)
         results.setdefault("failed_metrics", [])
         results["failed_metrics"].extend(failed_registry_metrics)
+
         write_metrics(results)
+
+        results = format_return(results)
         return {
-            "metrics": registry.list_metrics(),
-            "results": format_return(results),
+            "results": results,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

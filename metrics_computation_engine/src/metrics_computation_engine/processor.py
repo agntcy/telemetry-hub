@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+import json
 from typing import Any, Dict
 
 from metrics_computation_engine.metrics.base import BaseMetric
@@ -196,6 +197,22 @@ class MetricsProcessor:
 
         return []
 
+    def _deduplicate_failures(self, failures):
+        seen = set()
+        deduplicated = []
+
+        for failure in failures:
+            try:
+                key = json.dumps(failure, sort_keys=True, default=str)
+            except TypeError:
+                key = str(failure)
+
+            if key not in seen:
+                seen.add(key)
+                deduplicated.append(failure)
+
+        return deduplicated
+
     def _should_compute_metric_for_span(
         self, metric_instance: BaseMetric, span: Any
     ) -> bool:
@@ -238,35 +255,47 @@ class MetricsProcessor:
                 for metric_name in self.registry.list_metrics():
                     metric_class = self.registry.get_metric(metric_name)
 
-                    # Check aggregation level without instantiation
-                    if hasattr(metric_class, "aggregation_level"):
-                        # Get aggregation_level
-                        if metric_class.aggregation_level != "span":
-                            continue
+                    try:
+                        # Check aggregation level without instantiation
+                        if hasattr(metric_class, "aggregation_level"):
+                            # Get aggregation_level
+                            if metric_class.aggregation_level != "span":
+                                continue
 
-                        # For entity filtering, we still need a temp instance to check requirements
-                        temp_instance = metric_class(metric_name)
-                        if not self._should_compute_metric_for_span(
-                            temp_instance, span
-                        ):
-                            continue
-                    else:
-                        # If it needs an instance to get aggregation_level
-                        temp_instance = metric_class(metric_name)
-                        if temp_instance.aggregation_level != "span":
-                            continue
-                        if not self._should_compute_metric_for_span(
-                            temp_instance, span
-                        ):
-                            continue
+                            # For entity filtering, we still need a temp instance to check requirements
+                            temp_instance = metric_class(metric_name)
+                            if not self._should_compute_metric_for_span(
+                                temp_instance, span
+                            ):
+                                continue
+                        else:
+                            # If it needs an instance to get aggregation_level
+                            temp_instance = metric_class(metric_name)
+                            if temp_instance.aggregation_level != "span":
+                                continue
+                            if not self._should_compute_metric_for_span(
+                                temp_instance, span
+                            ):
+                                continue
 
-                    # Only initialize if we're going to compute it
-                    metric_instance = await self._initialize_metric(
-                        metric_name, metric_class
-                    )
+                        # Only initialize if we're going to compute it
+                        metric_instance = await self._initialize_metric(
+                            metric_name, metric_class
+                        )
 
-                    if metric_instance is not None:
-                        tasks.append(self._safe_compute(metric_instance, span))
+                        if metric_instance is not None:
+                            tasks.append(self._safe_compute(metric_instance, span))
+
+                    except Exception as e:
+                        metric_results["failed_metrics"].append(
+                            {
+                                "metric_name": metric_name,
+                                "aggregation_level": "unknown",
+                                "error_message": str(e),
+                                "metadata": {},
+                            }
+                        )
+                        continue
 
             # Session-level metrics: pass the SessionEntity directly
             for metric_name in self.registry.list_metrics():
@@ -283,9 +312,20 @@ class MetricsProcessor:
                 ):
                     continue
 
-                metric_instance = await self._initialize_metric(
-                    metric_name, metric_class
-                )
+                try:
+                    metric_instance = await self._initialize_metric(
+                        metric_name, metric_class
+                    )
+                except Exception as e:
+                    metric_results["failed_metrics"].append(
+                        {
+                            "metric_name": metric_name,
+                            "aggregation_level": "unknown",
+                            "error_message": str(e),
+                            "metadata": {},
+                        }
+                    )
+                    continue
 
                 if (
                     metric_instance is not None
@@ -297,7 +337,21 @@ class MetricsProcessor:
         # Population-level metrics: pass all sessions data
         for metric_name in self.registry.list_metrics():
             metric_class = self.registry.get_metric(metric_name)
-            metric_instance = await self._initialize_metric(metric_name, metric_class)
+
+            try:
+                metric_instance = await self._initialize_metric(
+                    metric_name, metric_class
+                )
+            except Exception as e:
+                metric_results["failed_metrics"].append(
+                    {
+                        "metric_name": metric_name,
+                        "aggregation_level": "unknown",
+                        "error_message": str(e),
+                        "metadata": {},
+                    }
+                )
+                continue
 
             if (
                 metric_instance is not None
@@ -325,5 +379,9 @@ class MetricsProcessor:
                             "metadata": result.metadata,
                         }
                     )
+
+        metric_results["failed_metrics"] = self._deduplicate_failures(
+            metric_results["failed_metrics"]
+        )
 
         return metric_results
