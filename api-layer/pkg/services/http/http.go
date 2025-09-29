@@ -804,6 +804,7 @@ func (hs *HttpServer) startServer() {
 			// Annotations
 			mux.HandleFunc("/annotations", annotationServer.CreateAnnotation).Methods(http.MethodPost)
 			mux.HandleFunc("/annotations", annotationServer.GetAnnotations).Methods(http.MethodGet)
+			mux.HandleFunc("/annotations/session/{session_id}", annotationServer.GetAnnotationsBySessionID).Methods(http.MethodGet)
 			mux.HandleFunc("/annotations/{id}", annotationServer.GetAnnotation).Methods(http.MethodGet)
 			mux.HandleFunc("/annotations/{id}", annotationServer.UpdateAnnotation).Methods(http.MethodPut)
 			mux.HandleFunc("/annotations/{id}", annotationServer.DeleteAnnotation).Methods(http.MethodDelete)

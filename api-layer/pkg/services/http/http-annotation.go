@@ -460,6 +460,75 @@ func (as *AnnotationServer) GetAnnotations(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// @Summary      Get annotations by session ID
+// @Description  Get annotations for a given session ID with optional pagination
+// @Tags         Annotations
+// @Accept       json
+// @Produce      json
+// @Param        session_id path string true "Session ID"
+// @Param        page query int false "Page number" default(1) minimum(1)
+// @Param        limit query int false "Number of items per page" default(50) minimum(1) maximum(100)
+// @Success      200 {object} models.PaginatedResponse "List of annotations"
+// @Failure      400 {object} string "Bad request"
+// @Failure      404 {object} string "Not found"
+// @Failure      500 {object} string "Internal server error"
+// @Router       /annotations/session/{session_id} [get]
+func (as *AnnotationServer) GetAnnotationsBySessionID(w http.ResponseWriter, r *http.Request) {
+	if !as.Enabled {
+		as.handleJSONError(w, http.StatusNotFound, "Annotation endpoints are disabled")
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		as.handleJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	vars := mux.Vars(r)
+	sessionID := vars["session_id"]
+	if sessionID == "" {
+		as.handleJSONError(w, http.StatusBadRequest, "Session ID is required")
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 || limit > 100 {
+		limit = 50
+	}
+
+	annotations, total, err := as.AnnotationService.GetAnnotations(page, limit, nil, &sessionID, nil)
+	if err != nil {
+		as.handleJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Error fetching annotations: %v", err))
+		return
+	}
+
+	responses := make([]models.AnnotationResponse, len(annotations))
+	for i, a := range annotations {
+		responses[i] = a.ToResponse()
+	}
+
+	paginatedResponse := models.PaginatedResponse{
+		Page:    page,
+		Limit:   limit,
+		Total:   total,
+		HasNext: page*limit < total,
+		HasPrev: page > 1,
+		Data:    responses,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(paginatedResponse); err != nil {
+		as.handleJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to encode response: %v", err))
+		return
+	}
+}
+
 // @Summary      Get annotation by ID
 // @Description  Get annotation by ID
 // @Tags         Annotations
