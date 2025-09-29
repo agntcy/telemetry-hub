@@ -58,6 +58,12 @@ class AgentToAgentInteractions(BaseMetric):
                 else []
             )
 
+            entities_involved = (
+                list(set([span.entity_name for span in session.agent_spans]))
+                if session.agent_spans
+                else []
+            )
+            
             return MetricResult(
                 metric_name=self.name,
                 value=dict(transition_counts),
@@ -70,7 +76,7 @@ class AgentToAgentInteractions(BaseMetric):
                 span_id=span_ids,
                 session_id=[session.session_id],
                 source="native",
-                entities_involved=[entities_involved],
+                entities_involved=entities_involved,
                 edges_involved=[],
                 success=True,
                 metadata={
