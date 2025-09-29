@@ -6,7 +6,7 @@ from metrics_computation_engine.models.session import SessionEntity
 GOAL_SUCCESS_RATE_PROMPT = """
     You are an evaluator of Goal Success Rate.
 
-    You will be given a QUERY and a RESPONSE, and (optionally) a Reference Answer that gets a score of 1. Evaluate how well the RESPONSE demonstrates Goal Success Rate.
+    You will be given a QUERY and a RESPONSE, and (optionally) a Ground Truth. If the RESPONSE to evaluate matches the Ground Truth, then the score should be a 1. The RESPONSE can alternatively score a goal of 1 by satisfying all of the evaluation critieria. Evaluate how well the RESPONSE demonstrates Goal Success Rate.
 
     The QUERY contains the GOAL that the user is requesting the assistant to achieve.
 
@@ -17,7 +17,7 @@ GOAL_SUCCESS_RATE_PROMPT = """
         0: the Assistant fails to achieve the goal specified by the user.
 
     QUERY: {query}
-    Optional Reference Answer (Score 1): {ground_truth}
+    Ground Truth: {ground_truth}
     RESPONSE to evaluate: {response}
 """
 
@@ -63,7 +63,7 @@ class GoalSuccessRate(BaseMetric):
         prompt = GOAL_SUCCESS_RATE_PROMPT.format(
             query=query, response=response, ground_truth=ground_truth
         )
-
+        
         if self.jury:
             score, reasoning = self.jury.judge(prompt, BinaryGrading)
             return self._create_success_result(
