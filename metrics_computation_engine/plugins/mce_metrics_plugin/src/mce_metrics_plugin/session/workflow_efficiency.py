@@ -70,21 +70,18 @@ class WorkflowEfficiency(BaseMetric):
                 else []
             )
             return MetricResult(
-                metric_name=self.name,
-                description="Workflow efficiency based on agent transitions",
-                value=efficiency_score,
-                reasoning="",
-                unit="efficiency_score",
-                aggregation_level=self.aggregation_level,
-                category="application",
-                app_name=session.app_name,
-                span_id="",
-                session_id=session.session_id,
-                source="native",
-                entities_involved=list(set(entities_involved)),
-                edges_involved=[],
-                success=True,
-                metadata={
+                self.name,
+                efficiency_score,
+                self.aggregation_level,
+                "application",
+                session.app_name,
+                "",
+                session.session_id,
+                "native",
+                list(set(entities_involved)),
+                [],
+                True,
+                {
                     "total_transitions": total_transitions,
                     "unique_transitions": unique_transitions,
                     "transition_counts": dict(session.agent_transition_counts)
@@ -92,25 +89,28 @@ class WorkflowEfficiency(BaseMetric):
                     else {},
                     "span_ids": agent_span_ids,
                 },
-                error_message=None,
+                None,
+                "Workflow efficiency based on agent transitions",
+                "",
+                "efficiency_score"
             )
 
         except Exception as e:
-            return MetricResult(
-                metric_name=self.name,
-                description="",
-                reasoning="",
-                value=-1,
-                unit="",
-                aggregation_level=self.aggregation_level,
-                category="application",
-                app_name=session.app_name,
-                span_id="",
-                session_id=session.session_id if hasattr(session, "session_id") else "",
-                source="native",
-                entities_involved=[],
-                edges_involved=[],
-                success=False,
-                metadata={},
-                error_message=str(e),
-            )
+                return MetricResult(
+                    self.name,
+                    -1,
+                    self.aggregation_level,
+                    "application",
+                    getattr(session, "app_name", ""),
+                    "",
+                    getattr(session, "session_id", ""),
+                    "native",
+                    [],
+                    [],
+                    False,
+                    {},
+                    str(e),
+                    "",
+                    "",
+                    ""
+                )

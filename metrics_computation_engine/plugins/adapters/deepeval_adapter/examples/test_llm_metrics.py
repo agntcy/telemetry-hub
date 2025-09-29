@@ -8,8 +8,9 @@ from typing import Any, Dict, List
 from dotenv import load_dotenv
 from mce_deepeval_adapter.adapter import DeepEvalMetricAdapter
 
-from metrics_computation_engine.core.data_parser import parse_raw_spans
-from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
+from metrics_computation_engine.entities.core.data_parser import parse_raw_spans
+from metrics_computation_engine.entities.core.session_aggregator import SessionAggregator
+from metrics_computation_engine.entities.models.session_set import SessionSet
 from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.model_handler import ModelHandler
 from metrics_computation_engine.models.eval import MetricResult
@@ -49,8 +50,14 @@ async def compute():
     addon = "" if len(traces_by_session) == 1 else "s"
     logger.info(f"Calculating metrics for {len(traces_by_session)} session{addon}.")
 
-    session_entities = build_session_entities_from_dict(sessions_data=traces_by_session)
-    sessions_data = {entity.session_id: entity for entity in session_entities}
+    # Create session entities using the new SessionAggregator
+    session_entities = []
+    aggregator = SessionAggregator()
+    for session_id, spans in traces_by_session.items():
+        session_entity = aggregator.create_session_from_spans(session_id, spans)
+        session_entities.append(session_entity)
+
+    sessions_set = SessionSet(sessions=session_entities)
 
     registry = MetricRegistry()
     metrics = build_llm_metrics()
@@ -66,9 +73,9 @@ async def compute():
         f" {registered_metrics}"
     )
     llm_config = LLMJudgeConfig(
-        LLM_BASE_MODEL_URL=os.environ["MCE_LLM_BASE_MODEL_URL"],
-        LLM_MODEL_NAME=os.environ["MCE_LLM_MODEL_NAME"],
-        LLM_API_KEY=os.environ["MCE_LLM_API_KEY"],
+        LLM_BASE_MODEL_URL=os.environ["LLM_BASE_MODEL_URL"],
+        LLM_MODEL_NAME=os.environ["LLM_MODEL_NAME"],
+        LLM_API_KEY=os.environ["LLM_API_KEY"],
     )
     model_handler = ModelHandler()
     processor = MetricsProcessor(
@@ -76,7 +83,7 @@ async def compute():
     )
 
     logger.info("Metrics calculation processor  started")
-    results = await processor.compute_metrics(sessions_data=sessions_data)
+    results = await processor.compute_metrics(sessions_set)
 
     logger.info("Metrics calculation processor finished")
 

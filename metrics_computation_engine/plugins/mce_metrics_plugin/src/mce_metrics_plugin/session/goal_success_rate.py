@@ -1,7 +1,7 @@
 from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 GOAL_SUCCESS_RATE_PROMPT = """
     You are an evaluator of Goal Success Rate.
@@ -21,7 +21,7 @@ GOAL_SUCCESS_RATE_PROMPT = """
 
 
 class GoalSuccessRate(BaseMetric):
-    REQUIRED_PARAMETERS = {"GoalSuccessRate": ["input_query", "final_response"]}
+    REQUIRED_PARAMETERS = {"GoalSuccessRate": ["user_input", "final_response"]}
 
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()
@@ -48,7 +48,7 @@ class GoalSuccessRate(BaseMetric):
         return self.create_native_model(llm_config)
 
     async def compute(self, session: SessionEntity):
-        query = session.input_query
+        query = session.user_input
         response = session.final_response
 
         entities_involved = (

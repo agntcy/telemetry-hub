@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 # Co-located prompt for better readability and maintainability
 GROUNDEDNESS_PROMPT = """
@@ -79,22 +79,22 @@ class Groundedness(BaseMetric):
                     else []
                 )
                 return MetricResult(
-                    metric_name=self.name,
-                    description="",
-                    value=score,
-                    reasoning=reasoning,
-                    unit="",
-                    aggregation_level=self.aggregation_level,
-                    category="application",
-                    app_name=session.app_name,
-                    span_id="",
-                    session_id=session.session_id,
-                    source="native",
-                    entities_involved=entities_involved,
-                    edges_involved=[],
-                    success=True,
-                    metadata={"span_ids": agent_span_ids},
-                    error_message=None,
+                    self.name,
+                    score,
+                    self.aggregation_level,
+                    "application",
+                    session.app_name,
+                    "",
+                    session.session_id,
+                    "native",
+                    entities_involved,
+                    [],
+                    True,
+                    {"span_ids": agent_span_ids},
+                    None,
+                    "",
+                    reasoning,
+                    ""
                 )
 
             return MetricResult(
@@ -117,18 +117,20 @@ class Groundedness(BaseMetric):
             )
         except Exception as e:
             return MetricResult(
-                metric_name=self.name,
-                description="",
-                value=-1,
-                reasoning="",
-                unit="",
-                aggregation_level=self.aggregation_level,
-                span_id="",
-                session_id=session.session_id if hasattr(session, "session_id") else "",
-                source="native",
-                entities_involved=entities_involved,
-                edges_involved=[],
-                success=False,
-                metadata={},
-                error_message=str(e),
+                self.name,
+                -1,
+                self.aggregation_level,
+                "application",
+                getattr(session, "app_name", ""),
+                "",
+                getattr(session, "session_id", ""),
+                "native",
+                entities_involved,
+                [],
+                False,
+                {},
+                str(e),
+                "",
+                "",
+                ""
             )

@@ -4,8 +4,8 @@ from typing import Optional, Union
 
 from deepeval.test_case import ConversationalTestCase, LLMTestCase, ToolCall, Turn
 
-from metrics_computation_engine.models.session import SessionEntity
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.util import (
     build_chat_history_from_payload,
     get_tool_definitions_from_span_attributes,

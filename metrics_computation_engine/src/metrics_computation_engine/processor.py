@@ -86,6 +86,13 @@ class MetricsProcessor:
             # logger.error(traceback.format_exc())
             logger.exception(f"Error computing metric {metric.name}: {e}")
             # Return error result instead of crashing
+            # Extract basic info from data for error reporting
+            app_name = "unknown-app"
+            if hasattr(data, 'app_name'):
+                app_name = data.app_name
+            elif hasattr(data, 'spans') and data.spans and hasattr(data.spans[0], 'app_name'):
+                app_name = data.spans[0].app_name
+                
             return MetricResult(
                 metric_name=metric.name,
                 description="",
@@ -93,6 +100,8 @@ class MetricsProcessor:
                 reasoning="",
                 unit="",
                 aggregation_level=metric.aggregation_level,
+                category="application",
+                app_name=app_name,
                 span_id=[],
                 session_id=[],
                 source="native",

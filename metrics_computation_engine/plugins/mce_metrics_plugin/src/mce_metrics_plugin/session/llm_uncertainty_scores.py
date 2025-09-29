@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
 from metrics_computation_engine.models.requests import LLMJudgeConfig
-from metrics_computation_engine.models.session import SessionEntity
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.types import AggregationLevel
 from metrics_computation_engine.util import setup_logger
 
@@ -58,22 +58,22 @@ class LLMUncertaintyScoresBase(BaseMetric):
             error_message = "No logprobs found"
 
         return MetricResult(
-            metric_name=self.name,
-            description="",
-            value=value,
-            reasoning="",
-            unit="",
-            aggregation_level=self.aggregation_level,
-            category="session",
-            app_name=data.app_name,
-            span_id=list(log_probs.keys()),
-            session_id=[self.session_id],
-            source="MCE",
-            entities_involved=[],
-            edges_involved=[],
-            success=success,
-            metadata={k: [x.model_dump() for x in v] for k, v in log_probs.items()},
-            error_message=error_message,
+            self.name,
+            value,
+            self.aggregation_level,
+            "session",
+            data.app_name,
+            list(log_probs.keys()),
+            [self.session_id],
+            "MCE",
+            [],
+            [],
+            success,
+            {k: [x.model_dump() for x in v] for k, v in log_probs.items()},
+            error_message,
+            "",
+            "",
+            ""
         )
 
     def init_with_model(self, model: Any) -> bool:
