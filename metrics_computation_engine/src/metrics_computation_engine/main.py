@@ -219,10 +219,12 @@ async def compute_metrics(config: MetricsConfigRequest):
         processor = MetricsProcessor(
             registry=registry, model_handler=model_handler, llm_config=llm_config
         )
+
         results = await processor.compute_metrics(sessions_set)
         results.setdefault("failed_metrics", [])
         results["failed_metrics"].extend(failed_registry_metrics)
 
+        results = format_return(results)
         # Implement caching of results here
         if os.getenv("METRICS_CACHE_ENABLED", "false").lower() == "true":
             logger.info("Caching required")

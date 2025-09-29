@@ -65,7 +65,7 @@ class GoalSuccessRate(BaseMetric):
         prompt = GOAL_SUCCESS_RATE_PROMPT.format(
             query=query, response=response, ground_truth=ground_truth
         )
-        
+
         if self.jury:
             score, reasoning = self.jury.judge(prompt, BinaryGrading)
             return self._create_success_result(

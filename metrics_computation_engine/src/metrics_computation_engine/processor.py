@@ -6,6 +6,7 @@ import asyncio
 import json
 import inspect
 from typing import Any, Dict, List, Optional
+import json
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult

@@ -63,7 +63,7 @@ class AgentToAgentInteractions(BaseMetric):
                 if session.agent_spans
                 else []
             )
-            
+
             return MetricResult(
                 metric_name=self.name,
                 value=dict(transition_counts),
