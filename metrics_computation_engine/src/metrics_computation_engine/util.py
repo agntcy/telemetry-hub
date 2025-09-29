@@ -147,11 +147,21 @@ def get_metric_class(metric_name: str) -> Tuple[Any, str]:
     available_metrics = list(all_metrics.keys())
     available_adapters = list(get_metric_adapters().keys())
 
+    adapter_install_hint = (
+        "No adapters detected. Install plugin packages such as:\n"
+        "- pip install -e telemetry-hub/metrics_computation_engine/plugins/adapters/ragas_adapter\n"
+        "- pip install -e telemetry-hub/metrics_computation_engine/plugins/adapters/opik_adapter\n"
+        "- pip install -e telemetry-hub/metrics_computation_engine/plugins/adapters/deepeval_adapter\n"
+    )
+
     raise ValueError(
-        f"Metric '{metric_key}' not found. "
-        f"Available native/plugin metrics: {available_metrics}. "
-        f"Available adapters: {available_adapters}. "
-        f"For adapter metrics, use format like 'deepeval.metrics.AnswerRelevancyMetric'"
+        (
+            f"Metric '{metric_key}' not found. "
+            f"Available native/plugin metrics: {available_metrics}. "
+            f"Available adapters: {available_adapters if available_adapters else '[] (none detected)'}. "
+            f"For adapter metrics, use format like 'deepeval.metrics.AnswerRelevancyMetric'."
+        )
+        + (f" {adapter_install_hint}" if not available_adapters else "")
     )
 
 
@@ -266,10 +276,16 @@ def stringify_keys(obj):
 
 
 def format_return(results):
-    for metric_category, metric_results in results.items():
-        results[metric_category] = [asdict(r) for r in metric_results]
+    formatted_results = {}
 
-    return stringify_keys(results)
+    for metric_category, metric_data in results.items():
+        if metric_category == "failed_metrics":
+            formatted_results[metric_category] = stringify_keys(metric_data)
+            continue
+
+        formatted_results[metric_category] = [asdict(r) for r in metric_data]
+
+    return stringify_keys(formatted_results)
 
 
 def clear_metrics_cache():

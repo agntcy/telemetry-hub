@@ -43,6 +43,7 @@ class MetricsProcessor:
                 value=-1,
                 error_message=str(e),
                 aggregation_level=metric.aggregation_level,
+                success=False,
             )
 
     async def _initialize_metric(self, metric_name: str, metric_class) -> BaseMetric:
@@ -228,6 +229,7 @@ class MetricsProcessor:
             "span_metrics": [],
             "session_metrics": [],
             "population_metrics": [],
+            "failed_metrics": [],
         }
 
         for session_id, session_entity in sessions_data.items():
@@ -310,10 +312,18 @@ class MetricsProcessor:
 
             # Organize results by aggregation level
             for result in results:
-                if result.value == -1 and not result.success:
-                    continue
-
-                aggregation_level = result.aggregation_level
-                metric_results[f"{aggregation_level}_metrics"].append(result)
+                if result.success:
+                    aggregation_level = result.aggregation_level
+                    metric_results[f"{aggregation_level}_metrics"].append(result)
+                else:
+                    metric_results["failed_metrics"].append(
+                        {
+                            "metric_name": result.metric_name,
+                            "aggregation_level": result.aggregation_level,
+                            "error_message": result.error_message
+                            or "Metric returned unsuccessful result",
+                            "metadata": result.metadata,
+                        }
+                    )
 
         return metric_results

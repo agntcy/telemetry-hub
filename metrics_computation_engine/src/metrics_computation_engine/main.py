@@ -188,6 +188,8 @@ async def compute_metrics(config: MetricsConfigRequest):
         logger.info(f"LLM Judge using - URL: {llm_config.LLM_BASE_MODEL_URL}")
         logger.info(f"LLM Judge using - Model: {llm_config.LLM_MODEL_NAME}")
 
+        failed_registry_metrics = []
+
         # Register metrics
         registry = MetricRegistry()
         for metric in config.metrics:
@@ -199,6 +201,14 @@ async def compute_metrics(config: MetricsConfigRequest):
                 )
             except Exception as e:
                 logger.error(f"Error: {e}")
+                failed_registry_metrics.append(
+                    {
+                        "metric_name": metric,
+                        "aggregation_level": "unknown",
+                        "error_message": str(e),
+                        "metadata": {},
+                    }
+                )
 
         logger.info(f"Registered Metrics: {registry.list_metrics()}")
 
@@ -207,6 +217,8 @@ async def compute_metrics(config: MetricsConfigRequest):
             registry, model_handler=model_handler, llm_config=llm_config
         )
         results = await processor.compute_metrics(sessions_data)
+        results.setdefault("failed_metrics", [])
+        results["failed_metrics"].extend(failed_registry_metrics)
         write_metrics(results)
         return {
             "metrics": registry.list_metrics(),
