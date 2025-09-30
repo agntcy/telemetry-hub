@@ -177,7 +177,7 @@ class DeepEvalMetricAdapter(BaseMetric):
         """
         Compute the metric using DeepEval's interface and return in your framework's format
         """
-        
+
         # Initialize variables before try block to avoid UnboundLocalError
         (
             category,

@@ -19,11 +19,11 @@ def create_session_from_spans(spans):
     """Helper function to create a session entity from spans using the new SessionAggregator API."""
     if not spans:
         raise ValueError("No spans provided")
-    
+
     aggregator = SessionAggregator()
     session_id = spans[0].session_id
     session = aggregator.create_session_from_spans(session_id, spans)
-    
+
     # Extract user_input and final_response from LLM spans for metric requirements
     for span in spans:
         if span.entity_type == "llm" and span.input_payload and span.output_payload:
@@ -35,7 +35,7 @@ def create_session_from_spans(spans):
                     if role == "user":
                         session.user_input = value
                         break
-            
+
             # Extract final response from the output (last assistant/user response)
             for key, value in span.output_payload.items():
                 if key.startswith("gen_ai.prompt") and ".content" in key:
@@ -43,7 +43,7 @@ def create_session_from_spans(spans):
                     role = span.output_payload.get(role_key, "")
                     if role in ["assistant", "user"]:  # Sometimes responses are marked as "user" in test data
                         session.final_response = value
-    
+
     return session
 
 

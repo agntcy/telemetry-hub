@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import Union, Dict, Any
 
-from metrics_computation_engine.models.session import SessionEntity
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.logger import setup_logger
 
 logger = setup_logger(__name__)

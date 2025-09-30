@@ -19,11 +19,11 @@ def create_session_from_spans(spans):
     """Helper function to create a session entity from spans using the new SessionAggregator API."""
     if not spans:
         raise ValueError("No spans provided")
-    
+
     aggregator = SessionAggregator()
     session_id = spans[0].session_id
     session = aggregator.create_session_from_spans(session_id, spans)
-    
+
     # Manually populate conversation elements for deepeval adapter compatibility
     conversation_elements = []
     for span in spans:
@@ -38,7 +38,7 @@ def create_session_from_spans(spans):
                             role=role,
                             content=value
                         ))
-            
+
             # Extract conversation from output payload
             if span.output_payload:
                 for key, value in span.output_payload.items():
@@ -49,10 +49,10 @@ def create_session_from_spans(spans):
                             role=role,
                             content=value
                         ))
-    
+
     # Set conversation elements on session
     session.conversation_elements = conversation_elements
-    
+
     return session
 
 
@@ -110,7 +110,7 @@ async def test_conversation_completeness_metric():
                 raw_span_data={},
             ),
         ]
-        
+
     # Compute via processor so model is constructed via ModelHandler
     registry = MetricRegistry()
     # Create an instance of the adapter with the specific metric name

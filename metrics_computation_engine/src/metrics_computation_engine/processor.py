@@ -92,7 +92,7 @@ class MetricsProcessor:
                 app_name = data.app_name
             elif hasattr(data, 'spans') and data.spans and hasattr(data.spans[0], 'app_name'):
                 app_name = data.spans[0].app_name
-                
+
             return MetricResult(
                 metric_name=metric.name,
                 description="",
