@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 from typing import Any
 from opik.evaluation import models
 from metrics_computation_engine.models.requests import LLMJudgeConfig

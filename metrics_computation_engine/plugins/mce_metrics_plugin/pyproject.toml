@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -5,6 +8,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mce_metrics_plugin"
 version = "0.1.0"
+license = "Apache-2.0"
 description = "Metrics plugin"
 authors = [
   {name = "AGNTCY Telemetry Hub team"},
