@@ -7,7 +7,7 @@ import importlib
 # These imports will be available in the runtime environment
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.types import AggregationLevel
 from metrics_computation_engine.models.requests import LLMJudgeConfig
 
