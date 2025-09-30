@@ -8,6 +8,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mce-deepeval-adapter"
 version = "0.1.0"
+license = "Apache-2.0"
 description = "DeepEval integration adapter for Metrics Computation Engine"
 authors = [
     {name = "AGNTCY Telemetry Hub team"},

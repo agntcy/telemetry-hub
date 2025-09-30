@@ -8,6 +8,7 @@ build-backend = "hatchling.build"
 [project]
 name = "metrics-computation-engine"
 version = "1.2.0"
+license = "Apache-2.0"
 description = "Service for computing metrics on AI agent performance data"
 readme = "README.md"
 authors = [
