@@ -100,7 +100,7 @@ class SessionEntity(BaseModel):
 
     tool_calls: Optional[List[ToolCall]] = None
 
-    user_input: Optional[str] = None
+    input_query: Optional[str] = None
     final_response: Optional[str] = None
 
     def _build_entity_indices(self) -> None:

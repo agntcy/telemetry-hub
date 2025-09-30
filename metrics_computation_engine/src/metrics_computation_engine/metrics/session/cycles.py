@@ -103,7 +103,9 @@ class CyclesCount(BaseMetric):
                 value=-1,
                 aggregation_level=self.aggregation_level,
                 category="application",
-                app_name=session.app_name if hasattr(session, "app_name") else "unknown",
+                app_name=session.app_name
+                if hasattr(session, "app_name")
+                else "unknown",
                 description="",
                 unit="",
                 reasoning="Count of contiguous cycles in agent and tool interactions",

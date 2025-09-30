@@ -26,10 +26,7 @@ async def test_tool_error_rate_all_cases():
     metric = ToolErrorRate()
 
     # Case 1: No tool spans
-    session_entity = SessionEntity(
-        session_id="abc",
-        spans=[]
-    )
+    session_entity = SessionEntity(session_id="abc", spans=[])
     result = await metric.compute(session_entity)
     assert result.value == 0
     assert result.success
@@ -39,10 +36,7 @@ async def test_tool_error_rate_all_cases():
         make_dummy_span("tool", False, "1"),
         make_dummy_span("tool", False, "2"),
     ]
-    session_entity = SessionEntity(
-        session_id=spans[0].session_id,
-        spans=spans
-    )
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
     result = await metric.compute(session_entity)
     assert result.value == 0
     assert result.success
@@ -52,10 +46,7 @@ async def test_tool_error_rate_all_cases():
         make_dummy_span("tool", True, "1"),
         make_dummy_span("tool", True, "2"),
     ]
-    session_entity = SessionEntity(
-        session_id=spans[0].session_id,
-        spans=spans
-    )
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
     result = await metric.compute(session_entity)
     assert result.value == 100
     assert result.success
@@ -65,10 +56,7 @@ async def test_tool_error_rate_all_cases():
         make_dummy_span("tool", False, "1"),
         make_dummy_span("tool", True, "2"),
     ]
-    session_entity = SessionEntity(
-        session_id=spans[0].session_id,
-        spans=spans
-    )
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
     result = await metric.compute(session_entity)
     assert result.value == 50
     assert result.success

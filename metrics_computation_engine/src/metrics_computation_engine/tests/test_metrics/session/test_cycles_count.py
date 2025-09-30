@@ -44,10 +44,7 @@ async def test_cycles_count_no_agents_or_tools():
         )
     ]
 
-    session_entity = SessionEntity(
-        session_id=spans[0].session_id,
-        spans=spans
-    )
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
     result = await metric.compute(session_entity)
     assert result.success
     assert result.value == 0
@@ -117,10 +114,7 @@ async def test_cycles_count_with_one_cycle():
             contains_error=False,
         ),
     ]
-    session_entity = SessionEntity(
-        session_id=spans[0].session_id,
-        spans=spans
-    )
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
     result = await metric.compute(session_entity)
     assert result.success
     assert result.value == 1
@@ -133,7 +127,7 @@ async def test_cycles_count_invalid_input_handling():
 
     session_entity = SessionEntity(
         session_id="abc",
-        spans=[]  # no spans at all
+        spans=[],  # no spans at all
     )
     result = await metric.compute(session_entity)
 

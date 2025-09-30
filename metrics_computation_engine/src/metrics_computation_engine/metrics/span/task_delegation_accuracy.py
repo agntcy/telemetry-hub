@@ -76,5 +76,5 @@ class TaskDelegationAccuracy(BaseMetric):
         return self._create_error_result(
             category="agent",
             app_name=data.app_name,
-            error_message="Please configure your LLM credentials"
+            error_message="Please configure your LLM credentials",
         )

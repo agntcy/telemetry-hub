@@ -96,8 +96,8 @@ class OpikSessionTestCase(AbstractTestCaseCalculator):
             params["conversation"] = conversation
 
         # Extract session-level metrics
-        if hasattr(data, "user_input") and data.user_input:
-            params["user_input"] = data.user_input
+        if hasattr(data, "input_query") and data.input_query:
+            params["user_input"] = data.input_query
 
         if hasattr(data, "final_response") and data.final_response:
             params["final_response"] = data.final_response

@@ -123,7 +123,7 @@ def sample_session_set(sample_trace_data, logger):
         agent_transition_counts=None,
         conversation_elements=None,
         tool_calls=None,
-        user_input=None,
+        input_query=None,
         final_response=None,
     )
     sessions.append(session)
@@ -158,7 +158,7 @@ def sample_session_with_tree(sample_session_set):
         agent_transition_counts=None,
         conversation_elements=None,
         tool_calls=None,
-        user_input=None,
+        input_query=None,
         final_response=None,
     )
 
@@ -183,7 +183,7 @@ def sample_session_without_tree(sample_session_set):
         agent_transition_counts=None,
         conversation_elements=None,
         tool_calls=None,
-        user_input=None,
+        input_query=None,
         final_response=None,
     )
 

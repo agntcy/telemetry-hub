@@ -3,7 +3,6 @@ Tests for the SpanCounter metric plugin.
 """
 
 import pytest
-from unittest.mock import Mock
 from span_counter import SpanCounter
 
 # Import SessionEntity and SpanEntity from the main codebase
@@ -15,6 +14,7 @@ except ImportError:
     class SpanEntity:
         def __init__(self, **kwargs):
             self.__dict__.update(kwargs)
+
     class SessionEntity:
         def __init__(self, session_id, spans):
             self.session_id = session_id

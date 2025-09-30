@@ -653,9 +653,7 @@ class ApiClient:
                     _endpoint = self._api_config.uri_span_metric
 
                 # run the query
-                status = self._post_api_request(
-                    endpoint=_endpoint, data=metric_data
-                )
+                status = self._post_api_request(endpoint=_endpoint, data=metric_data)
                 self.logger.info(
                     f"write {metric_category} metrics {metric_data['session_id']=}: {status}"
                 )

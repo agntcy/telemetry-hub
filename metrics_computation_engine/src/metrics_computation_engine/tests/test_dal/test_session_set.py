@@ -84,7 +84,7 @@ class TestSessionSet:
                 agent_transition_counts=None,
                 conversation_elements=None,
                 tool_calls=None,
-                user_input=None,
+                input_query=None,
                 final_response=None,
             )
             mock_sessions.append(mock_session)
@@ -359,7 +359,7 @@ class TestSessionSetStatsCaching:
         mock_session.tool_calls = []
         mock_session.start_time = None
         mock_session.end_time = None
-        mock_session.user_input = None
+        mock_session.input_query = None
         mock_session.final_response = None
         mock_session.requirements = None
 

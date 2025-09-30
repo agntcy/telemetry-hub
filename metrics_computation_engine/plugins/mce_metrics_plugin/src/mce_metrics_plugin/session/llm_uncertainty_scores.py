@@ -73,7 +73,7 @@ class LLMUncertaintyScoresBase(BaseMetric):
             error_message,
             "",
             "",
-            ""
+            "",
         )
 
     def init_with_model(self, model: Any) -> bool:

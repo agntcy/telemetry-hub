@@ -12,10 +12,7 @@ async def test_agent_to_tool_interactions():
     metric = AgentToToolInteractions()
 
     # Case 1: No tool spans
-    session_entity = SessionEntity(
-        session_id="s1",
-        spans=[]
-    )
+    session_entity = SessionEntity(session_id="s1", spans=[])
     result = await metric.compute(session_entity)
     assert result.success
     assert result.value == Counter()
@@ -40,10 +37,7 @@ async def test_agent_to_tool_interactions():
             }
         },
     )
-    session_entity = SessionEntity(
-        session_id=span1.session_id,
-        spans=[span1]
-    )
+    session_entity = SessionEntity(session_id=span1.session_id, spans=[span1])
     result = await metric.compute(session_entity)
     assert result.success
     assert result.value == Counter({"(Agent: AgentA) -> (Tool: ToolX)": 1})
@@ -68,10 +62,7 @@ async def test_agent_to_tool_interactions():
             }
         },
     )
-    session_entity = SessionEntity(
-        session_id=span1.session_id,
-        spans=[span1, span2]
-    )
+    session_entity = SessionEntity(session_id=span1.session_id, spans=[span1, span2])
     result = await metric.compute(session_entity)
     assert result.success
     assert result.value == Counter({"(Agent: AgentA) -> (Tool: ToolX)": 2})
@@ -97,8 +88,7 @@ async def test_agent_to_tool_interactions():
         },
     )
     session_entity = SessionEntity(
-        session_id=span1.session_id,
-        spans=[span1, span2, span3]
+        session_id=span1.session_id, spans=[span1, span2, span3]
     )
     result = await metric.compute(session_entity)
     assert result.success
@@ -123,10 +113,7 @@ async def test_agent_to_tool_interactions():
             "SpanAttributes": {}  # Missing required keys
         },
     )
-    session_entity = SessionEntity(
-        session_id=span4.session_id,
-        spans=[span4]
-    )
+    session_entity = SessionEntity(session_id=span4.session_id, spans=[span4])
     result = await metric.compute(session_entity)
     assert not result.success
     assert result.value == -1

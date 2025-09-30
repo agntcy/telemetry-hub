@@ -4,7 +4,6 @@
 import logging
 import asyncio
 import inspect
-import traceback
 from typing import Any, Dict, List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
@@ -59,8 +58,7 @@ class MetricsProcessor:
 
             if metric.aggregation_level in ["span", "session"]:
                 cached_result = await metric.check_cache_metric(
-                    metric_name=metric.name,
-                    session_id=data.session_id
+                    metric_name=metric.name, session_id=data.session_id
                 )
             if cached_result is not None:
                 if logger.isEnabledFor(logging.DEBUG):
@@ -88,9 +86,13 @@ class MetricsProcessor:
             # Return error result instead of crashing
             # Extract basic info from data for error reporting
             app_name = "unknown-app"
-            if hasattr(data, 'app_name'):
+            if hasattr(data, "app_name"):
                 app_name = data.app_name
-            elif hasattr(data, 'spans') and data.spans and hasattr(data.spans[0], 'app_name'):
+            elif (
+                hasattr(data, "spans")
+                and data.spans
+                and hasattr(data.spans[0], "app_name")
+            ):
                 app_name = data.spans[0].app_name
 
             return MetricResult(
@@ -205,10 +207,10 @@ class MetricsProcessor:
                         f"{metric_name} invalid for session {session_entity.session_id}! `conversation_elements` is empty"
                     )
                     return False
-            elif param == "user_input":
+            elif param == "input_query":
                 if not attr_value or len(str(attr_value)) == 0:
                     logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `user_input` is empty"
+                        f"{metric_name} invalid for session {session_entity.session_id}! `input_query` is empty"
                     )
                     return False
             elif param == "final_response":

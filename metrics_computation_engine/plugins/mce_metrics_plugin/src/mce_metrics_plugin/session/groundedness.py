@@ -94,7 +94,7 @@ class Groundedness(BaseMetric):
                     None,
                     "",
                     reasoning,
-                    ""
+                    "",
                 )
 
             return MetricResult(
@@ -132,5 +132,5 @@ class Groundedness(BaseMetric):
                 str(e),
                 "",
                 "",
-                ""
+                "",
             )

@@ -434,6 +434,159 @@ class AgentTransitionTransformer(DataPreservingTransformer):
         }
 
 
+class EndToEndAttributesTransformer(DataPreservingTransformer):
+    """
+    Transformer for extracting session-level input_query and final_response
+    from LLM span conversation history.
+    """
+
+    def extract(self, session: SessionEntity) -> Dict[str, Any]:
+        """Extract input_query and final_response from LLM spans."""
+        if not isinstance(session, SessionEntity):
+            return {}
+
+        if not session.llm_spans:
+            return {}
+
+        # Use the latest invocation of the LLM which should maintain the whole chat history
+        from datetime import datetime
+
+        try:
+            latest_span = max(
+                session.llm_spans, key=lambda x: datetime.fromisoformat(x.timestamp)
+            )
+        except (ValueError, AttributeError):
+            # Fallback if timestamp parsing fails
+            latest_span = session.llm_spans[-1]
+
+        if not latest_span.input_payload:
+            return {}
+
+        # Extract prompt indices
+        indexes = {
+            int(key.split(".")[2])
+            for key in latest_span.input_payload.keys()
+            if key.startswith("gen_ai.prompt.")
+            and len(key.split(".")) > 2
+            and key.split(".")[2].isdigit()
+        }
+
+        input_query, final_response = None, None
+
+        # Process prompts in order to find first user input
+        for i in sorted(indexes):
+            role_key = f"gen_ai.prompt.{i}.role"
+            content_key = f"gen_ai.prompt.{i}.content"
+
+            if (
+                role_key in latest_span.input_payload
+                and latest_span.input_payload[role_key].lower() == "system"
+            ):
+                # Skip system messages
+                continue
+
+            if content_key in latest_span.input_payload:
+                content = latest_span.input_payload[content_key]
+                if content and not input_query:  # Only set the first user input
+                    input_query = content
+                    break  # Stop after finding the first user input
+
+        # Extract final_response from all LLM spans, looking for meaningful responses
+        # We need to find the last meaningful assistant response, not just the last completion
+        for span in sorted(
+            session.llm_spans,
+            key=lambda x: datetime.fromisoformat(x.timestamp),
+            reverse=True,
+        ):
+            if span.output_payload:
+                completion_indexes = {
+                    int(key.split(".")[2])
+                    for key in span.output_payload.keys()
+                    if key.startswith("gen_ai.completion.")
+                    and len(key.split(".")) > 2
+                    and key.split(".")[2].isdigit()
+                }
+
+                # Look for meaningful completions (not just system control messages)
+                for i in sorted(completion_indexes, reverse=True):
+                    content_key = f"gen_ai.completion.{i}.content"
+                    role_key = f"gen_ai.completion.{i}.role"
+
+                    if content_key in span.output_payload:
+                        content = span.output_payload[content_key]
+                        role = span.output_payload.get(role_key, "").lower()
+
+                        # Skip if content is empty or looks like system control
+                        if not content:
+                            continue
+
+                        content_str = str(content).strip()
+
+                        # Skip obvious system control messages and analysis content
+                        if (
+                            # JSON control messages (both single and double quotes)
+                            content_str.startswith('{"next":')
+                            or content_str.startswith(
+                                "{'next':"
+                            )  # Single quote version
+                            or content_str == '{"next": "FINISH"}'
+                            or content_str
+                            == "{'next': 'FINISH'}"  # Single quote version
+                            or content_str.startswith('{"next": "')
+                            or content_str.startswith(
+                                "{'next': '"
+                            )  # Single quote version
+                            or
+                            # Short responses
+                            len(content_str) < 10  # Skip very short responses
+                            or
+                            # Analysis content patterns (more specific)
+                            content_str.lower().startswith("the text contains")
+                            or content_str.lower().startswith("the word ")
+                            or "text contains" in content_str.lower()
+                            or
+                            # Only filter if it's clearly analysis content, not just any text with "next"/"finish"
+                            (
+                                content_str.lower().startswith("the ")
+                                and len(content_str) < 50
+                                and (
+                                    "next" in content_str.lower()
+                                    or "finish" in content_str.lower()
+                                )
+                            )
+                            or content_str.lower() == "next"
+                            or content_str.lower() == "finish"
+                            or content_str.lower().endswith(" is mentioned.")
+                            or content_str.lower().endswith(" is present.")
+                            or (
+                                "mentioned" in content_str.lower()
+                                and len(content_str) < 100
+                                and (
+                                    "next" in content_str.lower()
+                                    or "finish" in content_str.lower()
+                                )
+                            )
+                        ):
+                            continue
+
+                        # This looks like a meaningful response
+                        if role == "assistant" or not role:  # Assistant or unknown role
+                            final_response = content_str
+                            break
+
+                # If we found a meaningful response, stop looking
+                if final_response:
+                    break
+
+        result = {}
+        if input_query:
+            result["input_query"] = str(input_query)
+        if final_response:
+            result["final_response"] = str(final_response)
+
+        return result
+
+
 class SessionEnrichmentPipeline:
     """
     Pipeline for enriching session data with conversation, workflow, and tool usage data.
@@ -446,6 +599,7 @@ class SessionEnrichmentPipeline:
             ToolUsageTransformer(),
             GraphDataTransformer(),
             AgentTransitionTransformer(),  # Add agent transition computation
+            EndToEndAttributesTransformer(),  # Add input_query and final_response extraction
             ExecutionTreeTransformer(),
         ]
 

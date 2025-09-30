@@ -54,7 +54,7 @@ class ToolError(BaseMetric):
             return self._create_error_result(
                 category="agent",
                 app_name=data.app_name,
-                error_message="Entity is not a tool!"
+                error_message="Entity is not a tool!",
             )
 
         results = list(find(dict(data), "status"))
@@ -71,5 +71,5 @@ class ToolError(BaseMetric):
         return self._create_error_result(
             category="agent",
             app_name=data.app_name,
-            error_message="Failed to retrieve tool status."
+            error_message="Failed to retrieve tool status.",
         )

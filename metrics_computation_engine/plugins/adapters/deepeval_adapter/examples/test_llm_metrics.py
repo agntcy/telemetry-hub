@@ -9,7 +9,9 @@ from dotenv import load_dotenv
 from mce_deepeval_adapter.adapter import DeepEvalMetricAdapter
 
 from metrics_computation_engine.entities.core.data_parser import parse_raw_spans
-from metrics_computation_engine.entities.core.session_aggregator import SessionAggregator
+from metrics_computation_engine.entities.core.session_aggregator import (
+    SessionAggregator,
+)
 from metrics_computation_engine.entities.models.session_set import SessionSet
 from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.model_handler import ModelHandler

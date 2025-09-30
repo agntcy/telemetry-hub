@@ -119,6 +119,7 @@ class RagasAdapter(BaseMetric):
         """Get the installed RAGAS version for debugging purposes."""
         try:
             import ragas
+
             return getattr(ragas, "__version__", "unknown")
         except (ImportError, AttributeError):
             return "unknown"
@@ -330,7 +331,9 @@ class RagasAdapter(BaseMetric):
                         # Re-raise to let RAGAS handle it (it seems to recover and produce results)
                         raise type_exc
                     else:
-                        logger.error(f"RAGAS computation failed for {self.name}: {type_exc}")
+                        logger.error(
+                            f"RAGAS computation failed for {self.name}: {type_exc}"
+                        )
                         raise type_exc
                 except Exception as inner_exc:
                     logger.error(
@@ -355,7 +358,9 @@ class RagasAdapter(BaseMetric):
                         # Re-raise to let RAGAS handle it (it seems to recover and produce results)
                         raise type_exc
                     else:
-                        logger.error(f"RAGAS computation failed for {self.name}: {type_exc}")
+                        logger.error(
+                            f"RAGAS computation failed for {self.name}: {type_exc}"
+                        )
                         raise type_exc
                 except Exception as inner_exc:
                     logger.error(

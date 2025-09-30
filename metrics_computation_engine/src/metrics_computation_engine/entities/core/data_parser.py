@@ -51,9 +51,7 @@ def app_name(span: Dict) -> str:
     # Then check ResourceAttributes for service.name
     if span.get("ResourceAttributes", None):
         resource_attrs = span.get("ResourceAttributes", None)
-        if isinstance(resource_attrs, dict) and resource_attrs.get(
-            "service.name"
-        ):
+        if isinstance(resource_attrs, dict) and resource_attrs.get("service.name"):
             service_name = str(resource_attrs["service.name"])
             if service_name and service_name != "unknown":
                 return service_name

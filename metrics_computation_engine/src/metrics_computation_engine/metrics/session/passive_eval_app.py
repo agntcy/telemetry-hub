@@ -54,7 +54,9 @@ class PassiveEvalApp(BaseMetric):
                     value={},
                     aggregation_level=self.aggregation_level,
                     category="application",
-                    app_name=session.app_name if hasattr(session, "app_name") else "unknown",
+                    app_name=session.app_name
+                    if hasattr(session, "app_name")
+                    else "unknown",
                     description="",
                     unit="",
                     reasoning="PassiveEvalApp requires SessionSet stats context but none was provided",
@@ -81,7 +83,9 @@ class PassiveEvalApp(BaseMetric):
                     value={},
                     aggregation_level=self.aggregation_level,
                     category="application",
-                    app_name=session.app_name if hasattr(session, "app_name") else "unknown",
+                    app_name=session.app_name
+                    if hasattr(session, "app_name")
+                    else "unknown",
                     description="Passive evaluation statistics for the application",
                     unit="",
                     reasoning="PassiveEvalApp requires session_set_stats and session_index in context",
@@ -160,7 +164,9 @@ class PassiveEvalApp(BaseMetric):
                 value={},
                 aggregation_level=self.aggregation_level,
                 category="application",
-                app_name=session.app_name if hasattr(session, "app_name") else "unknown",
+                app_name=session.app_name
+                if hasattr(session, "app_name")
+                else "unknown",
                 description="Passive evaluation statistics for the application",
                 unit="",
                 reasoning="Error occurred while computing passive evaluation statistics",

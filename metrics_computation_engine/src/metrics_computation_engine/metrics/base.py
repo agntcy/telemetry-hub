@@ -204,6 +204,7 @@ class BaseMetric(ABC):
                     if isinstance(metrics, str):
                         try:
                             import json
+
                             metrics = json.loads(metrics)
                         except (json.JSONDecodeError, TypeError):
                             continue
@@ -233,6 +234,7 @@ class BaseMetric(ABC):
             if isinstance(metric_data, str):
                 try:
                     import json
+
                     metric_data = json.loads(metric_data)
                 except (json.JSONDecodeError, TypeError):
                     return None

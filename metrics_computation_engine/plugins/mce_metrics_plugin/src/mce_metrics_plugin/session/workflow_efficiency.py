@@ -92,25 +92,25 @@ class WorkflowEfficiency(BaseMetric):
                 None,
                 "Workflow efficiency based on agent transitions",
                 "",
-                "efficiency_score"
+                "efficiency_score",
             )
 
         except Exception as e:
-                return MetricResult(
-                    self.name,
-                    -1,
-                    self.aggregation_level,
-                    "application",
-                    getattr(session, "app_name", ""),
-                    "",
-                    getattr(session, "session_id", ""),
-                    "native",
-                    [],
-                    [],
-                    False,
-                    {},
-                    str(e),
-                    "",
-                    "",
-                    ""
-                )
+            return MetricResult(
+                self.name,
+                -1,
+                self.aggregation_level,
+                "application",
+                getattr(session, "app_name", ""),
+                "",
+                getattr(session, "session_id", ""),
+                "native",
+                [],
+                [],
+                False,
+                {},
+                str(e),
+                "",
+                "",
+                "",
+            )

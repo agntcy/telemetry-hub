@@ -7,7 +7,9 @@ from metrics_computation_engine.model_handler import ModelHandler
 from metrics_computation_engine.models.requests import LLMJudgeConfig
 from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.entities.models.session_set import SessionSet
-from metrics_computation_engine.entities.core.session_aggregator import SessionAggregator
+from metrics_computation_engine.entities.core.session_aggregator import (
+    SessionAggregator,
+)
 from metrics_computation_engine.processor import MetricsProcessor
 from metrics_computation_engine.registry import MetricRegistry
 
@@ -24,7 +26,7 @@ def create_session_from_spans(spans):
     session_id = spans[0].session_id
     session = aggregator.create_session_from_spans(session_id, spans)
 
-    # Extract user_input and final_response from LLM spans for metric requirements
+    # Extract input_query and final_response from LLM spans for metric requirements
     for span in spans:
         if span.entity_type == "llm" and span.input_payload and span.output_payload:
             # Extract user input from the first user role prompt
@@ -33,7 +35,7 @@ def create_session_from_spans(spans):
                     role_key = key.replace(".content", ".role")
                     role = span.input_payload.get(role_key, "")
                     if role == "user":
-                        session.user_input = value
+                        session.input_query = value
                         break
 
             # Extract final response from the output (last assistant/user response)
@@ -41,7 +43,10 @@ def create_session_from_spans(spans):
                 if key.startswith("gen_ai.prompt") and ".content" in key:
                     role_key = key.replace(".content", ".role")
                     role = span.output_payload.get(role_key, "")
-                    if role in ["assistant", "user"]:  # Sometimes responses are marked as "user" in test data
+                    if role in [
+                        "assistant",
+                        "user",
+                    ]:  # Sometimes responses are marked as "user" in test data
                         session.final_response = value
 
     return session

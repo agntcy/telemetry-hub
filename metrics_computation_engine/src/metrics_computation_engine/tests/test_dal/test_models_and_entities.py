@@ -248,7 +248,7 @@ class TestSessionSetPrinterPerformance:
                 agent_transition_counts=None,
                 conversation_elements=None,
                 tool_calls=None,
-                user_input=None,
+                input_query=None,
                 final_response=None,
             )
             sessions.append(session)
@@ -335,7 +335,7 @@ class TestErrorHandling:
                 agent_transition_counts=None,
                 conversation_elements=None,
                 tool_calls=None,
-                user_input=None,
+                input_query=None,
                 final_response=None,
             )
             session_set = SessionSet(sessions=[corrupted_session])

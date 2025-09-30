@@ -7,7 +7,9 @@ from metrics_computation_engine.models.requests import LLMJudgeConfig
 from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.entities.models.session import ConversationElement
 from metrics_computation_engine.entities.models.session_set import SessionSet
-from metrics_computation_engine.entities.core.session_aggregator import SessionAggregator
+from metrics_computation_engine.entities.core.session_aggregator import (
+    SessionAggregator,
+)
 from metrics_computation_engine.processor import MetricsProcessor
 from metrics_computation_engine.registry import MetricRegistry
 
@@ -34,10 +36,9 @@ def create_session_from_spans(spans):
                     if key.startswith("gen_ai.prompt") and ".content" in key:
                         role_key = key.replace(".content", ".role")
                         role = span.input_payload.get(role_key, "user")
-                        conversation_elements.append(ConversationElement(
-                            role=role,
-                            content=value
-                        ))
+                        conversation_elements.append(
+                            ConversationElement(role=role, content=value)
+                        )
 
             # Extract conversation from output payload
             if span.output_payload:
@@ -45,10 +46,9 @@ def create_session_from_spans(spans):
                     if key.startswith("gen_ai.completion") and ".content" in key:
                         role_key = key.replace(".content", ".role")
                         role = span.output_payload.get(role_key, "assistant")
-                        conversation_elements.append(ConversationElement(
-                            role=role,
-                            content=value
-                        ))
+                        conversation_elements.append(
+                            ConversationElement(role=role, content=value)
+                        )
 
     # Set conversation elements on session
     session.conversation_elements = conversation_elements
@@ -65,51 +65,51 @@ async def test_conversation_completeness_metric():
 
     # Build minimal session containing at least two llm spans (adapter uses [-2])
     spans = [
-            SpanEntity(
-                entity_type="llm",
-                span_id="1",
-                entity_name="assistant",
-                app_name="test_app",
-                contains_error=False,
-                timestamp="2024-01-01T10:00:00Z",
-                parent_span_id=None,
-                trace_id="trace1",
-                session_id="session1",
-                start_time=None,
-                end_time=None,
-                input_payload={
-                    "gen_ai.prompt.0.role": "user",
-                    "gen_ai.prompt.0.content": "What is 2+2?",
-                },
-                output_payload={
-                    "gen_ai.completion.0.role": "assistant",
-                    "gen_ai.completion.0.content": "4",
-                },
-                raw_span_data={},
-            ),
-            SpanEntity(
-                entity_type="llm",
-                span_id="2",
-                entity_name="assistant",
-                app_name="test_app",
-                contains_error=False,
-                timestamp="2024-01-01T10:01:00Z",
-                parent_span_id=None,
-                trace_id="trace1",
-                session_id="session1",
-                start_time=None,
-                end_time=None,
-                input_payload={
-                    "gen_ai.prompt.0.role": "user",
-                    "gen_ai.prompt.0.content": "Thanks!",
-                },
-                output_payload={
-                    "gen_ai.completion.0.role": "assistant",
-                    "gen_ai.completion.0.content": "You're welcome.",
-                },
-                raw_span_data={},
-            ),
-        ]
+        SpanEntity(
+            entity_type="llm",
+            span_id="1",
+            entity_name="assistant",
+            app_name="test_app",
+            contains_error=False,
+            timestamp="2024-01-01T10:00:00Z",
+            parent_span_id=None,
+            trace_id="trace1",
+            session_id="session1",
+            start_time=None,
+            end_time=None,
+            input_payload={
+                "gen_ai.prompt.0.role": "user",
+                "gen_ai.prompt.0.content": "What is 2+2?",
+            },
+            output_payload={
+                "gen_ai.completion.0.role": "assistant",
+                "gen_ai.completion.0.content": "4",
+            },
+            raw_span_data={},
+        ),
+        SpanEntity(
+            entity_type="llm",
+            span_id="2",
+            entity_name="assistant",
+            app_name="test_app",
+            contains_error=False,
+            timestamp="2024-01-01T10:01:00Z",
+            parent_span_id=None,
+            trace_id="trace1",
+            session_id="session1",
+            start_time=None,
+            end_time=None,
+            input_payload={
+                "gen_ai.prompt.0.role": "user",
+                "gen_ai.prompt.0.content": "Thanks!",
+            },
+            output_payload={
+                "gen_ai.completion.0.role": "assistant",
+                "gen_ai.completion.0.content": "You're welcome.",
+            },
+            raw_span_data={},
+        ),
+    ]
 
     # Compute via processor so model is constructed via ModelHandler
     registry = MetricRegistry()
