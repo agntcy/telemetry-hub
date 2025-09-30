@@ -30,10 +30,10 @@ def setup_logger(
         Configured logger.
     """
     logger = logging.getLogger(name)
-    logger.setLevel(os.environ.get("LOG_LEVEL", level).upper())
+    logger.setLevel(os.environ.get("LOG_LEVEL", str(level)).upper())
 
     ch = logging.StreamHandler()
-    ch.setLevel(os.environ.get("LOG_LEVEL", level).upper())
+    ch.setLevel(os.environ.get("LOG_LEVEL", str(level)).upper())
 
     formatter = logging.Formatter(formatter_str)
     ch.setFormatter(formatter)
