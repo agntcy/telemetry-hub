@@ -1,3 +1,6 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
 import pytest
 from metrics_computation_engine.metrics.session.tool_error_rate import ToolErrorRate
 from metrics_computation_engine.models.span import SpanEntity
