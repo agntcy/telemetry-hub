@@ -4,7 +4,7 @@
 from typing import List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
-from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
+from metrics_computation_engine.models.eval import BinaryGrading
 from metrics_computation_engine.entities.models.session import SessionEntity
 
 import json
@@ -57,7 +57,6 @@ class Groundedness(BaseMetric):
         Args:
             session: SessionEntity with pre-computed conversation data
         """
-        logger.info("Computing groundedness for session: %s", session.session_id)
         try:
             if self.jury:
                 # Use pre-computed conversation data from SessionEntity
@@ -73,6 +72,7 @@ class Groundedness(BaseMetric):
                     else conversation
                 )
                 prompt = GROUNDEDNESS_PROMPT.format(conversation=conversation_str)
+                score, reasoning = self.jury.judge(prompt, BinaryGrading)
 
                 # Get relevant span IDs for metadata
                 agent_span_ids = (
@@ -92,7 +92,7 @@ class Groundedness(BaseMetric):
                     category="application",
                     app_name=session.app_name,
                     entities_involved=entities_involved,
-                    span_ids=[span.span_id for span in session.llm_spans],
+                    span_ids=[agent_span_ids],
                     session_ids=[session.session_id],
                 )
 
@@ -101,7 +101,7 @@ class Groundedness(BaseMetric):
                 category="application",
                 app_name=session.app_name,
                 entities_involved=entities_involved,
-                span_ids=[span.span_id for span in session.llm_spans],
+                span_ids=[agent_span_ids],
                 session_ids=[session.session_id],
             )
 
@@ -111,6 +111,6 @@ class Groundedness(BaseMetric):
                 category="application",
                 app_name=session.app_name,
                 entities_involved=entities_involved,
-                span_ids=[span.span_id for span in session.llm_spans],
+                span_ids=[agent_span_ids],
                 session_ids=[session.session_id],
             )

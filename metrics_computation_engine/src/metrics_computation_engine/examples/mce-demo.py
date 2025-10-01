@@ -9,10 +9,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 from dotenv import load_dotenv
 
-
-from metrics_computation_engine.entities.core.data_parser import parse_raw_spans
-
-
 # Import MCE Native Metrics
 from metrics_computation_engine.metrics.session import (
     AgentToAgentInteractions,
