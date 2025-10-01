@@ -6,8 +6,8 @@ from collections import Counter
 from metrics_computation_engine.metrics.session.agent_to_tool_interactions import (
     AgentToToolInteractions,
 )
-from metrics_computation_engine.models.span import SpanEntity
-from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
+from metrics_computation_engine.entities.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 
 @pytest.mark.asyncio
@@ -15,12 +15,8 @@ async def test_agent_to_tool_interactions():
     metric = AgentToToolInteractions()
 
     # Case 1: No tool spans
-    traces_by_session = {
-        "abc": [],
-    }
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
-
+    session_entity = SessionEntity(session_id="s1", spans=[])
+    result = await metric.compute(session_entity)
     assert result.success
     assert result.value == Counter()
 
@@ -44,10 +40,8 @@ async def test_agent_to_tool_interactions():
             }
         },
     )
-    traces_by_session = {span1.session_id: [span1]}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
-
+    session_entity = SessionEntity(session_id=span1.session_id, spans=[span1])
+    result = await metric.compute(session_entity)
     assert result.success
     assert result.value == Counter({"(Agent: AgentA) -> (Tool: ToolX)": 1})
 
@@ -71,9 +65,8 @@ async def test_agent_to_tool_interactions():
             }
         },
     )
-    traces_by_session = {span1.session_id: [span1, span2]}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(session_id=span1.session_id, spans=[span1, span2])
+    result = await metric.compute(session_entity)
     assert result.success
     assert result.value == Counter({"(Agent: AgentA) -> (Tool: ToolX)": 2})
 
@@ -97,9 +90,10 @@ async def test_agent_to_tool_interactions():
             }
         },
     )
-    traces_by_session = {span1.session_id: [span1, span2, span3]}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(
+        session_id=span1.session_id, spans=[span1, span2, span3]
+    )
+    result = await metric.compute(session_entity)
     assert result.success
     assert result.value == Counter(
         {"(Agent: AgentA) -> (Tool: ToolX)": 2, "(Agent: AgentB) -> (Tool: ToolY)": 1}
@@ -122,9 +116,8 @@ async def test_agent_to_tool_interactions():
             "SpanAttributes": {}  # Missing required keys
         },
     )
-    traces_by_session = {span4.session_id: [span4]}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(session_id=span4.session_id, spans=[span4])
+    result = await metric.compute(session_entity)
     assert not result.success
     assert result.value == -1
     assert isinstance(result.error_message, Exception)

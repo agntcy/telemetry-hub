@@ -6,16 +6,17 @@
 from datetime import datetime
 import uvicorn
 import os
+import logging
 
 from fastapi import FastAPI, HTTPException
 
-from metrics_computation_engine.dal.traces import (
+from metrics_computation_engine.dal.api_client import (
+    get_api_client,
     get_all_session_ids,
-    get_traces_by_session,
     get_traces_by_session_ids,
+    traces_processor,
 )
-from metrics_computation_engine.dal.metrics import write_metrics
-from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
+
 from metrics_computation_engine.models.requests import MetricsConfigRequest
 from metrics_computation_engine.processor import MetricsProcessor
 from metrics_computation_engine.registry import MetricRegistry
@@ -24,13 +25,20 @@ from metrics_computation_engine.util import (
     get_metric_class,
     get_all_available_metrics,
 )
-
+from metrics_computation_engine.entities.models.session_set import SessionSet
+from metrics_computation_engine.entities.models.session_set_printer import (
+    print_session_summary,
+)
 from metrics_computation_engine.model_handler import ModelHandler
 
 from metrics_computation_engine.logger import setup_logger
 
 logger = setup_logger(__name__)
 
+# initialize the dal api client
+get_api_client(logger=logger)
+
+# TODO: we should create a class to hold the app and other global level variables (model_handler)
 # ========== FastAPI App ==========
 app = FastAPI(
     title="Metrics Computation Engine",
@@ -41,17 +49,29 @@ app = FastAPI(
 model_handler = None
 
 
-def start_server(host: str, port: int, reload: bool, log_level: str, workers: int):
+def start_server(host: str, port: int, reload: bool, log_level: str, workers: int = 1):
     global model_handler
+    logger.debug("Starting server...")
     model_handler = ModelHandler()
-    uvicorn.run(
-        "metrics_computation_engine.main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level=log_level,
-        workers=workers,
-    )
+
+    if reload:
+        # USe import chain to avoid reloading issues
+        uvicorn.run(
+            "metrics_computation_engine.main:app",
+            host=host,
+            port=port,
+            reload=True,
+            log_level=log_level,
+        )
+    else:
+        # Use app object when reload=false
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            reload=False,
+            log_level=log_level,
+        )
 
 
 @app.get("/")
@@ -117,8 +137,14 @@ async def status():
 async def compute_metrics(config: MetricsConfigRequest):
     """Compute metrics based on the provided configuration."""
     global model_handler
+
+    # ensure the request is valid
+    if not config.validate():
+        logger.error("Request validation failed")
+        raise HTTPException(status_code=400, detail="Invalid request configuration.")
+
     if model_handler is None:
-        logger.info("Warning: missing model_handler, creating it.")
+        logger.warning("missing model_handler, creating it.")
         model_handler = ModelHandler()
     try:
         # Get session IDs
@@ -128,14 +154,9 @@ async def compute_metrics(config: MetricsConfigRequest):
             session_ids = get_all_session_ids(batch_config=batch_config)
         else:
             session_ids = config.get_session_ids()
+        if logger.isEnabledFor(logging.DEBUG):  # DEBUG level
+            logger.debug(f"Session IDs: {session_ids}")
 
-        # ensure the request is valid
-        if not config.validate():
-            raise HTTPException(
-                status_code=400, detail="Invalid request configuration."
-            )
-
-        # Try batched approach first, fallback to sequential if endpoint doesn't exist
         try:
             traces_by_session, notfound_session_ids = get_traces_by_session_ids(
                 session_ids
@@ -146,36 +167,18 @@ async def compute_metrics(config: MetricsConfigRequest):
                 logger.warning(f"Sessions not found: {notfound_session_ids}")
 
             # Build SessionEntity objects and create mapping
-            session_entities = build_session_entities_from_dict(traces_by_session)
-            sessions_data = {entity.session_id: entity for entity in session_entities}
-
+            if logger.isEnabledFor(logging.DEBUG):  # DEBUG level
+                logger.debug("Building sessions_set")
+            sessions_set = traces_processor(traces_by_session)
         except Exception as e:
-            # Fallback to sequential approach if batched endpoint fails (404)
-            logger.warning(
-                f"Batched endpoint failed ({e}), falling back to sequential processing"
-            )
-            traces_by_session = {}
+            # No more fallback - old endpoint deprecated
+            logger.error(f"Batched endpoint failed ({e})")
+            sessions_set = SessionSet(sessions=[], stats=None)
 
-            for session_id in session_ids:
-                try:
-                    spans = get_traces_by_session(session_id)
-                    if spans:
-                        traces_by_session[session_id] = spans
-                except Exception as session_error:
-                    logger.error(
-                        f"Failed to get traces for session {session_id}: {session_error}"
-                    )
+        logger.info(print_session_summary(sessions_set))
 
-            # Build SessionEntity objects and create mapping
-            if traces_by_session:
-                session_entities = build_session_entities_from_dict(traces_by_session)
-                sessions_data = {
-                    entity.session_id: entity for entity in session_entities
-                }
-            else:
-                sessions_data = {}
-
-        logger.info(f"Session IDs Found: {list(sessions_data.keys())}")
+        # if logger.isEnabledFor(logging.DEBUG):  # DEBUG level
+        #     logger.debug(f"Session IDs Content Found: {list(sessions_set.values())}")
         # Configure LLM
         llm_config = config.llm_judge_config
         if llm_config.LLM_API_KEY == "sk-...":
@@ -214,15 +217,17 @@ async def compute_metrics(config: MetricsConfigRequest):
 
         # Process metrics with structured session data
         processor = MetricsProcessor(
-            registry, model_handler=model_handler, llm_config=llm_config
+            registry=registry, model_handler=model_handler, llm_config=llm_config
         )
-        results = await processor.compute_metrics(sessions_data)
+        results = await processor.compute_metrics(sessions_set)
         results.setdefault("failed_metrics", [])
         results["failed_metrics"].extend(failed_registry_metrics)
 
-        write_metrics(results)
+        # Implement caching of results here
+        if os.getenv("METRICS_CACHE_ENABLED", "false").lower() == "true":
+            logger.info("Caching required")
+            get_api_client().cache_metrics(results)
 
-        results = format_return(results)
         return {
             "results": results,
         }

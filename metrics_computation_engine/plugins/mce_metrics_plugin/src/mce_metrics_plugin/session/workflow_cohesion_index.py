@@ -5,7 +5,7 @@
 from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 WORKFLOW_COHESION_INDEX_PROMPT = """
     You are an evaluator of Workflow Cohesion.

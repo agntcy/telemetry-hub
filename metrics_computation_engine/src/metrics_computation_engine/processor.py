@@ -1,13 +1,16 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 import asyncio
 import json
-from typing import Any, Dict
+import inspect
+from typing import Any, Dict, List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session_set import SessionSet
 from metrics_computation_engine.registry import MetricRegistry
 from metrics_computation_engine.model_handler import ModelHandler
 from metrics_computation_engine.logger import setup_logger
@@ -31,20 +34,85 @@ class MetricsProcessor:
         self.dataset = dataset
         self.llm_config = llm_config
         self.model_handler = model_handler
+        # Cache for introspection results
+        self._context_support_cache: Dict[str, bool] = {}
 
-    async def _safe_compute(self, metric: BaseMetric, data: Any) -> MetricResult:
-        """Safely compute metric with error handling"""
+    def _metric_supports_context(self, metric: BaseMetric) -> bool:
+        """Check if metric's compute method accepts context parameter (cached)"""
+        metric_class_name = metric.__class__.__name__
+
+        if metric_class_name not in self._context_support_cache:
+            signature = inspect.signature(metric.compute)
+            self._context_support_cache[metric_class_name] = (
+                "context" in signature.parameters
+            )
+
+        return self._context_support_cache[metric_class_name]
+
+    async def _safe_compute(
+        self, metric: BaseMetric, data: Any, context: Optional[Dict[str, Any]] = None
+    ) -> MetricResult:
+        """Safely compute metric with error handling and cache checking"""
         try:
-            result = await metric.compute(data)
+            # Check cache first
+            cached_result = None
+
+            if metric.aggregation_level in ["span", "session"]:
+                cached_result = await metric.check_cache_metric(
+                    metric_name=metric.name, session_id=data.session_id
+                )
+            if cached_result is not None:
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Cache hit for {metric.name} {cached_result=}")
+                # build back the MetricResult object from cached data
+                return cached_result
+
+            # Cache miss - compute normally
+            logger.debug(f"Cache miss for {metric.name}, computing...")
+
+            if self._metric_supports_context(metric) and context is not None:
+                logger.debug(
+                    f"Calling {metric.name} with context: {list(context.keys()) if context else 'None'}"
+                )
+                result = await metric.compute(data, context=context)
+            else:
+                logger.debug(
+                    f"Calling {metric.name} without context (supports_context: {self._metric_supports_context(metric)}, context is None: {context is None})"
+                )
+                result = await metric.compute(data)
             return result
         except Exception as e:
+            # logger.error(traceback.format_exc())
+            logger.exception(f"Error computing metric {metric.name}: {e}")
             # Return error result instead of crashing
+            # Extract basic info from data for error reporting
+            app_name = "unknown-app"
+            if hasattr(data, "app_name"):
+                app_name = data.app_name
+            elif (
+                hasattr(data, "spans")
+                and data.spans
+                and hasattr(data.spans[0], "app_name")
+            ):
+                app_name = data.spans[0].app_name
+
             return MetricResult(
                 metric_name=metric.name,
+                description="",
                 value=-1,
-                error_message=str(e),
+                reasoning="",
+                unit="",
                 aggregation_level=metric.aggregation_level,
+                category="application",
+                app_name=app_name,
+                span_id=[],
+                session_id=[],
+                source="native",
+                entities_involved=[],
+                edges_involved=[],
                 success=False,
+                metadata={},
+                error_message=str(e),
             )
 
     async def _initialize_metric(self, metric_name: str, metric_class) -> BaseMetric:
@@ -111,10 +179,11 @@ class MetricsProcessor:
             if param == "conversation_data":
                 if not isinstance(attr_value, dict):
                     return False
-                conversation_text = attr_value.get("conversation", "")
-                if not conversation_text or len(conversation_text) == 0:
+                # Check if conversation_data has elements (the actual structure)
+                elements = attr_value.get("elements", [])
+                if not elements or len(elements) == 0:
                     logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `conversation` is empty"
+                        f"{metric_name} invalid for session {session_entity.session_id}! `conversation_data.elements` is empty"
                     )
                     return False
             elif param == "conversation_elements":
@@ -139,10 +208,10 @@ class MetricsProcessor:
                         f"{metric_name} invalid for session {session_entity.session_id}! `conversation_elements` is empty"
                     )
                     return False
-            elif param == "user_input":
+            elif param == "input_query":
                 if not attr_value or len(str(attr_value)) == 0:
                     logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `user_input` is empty"
+                        f"{metric_name} invalid for session {session_entity.session_id}! `input_query` is empty"
                     )
                     return False
             elif param == "final_response":
@@ -175,12 +244,18 @@ class MetricsProcessor:
                 if len(attr_value) == 0:
                     return False
             elif param == "agent_transition_counts":
-                if not isinstance(attr_value, list):
+                # agent_transition_counts should be a Counter (which is a dict-like object)
+                from collections import Counter
+
+                if not isinstance(attr_value, (Counter, dict)):
                     logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `agent_transition_counts` is empty"
+                        f"{metric_name} invalid for session {session_entity.session_id}! `agent_transition_counts` should be a Counter object"
                     )
                     return False
                 if len(attr_value) == 0:
+                    logger.info(
+                        f"{metric_name} invalid for session {session_entity.session_id}! `agent_transition_counts` is empty"
+                    )
                     return False
             elif isinstance(attr_value, (str, list, dict)):
                 if not attr_value:  # Empty string, list, or dict
@@ -189,17 +264,9 @@ class MetricsProcessor:
         return True
 
     def _get_metric_requirements(self, metric_class, metric_name: str) -> list:
-        """Get required parameters using centralized configuration or fallback"""
-
-        # NEW: Use lightweight interface if available (for adapters with centralized config)
-        if hasattr(metric_class, "get_requirements"):
-            try:
-                return metric_class.get_requirements(metric_name)
-            except Exception:
-                pass  # Fall back to old approach
-
-        # FALLBACK: Use old hardcoded approach
+        """Get required parameters from class without instantiation"""
         required_params_dict = getattr(metric_class, "REQUIRED_PARAMETERS", {})
+
         if isinstance(required_params_dict, dict):
             return required_params_dict.get(metric_name, [])
 
@@ -241,8 +308,8 @@ class MetricsProcessor:
         return span.entity_type in required_types
 
     async def compute_metrics(
-        self, sessions_data: Dict[str, SessionEntity]
-    ) -> Dict[str, Any]:
+        self, sessions_set: SessionSet
+    ) -> Dict[str, List[MetricResult]]:
         """
         Compute multiple metrics concurrently using SessionEntity objects.
 
@@ -257,7 +324,9 @@ class MetricsProcessor:
             "failed_metrics": [],
         }
 
-        for session_id, session_entity in sessions_data.items():
+        for session_index, session_entity in enumerate(
+            sessions_set.sessions
+        ):  # browse by SessionEntity
             # Span-level metrics: iterate through spans in the session
             for span in session_entity.spans:
                 for metric_name in self.registry.list_metrics():
@@ -339,8 +408,23 @@ class MetricsProcessor:
                     metric_instance is not None
                     and metric_instance.aggregation_level == "session"
                 ):
+                    # Prepare context for metrics that need it
+                    context = None
+                    if sessions_set is not None:
+                        context = {
+                            "session_set_stats": sessions_set.stats,
+                            "session_index": session_index,
+                            "session_set": sessions_set,
+                        }
+                        logger.debug(
+                            f"Prepared context with keys: {list(context.keys())}"
+                        )
                     # Pass the SessionEntity directly to session-level metrics
-                    tasks.append(self._safe_compute(metric_instance, session_entity))
+                    tasks.append(
+                        self._safe_compute(
+                            metric_instance, session_entity, context=context
+                        )
+                    )
 
         # Population-level metrics: pass all sessions data
         for metric_name in self.registry.list_metrics():
@@ -366,18 +450,22 @@ class MetricsProcessor:
                 and metric_instance.aggregation_level == "population"
             ):
                 # Pass the entire sessions_data dict for population metrics
-                tasks.append(self._safe_compute(metric_instance, sessions_data))
+                tasks.append(self._safe_compute(metric_instance, sessions_set))
 
         # Execute all tasks concurrently
         if tasks:
-            results = await asyncio.gather(*tasks)
+            results: List[MetricResult] = await asyncio.gather(*tasks)
+
+            # mapping of session ids / app name
+            sessions_appname_dict = {
+                k: v for k, v in sessions_set.stats.meta.session_ids
+            }
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"sessions_appname_dict: {sessions_appname_dict}")
 
             # Organize results by aggregation level
             for result in results:
-                if result.success:
-                    aggregation_level = result.aggregation_level
-                    metric_results[f"{aggregation_level}_metrics"].append(result)
-                else:
+                if (result.value == -1 or result.value == {}) and not result.success:
                     metric_results["failed_metrics"].append(
                         {
                             "metric_name": result.metric_name,
@@ -387,6 +475,15 @@ class MetricsProcessor:
                             "metadata": result.metadata,
                         }
                     )
+                    continue
+
+                aggregation_level = result.aggregation_level
+                if aggregation_level in ["span", "session"]:
+                    result.app_name = sessions_appname_dict.get(
+                        result.session_id[0], result.app_name
+                    )
+
+                metric_results[f"{aggregation_level}_metrics"].append(result)
 
         metric_results["failed_metrics"] = self._deduplicate_failures(
             metric_results["failed_metrics"]

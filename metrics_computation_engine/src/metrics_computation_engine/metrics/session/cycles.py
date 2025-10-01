@@ -4,7 +4,7 @@
 from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 from metrics_computation_engine.logger import setup_logger
 
@@ -73,21 +73,20 @@ class CyclesCount(BaseMetric):
             cycle_count = self.count_contiguous_cycles(events)
 
             span_ids = [span.span_id for span in agent_tool_spans]
+
             return MetricResult(
                 metric_name=self.name,
-                description="Count of contiguous cycles in agent and tool interactions",
                 value=cycle_count,
-                unit="cycles",
-                reasoning="Count of contiguous cycles in agent and tool interactions",
                 aggregation_level=self.aggregation_level,
                 category="application",
                 app_name=session.app_name,
+                description="Count of contiguous cycles in agent and tool interactions",
+                unit="cycles",
+                reasoning="Count of contiguous cycles in agent and tool interactions",
                 span_id="",
                 session_id=[session.session_id],
                 source="native",
-                entities_involved=list(
-                    set([span.entity_name for span in agent_tool_spans])
-                ),
+                entities_involved=[],
                 edges_involved=[],
                 success=True,
                 metadata={
@@ -101,21 +100,21 @@ class CyclesCount(BaseMetric):
         except Exception as e:
             return MetricResult(
                 metric_name=self.name,
-                description="",
                 value=-1,
-                unit="",
-                reasoning="Count of contiguous cycles in agent and tool interactions",
                 aggregation_level=self.aggregation_level,
                 category="application",
-                app_name=session.app_name,
+                app_name=session.app_name
+                if hasattr(session, "app_name")
+                else "unknown",
+                description="",
+                unit="",
+                reasoning="Count of contiguous cycles in agent and tool interactions",
                 span_id="",
                 session_id=[session.session_id]
                 if hasattr(session, "session_id")
                 else [],
                 source="native",
-                entities_involved=list(
-                    set([span.entity_name for span in agent_tool_spans])
-                ),
+                entities_involved=[],
                 edges_involved=[],
                 success=False,
                 metadata={},

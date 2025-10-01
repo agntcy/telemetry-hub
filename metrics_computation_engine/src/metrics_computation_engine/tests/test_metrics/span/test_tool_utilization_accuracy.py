@@ -5,7 +5,7 @@ import pytest
 from metrics_computation_engine.metrics.span.tool_utilization_accuracy import (
     ToolUtilizationAccuracy,
 )
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 
 
 # Mock jury class to simulate LLM evaluation

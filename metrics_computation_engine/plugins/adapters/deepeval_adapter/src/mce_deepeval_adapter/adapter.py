@@ -7,8 +7,8 @@ from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
 from metrics_computation_engine.models.requests import LLMJudgeConfig
-from metrics_computation_engine.models.session import SessionEntity
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.types import AggregationLevel
 
 from .metric_configuration import MetricConfiguration, build_metric_configuration_map
@@ -178,6 +178,15 @@ class DeepEvalMetricAdapter(BaseMetric):
         Compute the metric using DeepEval's interface and return in your framework's format
         """
 
+        # Initialize variables before try block to avoid UnboundLocalError
+        (
+            category,
+            app_name,
+            entities_involved,
+            span_id,
+            session_id,
+        ) = await self._get_source_data(data=data)
+
         try:
             test_case_calculator = self.metric_configuration.test_case_calculator
             test_case = test_case_calculator.calculate_test_case(data=data)
@@ -202,14 +211,6 @@ class DeepEvalMetricAdapter(BaseMetric):
             logger.info(f"metadata: {metadata}")
             # Filter out None values
             metadata = {k: v for k, v in metadata.items() if v is not None}
-
-            (
-                category,
-                app_name,
-                entities_involved,
-                span_id,
-                session_id,
-            ) = await self._get_source_data(data=data)
 
             logger.info(f"aggregation level: {self.aggregation_level}")
             return MetricResult(
