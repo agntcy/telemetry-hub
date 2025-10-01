@@ -7,6 +7,7 @@ import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List
+from dotenv import load_dotenv
 
 
 from metrics_computation_engine.core.data_parser import parse_raw_spans
@@ -47,6 +48,10 @@ RAW_TRACES_PATH: Path = Path(__file__).parent / "data" / "sample_data.json"
 ENV_FILE_PATH: Path = Path(__file__).parent.parent.parent.parent / ".env"
 
 print("ENV", ENV_FILE_PATH)
+
+# Load environment variables from .env file
+load_dotenv(ENV_FILE_PATH)
+
 logger = setup_logger(name=__name__)
 
 
@@ -100,11 +105,11 @@ async def compute():
     registry.register_metric(DeepEvalMetricAdapter, "AnswerRelevancyMetric")
     registry.register_metric(OpikMetricAdapter, "Hallucination")
     # Again you can use the get_metric_class() helper while structuring your metric as '<third_party_libary>.<third_party_metric>'
-    for metric in ["deepeval.RoleAdherenceMetric", "opik.AnswerRelevance"]:
+    for metric in ["deepeval.RoleAdherenceMetric"]:
         metric, metric_name = get_metric_class(metric)
         registry.register_metric(metric, metric_name)
     logger.info(
-        "Registered DeepEval's AnswerRelevancy, Hallucination, RoleAdherence, and Opik's AnswerRevalance Metrics from 3rd parties."
+        "Registered DeepEval's AnswerRelevancy, Hallucination, RoleAdherence Metrics from 3rd parties."
     )
 
     registered_metrics = registry.list_metrics()
