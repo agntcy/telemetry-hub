@@ -84,5 +84,5 @@ To uninstall a plugin, simply uninstall the package.
 
 List available metrics from the cli.
 ```bash
-uv run --env-file .env  mce-cli list_metrics
+uv run --env-file .env  mce-cli list-metrics
 ```

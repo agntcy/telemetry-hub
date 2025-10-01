@@ -5,13 +5,51 @@ import pytest
 
 from metrics_computation_engine.model_handler import ModelHandler
 from metrics_computation_engine.models.requests import LLMJudgeConfig
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session_set import SessionSet
+from metrics_computation_engine.entities.core.session_aggregator import (
+    SessionAggregator,
+)
 from metrics_computation_engine.processor import MetricsProcessor
 from metrics_computation_engine.registry import MetricRegistry
-from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
 
 # Import the GoalSuccessRate directly from the plugin system
 from mce_metrics_plugin.session.goal_success_rate import GoalSuccessRate
+
+
+def create_session_from_spans(spans):
+    """Helper function to create a session entity from spans using the new SessionAggregator API."""
+    if not spans:
+        raise ValueError("No spans provided")
+
+    aggregator = SessionAggregator()
+    session_id = spans[0].session_id
+    session = aggregator.create_session_from_spans(session_id, spans)
+
+    # Extract input_query and final_response from LLM spans for metric requirements
+    for span in spans:
+        if span.entity_type == "llm" and span.input_payload and span.output_payload:
+            # Extract user input from the first user role prompt
+            for key, value in span.input_payload.items():
+                if key.startswith("gen_ai.prompt") and ".content" in key:
+                    role_key = key.replace(".content", ".role")
+                    role = span.input_payload.get(role_key, "")
+                    if role == "user":
+                        session.input_query = value
+                        break
+
+            # Extract final response from the output (last assistant/user response)
+            for key, value in span.output_payload.items():
+                if key.startswith("gen_ai.prompt") and ".content" in key:
+                    role_key = key.replace(".content", ".role")
+                    role = span.output_payload.get(role_key, "")
+                    if role in [
+                        "assistant",
+                        "user",
+                    ]:  # Sometimes responses are marked as "user" in test data
+                        session.final_response = value
+
+    return session
 
 
 # Mock jury class to simulate LLM evaluation for GoalSuccessRate
@@ -173,9 +211,8 @@ async def test_compute_with_mock_jury_successful_goal():
         ),
     ]
 
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = create_session_from_spans(spans)
+    result = await metric.compute(session_entity)
 
     assert result.success is True
     assert isinstance(result.value, float)
@@ -219,9 +256,8 @@ async def test_compute_with_mock_jury_failed_goal():
         ),
     ]
 
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = create_session_from_spans(spans)
+    result = await metric.compute(session_entity)
 
     assert result.success is True  # Computation succeeded
     assert result.value == 0.0  # But goal failed
@@ -260,9 +296,8 @@ async def test_compute_no_jury():
         ),
     ]
 
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = create_session_from_spans(spans)
+    result = await metric.compute(session_entity)
 
     assert result.success is False
     assert result.error_message == "No model available"
@@ -321,11 +356,10 @@ async def test_goal_success_rate_mock_end_to_end():
         llm_config=llm_config,
     )
 
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    sessions_data = {entity.session_id: entity for entity in session_entities}
+    session_entity = create_session_from_spans(spans)
+    sessions_set = SessionSet(sessions=[session_entity])
 
-    results = await processor.compute_metrics(sessions_data)
+    results = await processor.compute_metrics(sessions_set)
 
     # Validate results
     session_metrics = results.get("session_metrics", [])

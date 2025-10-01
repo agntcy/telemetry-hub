@@ -7,8 +7,8 @@ from typing import Optional, Union
 
 from deepeval.test_case import ConversationalTestCase, LLMTestCase, ToolCall, Turn
 
-from metrics_computation_engine.models.session import SessionEntity
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.util import (
     build_chat_history_from_payload,
     get_tool_definitions_from_span_attributes,
@@ -51,7 +51,7 @@ class DeepEvalTestCaseLLMWithTools(AbstractTestCaseCalculator):
         Create test case with tools from SessionEntity data.
         """
         data: SessionEntity = _make_sure_input_is_session_entity(data=data)
-        user_input = data.user_input or ""
+        user_input = data.input_query or ""
         final_response = data.final_response or ""
 
         if not user_input or not final_response:
@@ -117,6 +117,84 @@ class LLMAnswerRelevancyTestCase(AbstractTestCaseCalculator):
             actual_output=json.dumps(data.output_payload, indent=2),
         )
         return test_case
+
+
+class SessionAnswerRelevancyTestCase(AbstractTestCaseCalculator):
+    def calculate_test_case(
+        self, data: Union[SpanEntity, SessionEntity]
+    ) -> Union[ConversationalTestCase, LLMTestCase]:
+        """
+        Create test case for session-level answer relevancy using enriched session data.
+        Uses the input_query and final_response fields from the SessionEntity.
+        Falls back to extracting from available spans if enriched data is not available.
+        """
+        data: SessionEntity = _make_sure_input_is_session_entity(data=data)
+
+        user_input = data.input_query or ""
+        final_response = data.final_response or ""
+
+        # If enriched data is not available, don't try to extract from raw spans
+        # because that's where the problematic analysis content comes from.
+        # The enriched data should be the authoritative source.
+        if not user_input or not final_response:
+            # Only try conversation_elements as a fallback, but with filtering
+            if data.conversation_elements and (not user_input or not final_response):
+                # Find first user input with filtering
+                if not user_input:
+                    for element in data.conversation_elements:
+                        if element.get("role", "").lower() == "user":
+                            content = element.get("content", "")
+                            # Apply same filtering as our transformer
+                            if content and not self._is_system_content(content):
+                                user_input = content
+                                break
+
+                # Find last meaningful assistant response with filtering
+                if not final_response:
+                    for element in reversed(data.conversation_elements):
+                        if element.get("role", "").lower() == "assistant":
+                            content = element.get("content", "")
+                            # Apply filtering to avoid analysis content
+                            if content and not self._is_system_content(content):
+                                final_response = content
+                                break
+
+        # Provide fallback values if still empty
+        if not user_input:
+            user_input = "[FALLBACK] No meaningful user input found in session data"
+        if not final_response:
+            final_response = (
+                "[FALLBACK] No meaningful final response found in session data"
+            )
+
+        test_case = LLMTestCase(
+            input=user_input,
+            actual_output=final_response,
+        )
+        return test_case
+
+    def _is_system_content(self, content: str) -> bool:
+        """Check if content looks like system control or analysis messages."""
+        if not content:
+            return True
+
+        content_lower = content.lower().strip()
+
+        # Filter out obvious system control messages
+        system_patterns = [
+            content.strip().startswith('{"next":'),
+            content.strip() == '{"next": "FINISH"}',
+            content.strip().startswith('{"next": "'),
+            len(content.strip()) < 10,  # Very short responses
+            "text contains" in content_lower,
+            content_lower.startswith("the word "),
+            "mentioned" in content_lower
+            and ("next" in content_lower or "finish" in content_lower),
+            content_lower == "next",
+            content_lower == "finish",
+        ]
+
+        return any(system_patterns)
 
 
 class LLMAnswerCorrectnessTestCase(AbstractTestCaseCalculator):

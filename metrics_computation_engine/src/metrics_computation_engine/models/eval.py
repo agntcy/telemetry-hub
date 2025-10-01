@@ -28,6 +28,7 @@ class MetricResult:
     metadata: Dict[str, Any] = field(default_factory=dict)
     # timestamp: datetime
     error_message: Optional[str] = None
+    from_cache: bool = False
 
 
 class BinaryGrading(BaseModel):

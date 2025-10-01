@@ -3,7 +3,7 @@
 
 from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 from metrics_computation_engine.models.eval import MetricResult
 
 
@@ -44,11 +44,13 @@ class SpanCounter(BaseMetric):
 
         return MetricResult(
             metric_name=self.name,
-            description="Number of spans in the session",
             value=total_spans,
+            aggregation_level=self.aggregation_level,
+            category="plugin",
+            app_name="example_plugin",
+            description="Number of spans in the session",
             reasoning="",
             unit="count",
-            aggregation_level=self.aggregation_level,
             span_id="",
             session_id=session.session_id,
             source="native",

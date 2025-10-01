@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading
-from metrics_computation_engine.models.session import SessionEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 # Co-located prompt for better readability and maintainability
 INTENT_RECOGNITION_ACCURACY_PROMPT = """

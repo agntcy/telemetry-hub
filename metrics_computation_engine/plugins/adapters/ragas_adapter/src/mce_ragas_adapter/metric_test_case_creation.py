@@ -4,8 +4,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import Union
 
-from metrics_computation_engine.models.session import SessionEntity
-from metrics_computation_engine.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -168,7 +168,24 @@ class RagasMultiTurnTestCase(AbstractTestCaseCalculator):
                 logger.info(
                     f"RAGAS DEBUG: Span {i} found completion: '{str(ai_response)[:50]}...'"
                 )
-                conversation_messages.append(AIMessage(content=ai_response))
+
+                # Handle both string and dict content
+                if isinstance(ai_response, dict):
+                    # Convert dict to string representation
+                    ai_response_str = str(ai_response)
+                    logger.info(
+                        f"RAGAS DEBUG: Span {i} converted dict to string: '{ai_response_str[:50]}...'"
+                    )
+                elif isinstance(ai_response, str):
+                    ai_response_str = ai_response
+                else:
+                    # Convert other types to string
+                    ai_response_str = str(ai_response)
+                    logger.info(
+                        f"RAGAS DEBUG: Span {i} converted {type(ai_response)} to string: '{ai_response_str[:50]}...'"
+                    )
+
+                conversation_messages.append(AIMessage(content=ai_response_str))
                 messages_found_this_span += 1
                 logger.info(f"RAGAS DEBUG: Span {i} - added completion AIMessage")
 

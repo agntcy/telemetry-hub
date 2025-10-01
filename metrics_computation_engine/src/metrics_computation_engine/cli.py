@@ -1,6 +1,3 @@
-# Copyright AGNTCY Contributors (https://github.com/agntcy)
-# SPDX-License-Identifier: Apache-2.0
-
 """CLI entry point for the Metrics Computation Engine."""
 
 import json
@@ -49,6 +46,7 @@ def list_metrics():
         if native_metrics:
             click.echo(f"\nNative metrics ({len(native_metrics)}):")
             for name, info in native_metrics.items():
+                print(info)
                 aggregation = info.get("aggregation_level", "unknown")
                 description = info.get("description", "").strip()
                 description = description.replace("\n", " ")
@@ -118,13 +116,33 @@ def compute(config_file: Path, server_url: str, output: Path = None):
                 # Print summary to console
                 click.echo("\nResults summary:")
                 if "results" in results:
-                    for session_id, session_results in results["results"].items():
-                        click.echo(f"\nSession: {session_id}")
-                        for (
-                            metric_name,
-                            metric_result,
-                        ) in session_results.items():
-                            click.echo(f"  {metric_name}: {metric_result}")
+                    try:
+                        # Check if results is a dict or list
+                        if isinstance(results["results"], dict):
+                            for session_id, session_results in results[
+                                "results"
+                            ].items():
+                                click.echo(f"\nSession: {session_id}")
+                                if isinstance(session_results, dict):
+                                    for (
+                                        metric_name,
+                                        metric_result,
+                                    ) in session_results.items():
+                                        click.echo(f"  {metric_name}: {metric_result}")
+                                elif isinstance(session_results, list):
+                                    for i, metric_result in enumerate(session_results):
+                                        click.echo(f"  Metric {i}: {metric_result}")
+                                else:
+                                    click.echo(f"  Result: {session_results}")
+                        elif isinstance(results["results"], list):
+                            for i, session_result in enumerate(results["results"]):
+                                click.echo(f"\nResult {i}: {session_result}")
+                        else:
+                            click.echo(f"Results: {results['results']}")
+                    except Exception as e:
+                        click.echo(f"❌ Unexpected error: {e}")
+                        click.echo(f"Results structure: {type(results['results'])}")
+                        click.echo(f"Results content: {results['results']}")
         else:
             click.echo(
                 f"❌ Error: Server returned status {response.status_code}",

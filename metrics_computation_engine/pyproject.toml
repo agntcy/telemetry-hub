@@ -96,6 +96,7 @@ all = [
 [project.scripts]
 mce-server = "metrics_computation_engine.server:main"
 mce-cli = "metrics_computation_engine.cli:main"
+dal-cli = "metrics_computation_engine.dal_cli:main"
 
 [project.urls]
 Homepage = "https://github.com/agntcy/telemetry-hub"
@@ -131,5 +132,8 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.3.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
     "ruff>=0.12.10",
 ]

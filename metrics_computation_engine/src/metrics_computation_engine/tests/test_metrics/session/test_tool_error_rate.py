@@ -3,8 +3,8 @@
 
 import pytest
 from metrics_computation_engine.metrics.session.tool_error_rate import ToolErrorRate
-from metrics_computation_engine.models.span import SpanEntity
-from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
+from metrics_computation_engine.entities.models.span import SpanEntity
+from metrics_computation_engine.entities.models.session import SessionEntity
 
 
 def make_dummy_span(entity_type, contains_error, span_id):
@@ -29,9 +29,8 @@ async def test_tool_error_rate_all_cases():
     metric = ToolErrorRate()
 
     # Case 1: No tool spans
-    traces_by_session = {"abc": []}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(session_id="abc", spans=[])
+    result = await metric.compute(session_entity)
     assert result.value == 0
     assert result.success
 
@@ -40,9 +39,8 @@ async def test_tool_error_rate_all_cases():
         make_dummy_span("tool", False, "1"),
         make_dummy_span("tool", False, "2"),
     ]
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
+    result = await metric.compute(session_entity)
     assert result.value == 0
     assert result.success
 
@@ -51,9 +49,8 @@ async def test_tool_error_rate_all_cases():
         make_dummy_span("tool", True, "1"),
         make_dummy_span("tool", True, "2"),
     ]
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
+    result = await metric.compute(session_entity)
     assert result.value == 100
     assert result.success
 
@@ -62,8 +59,7 @@ async def test_tool_error_rate_all_cases():
         make_dummy_span("tool", False, "1"),
         make_dummy_span("tool", True, "2"),
     ]
-    traces_by_session = {spans[0].session_id: spans}
-    session_entities = build_session_entities_from_dict(traces_by_session)
-    result = await metric.compute(session_entities.pop())
+    session_entity = SessionEntity(session_id=spans[0].session_id, spans=spans)
+    result = await metric.compute(session_entity)
     assert result.value == 50
     assert result.success

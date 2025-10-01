@@ -52,7 +52,9 @@ class ToolError(BaseMetric):
 
         if data.entity_type not in self.required["entity_type"]:
             return self._create_error_result(
-                category="agent", error_message="Entity is not a tool!"
+                category="agent",
+                app_name=data.app_name,
+                error_message="Entity is not a tool!",
             )
 
         results = list(find(dict(data), "status"))
@@ -61,10 +63,13 @@ class ToolError(BaseMetric):
             return self._create_success_result(
                 results[0],
                 category="agent",
+                app_name=data.app_name,
                 span_ids=[data.span_id],
                 session_ids=data.session_id,
             )
 
         return self._create_error_result(
-            category="agent", error_message="Failed to retrieve tool status."
+            category="agent",
+            app_name=data.app_name,
+            error_message="Failed to retrieve tool status.",
         )
