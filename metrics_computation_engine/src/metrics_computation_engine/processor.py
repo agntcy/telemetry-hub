@@ -43,6 +43,8 @@ class MetricsProcessor:
                 value=-1,
                 error_message=str(e),
                 aggregation_level=metric.aggregation_level,
+                category="unknown",
+                app_name=getattr(data, "app_name", "unknown"),
             )
 
     async def _initialize_metric(self, metric_name: str, metric_class) -> BaseMetric:
