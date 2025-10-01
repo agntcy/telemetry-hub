@@ -6,11 +6,11 @@ metadata:
 data:
   TEST: '{{ .Values.server.test }}'
   {{- if eq .Values.clickhouseSettings.secret.usesSecretEnvVars false }}
-  CLICKHOUSE_URL: '{{ .Values.clickhouseSettings.url }}'
-  CLICKHOUSE_USER: '{{ .Values.clickhouseSettings.user }}'
-  CLICKHOUSE_PASS: '{{ .Values.clickhouseSettings.pass }}'
-  CLICKHOUSE_PORT: '{{ .Values.clickhouseSettings.port }}'
-  CLICKHOUSE_DB: '{{ .Values.clickhouseSettings.db }}'
+  CLICKHOUSE_URL: '{{ .Values.clickhouseSettings.values.url }}'
+  CLICKHOUSE_USER: '{{ .Values.clickhouseSettings.values.user }}'
+  CLICKHOUSE_PASS: '{{ .Values.clickhouseSettings.values.pass }}'
+  CLICKHOUSE_PORT: '{{ .Values.clickhouseSettings.values.port }}'
+  CLICKHOUSE_DB: '{{ .Values.clickhouseSettings.values.db }}'
   {{- end }}
   {{- if eq .Values.server.secret.usesSecretEnvVars false }}
   PORT: '{{ .Values.server.service.port }}'
