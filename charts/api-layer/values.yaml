@@ -151,7 +151,7 @@ clickhouseSettings:
     name: "clickhouse-settings-secret"
   values:
     url: 'clickhouse'
-    user: 'user'
-    pass: 'password'
+    user: 'admin'
+    pass: 'admin'
     port: '8123'
     db: 'default'
