@@ -67,7 +67,11 @@ class Groundedness(BaseMetric):
                     else ""
                 )
 
-                conversation_str = json.dumps(conversation, indent=2) if isinstance(conversation, list) else conversation
+                conversation_str = (
+                    json.dumps(conversation, indent=2)
+                    if isinstance(conversation, list)
+                    else conversation
+                )
                 prompt = GROUNDEDNESS_PROMPT.format(conversation=conversation_str)
 
                 # Get relevant span IDs for metadata
@@ -91,7 +95,6 @@ class Groundedness(BaseMetric):
                     span_ids=[span.span_id for span in session.llm_spans],
                     session_ids=[session.session_id],
                 )
-
 
             return self._create_error_result(
                 error_message="Please configure your LLM credentials",
