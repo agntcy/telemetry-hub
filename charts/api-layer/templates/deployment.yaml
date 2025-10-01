@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "obs-api-layer.fullname" . }}
+  labels:
+    {{- include "obs-api-layer.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "obs-api-layer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "obs-api-layer.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "obs-api-layer.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.service.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ .Chart.Name }}-configmap
+          env:
+            {{- if .Values.server.secret.usesSecretEnvVars }}
+            - name: PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "server.secretName" . }}
+                  key: port
+            - name: ALLOW_ORIGINS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "server.secretName" . }}
+                  key: allowOrigins
+            - name: BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "server.secretName" . }}
+                  key: baseUrl
+            {{- end }}
+            {{- if .Values.clickhouseSettings.secret.usesSecretEnvVars }}
+            - name: CLICKHOUSE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.secretName" . }}
+                  key: url
+            - name: CLICKHOUSE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.secretName" . }}
+                  key: user
+            - name: CLICKHOUSE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.secretName" . }}
+                  key: pass
+            - name: CLICKHOUSE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.secretName" . }}
+                  key: port
+            - name: CLICKHOUSE_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clickhouse.secretName" . }}
+                  key: db
+            {{- end }}
+
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            # {{- if .Values.certManagerCert.enabled }}
+            # - name: obs-grpc-server-certificate-secret
+            #   mountPath: "/etc/obs-api-layer/cert"
+            #   readOnly: true
+            # {{- end }}
+          {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+      - name: aethe-api-root-ca-certificate-secret
+        secret:
+          secretName: obs-api-layer-root-ca-certificate-secret
+          items:
+          - key: ca.crt
+            path: ca.crt
+      # {{- if .Values.certManagerCert.enabled }}
+      # - name: obs-gql-server-certificate-secret
+      #   secret:
+      #     secretName: obs-grpc-server-certificate-secret
+      # - name: obs-grpc-client-certificate-secret
+      #   secret:
+      #     secretName: obs-grpc-client-certificate-secret
+      # {{- end }}
+      {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

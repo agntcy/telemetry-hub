@@ -1,0 +1,39 @@
+{{- if .Values.certManagerCert.enabled }}
+# Certificate for obs api server
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: obs-api-layer-certificate
+spec:
+  secretName: obs-api-layer-certificate-secret
+  dnsNames:
+    - {{ include "obs-api-layer.fullname" . }}
+    - {{ include "obs-api-layer.fullname" . }}.{{ .Release.Namespace }}
+    - {{ include "obs-api-layer.fullname" . }}.{{ .Release.Namespace }}.svc
+    - {{ include "obs-api-layer.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    name: obs-api-layer-root-ca-issuer
+  duration: 2160h0m0s # 90d
+  renewBefore: 360h0m0s # 15d
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: obs-api-layer-client-certificate
+spec:
+  secretName: obs-api-layer-client-certificate-secret
+  issuerRef:
+    name: obs-api-layer-root-ca-issuer
+  duration: 2160h0m0s # 90d
+  emailAddresses:
+    - obs-api@obs.org
+  renewBefore: 360h0m0s # 15d
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+{{- end }}

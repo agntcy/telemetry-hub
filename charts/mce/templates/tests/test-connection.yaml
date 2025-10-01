@@ -1,0 +1,17 @@
+{{- if .Values.test -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "obs-mce.fullname" . }}-test-connection"
+  labels:
+    {{- include "obs-mce.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "obs-mce.fullname" . }}:{{ .Values.server.service.port }}/keepalive']
+  restartPolicy: Never
+{{- end -}}

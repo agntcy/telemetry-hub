@@ -1,0 +1,39 @@
+{{- if .Values.certManagerCert.enabled }}
+# Certificate for obs-mce server
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: obs-mce-certificate
+spec:
+  secretName: obs-mce-certificate-secret
+  dnsNames:
+    - {{ include "obs-mce.fullname" . }}
+    - {{ include "obs-mce.fullname" . }}.{{ .Release.Namespace }}
+    - {{ include "obs-mce.fullname" . }}.{{ .Release.Namespace }}.svc
+    - {{ include "obs-mce.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    name: obs-mce-root-ca-issuer
+  duration: 2160h0m0s # 90d
+  renewBefore: 360h0m0s # 15d
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: obs-mce-client-certificate
+spec:
+  secretName: obs-mce-client-certificate-secret
+  issuerRef:
+    name: obs-mce-root-ca-issuer
+  duration: 2160h0m0s # 90d
+  emailAddresses:
+    - obs-mce@obs.org
+  renewBefore: 360h0m0s # 15d
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+{{- end }}

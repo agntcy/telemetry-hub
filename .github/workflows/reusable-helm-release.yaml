@@ -1,0 +1,81 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      registry:
+        required: true
+        type: string
+        description: "OCI registry to use."
+      release_tag:
+        required: true
+        type: string
+        description: "Release tag for all components."
+      helm-version:
+        required: false
+        default: "3.12.1"
+        type: string
+        description: 'Helm version'
+    secrets:
+      github-token:
+        description: "github token"
+        required: true
+
+jobs:
+  chart:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.github-token}}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4.2.0
+        with:
+          version: ${{ inputs.helm-version }}
+
+      - name: Set chart name
+        id: chart-name
+        shell: bash
+        run: |
+          echo "Resolving chart name from release tag: ${{ inputs.release_tag }}"
+          _chart_name=${{ inputs.release_tag }}
+
+          # Extract the chart name from the release tag
+          echo "value=${_chart_name%-v*}" >> "$GITHUB_OUTPUT"
+
+          # extract the chart version form the tag
+          echo "version=v${_chart_name##*-v}" >> "$GITHUB_OUTPUT"
+
+
+      - name: Helm lint
+        shell: bash
+        run: |
+          ## By convention the name of the chart is the name of the folder under charts/
+          helm lint charts/${{ steps.chart-name.outputs.value }} --with-subcharts
+
+      - name: Helm package
+        id: build
+        shell: bash
+        run: |
+          helm package charts/${{ steps.chart-name.outputs.value }} --dependency-update --version ${{ steps.chart-name.outputs.version }}
+          echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.chart-name.outputs.version }}.tgz" >> "$GITHUB_OUTPUT"
+
+      - name: Helm push to GHCR OCI registry
+        shell: bash
+        run: |
+          echo "🚧 Pushing ${{ steps.build.outputs.package }} to GHCR OCI registry"
+          helm push ${{ steps.build.outputs.package }} oci://${{ inputs.registry }}/helm
