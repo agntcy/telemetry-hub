@@ -7,6 +7,8 @@ from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
 
+import json
+
 # Co-located prompt for better readability and maintainability
 GROUNDEDNESS_PROMPT = """
     You are an evaluator of Groundedness Evaluate how well each response is grounded in verifiable data and avoids speculation or hallucinations.
@@ -55,17 +57,18 @@ class Groundedness(BaseMetric):
         Args:
             session: SessionEntity with pre-computed conversation data
         """
+        logger.info("Computing groundedness for session: %s", session.session_id)
         try:
             if self.jury:
                 # Use pre-computed conversation data from SessionEntity
                 conversation = (
-                    session.conversation_data.get("conversation", "")
+                    session.conversation_data.get("elements", "")
                     if session.conversation_data
                     else ""
                 )
 
-                prompt = GROUNDEDNESS_PROMPT.format(conversation=conversation)
-                score, reasoning = self.jury.judge(prompt, BinaryGrading)
+                conversation_str = json.dumps(conversation, indent=2) if isinstance(conversation, list) else conversation
+                prompt = GROUNDEDNESS_PROMPT.format(conversation=conversation_str)
 
                 # Get relevant span IDs for metadata
                 agent_span_ids = (
@@ -78,59 +81,33 @@ class Groundedness(BaseMetric):
                     if session.agent_spans
                     else []
                 )
-                return MetricResult(
-                    self.name,
-                    score,
-                    self.aggregation_level,
-                    "application",
-                    session.app_name,
-                    "",
-                    session.session_id,
-                    "native",
-                    entities_involved,
-                    [],
-                    True,
-                    {"span_ids": agent_span_ids},
-                    None,
-                    "",
-                    reasoning,
-                    "",
+
+                return self._create_success_result(
+                    score=score,
+                    reasoning=reasoning,
+                    category="application",
+                    app_name=session.app_name,
+                    entities_involved=entities_involved,
+                    span_ids=[span.span_id for span in session.llm_spans],
+                    session_ids=[session.session_id],
                 )
 
-            return MetricResult(
-                metric_name=self.name,
-                description="",
-                value=-1,
-                reasoning="",
-                unit="",
-                aggregation_level=self.aggregation_level,
+
+            return self._create_error_result(
+                error_message="Please configure your LLM credentials",
                 category="application",
                 app_name=session.app_name,
-                span_id="",
-                session_id=session.session_id,
-                source="native",
                 entities_involved=entities_involved,
-                edges_involved=[],
-                success=False,
-                metadata={},
-                error_message="Please configure your LLM credentials",
+                span_ids=[span.span_id for span in session.llm_spans],
+                session_ids=[session.session_id],
             )
+
         except Exception as e:
-            return MetricResult(
-                self.name,
-                -1,
-                self.aggregation_level,
-                "application",
-                getattr(session, "app_name", ""),
-                "",
-                getattr(session, "session_id", ""),
-                "native",
-                entities_involved,
-                [],
-                False,
-                {},
-                str(e),
-                "",
-                "",
-                "",
+            return self._create_error_result(
+                error_message=str(e),
+                category="application",
+                app_name=session.app_name,
+                entities_involved=entities_involved,
+                span_ids=[span.span_id for span in session.llm_spans],
+                session_ids=[session.session_id],
             )

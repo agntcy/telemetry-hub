@@ -71,6 +71,8 @@ class ToolUtilizationAccuracy(BaseMetric):
                 app_name=data.app_name,
                 entities_involved=[data.entity_name],
                 error_message="Missing required data for tool utilization accuracy computation",
+                span_ids=[data.span_id],
+                session_ids=[data.session_id],
             )
 
         if self.jury:
@@ -97,4 +99,6 @@ class ToolUtilizationAccuracy(BaseMetric):
             app_name=data.app_name,
             entities_involved=[data.entity_name],
             error_message="Please configure your LLM credentials",
+            span_ids=[data.span_id],
+            session_ids=[data.session_id],
         )

@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 from dotenv import load_dotenv
 
 
-from metrics_computation_engine.core.data_parser import parse_raw_spans
+from metrics_computation_engine.entities.core.data_parser import parse_raw_spans
 
 
 # Import MCE Native Metrics
@@ -40,9 +40,9 @@ from metrics_computation_engine.processor import MetricsProcessor
 from metrics_computation_engine.registry import MetricRegistry
 from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.util import get_metric_class
-from metrics_computation_engine.dal.sessions import build_session_entities_from_dict
 from metrics_computation_engine.models.requests import LLMJudgeConfig
 from metrics_computation_engine.model_handler import ModelHandler
+from metrics_computation_engine.entities.core.trace_processor import TraceProcessor
 
 RAW_TRACES_PATH: Path = Path(__file__).parent / "data" / "sample_data.json"
 ENV_FILE_PATH: Path = Path(__file__).parent.parent.parent.parent / ".env"
@@ -60,14 +60,10 @@ async def compute():
     raw_spans = json.loads(RAW_TRACES_PATH.read_text())
 
     # Convert the list to a single session
-    span_entities = parse_raw_spans(raw_spans=raw_spans)
-    traces_by_session = build_session_entities_from_dict({"session_1": span_entities})
-    traces_by_session = {
-        session.session_id[0]: session for session in traces_by_session
-    }
-    addon = "" if len(traces_by_session) == 1 else "s"
+    trace_processor = TraceProcessor()
+    sessions_set = trace_processor.process_raw_traces(raw_spans)
 
-    logger.info(f"Calculating metrics for {len(traces_by_session)} session{addon}.")
+    logger.info(f"Calculating metrics for {len(sessions_set.sessions)} session.")
 
     registry = MetricRegistry()
 
@@ -131,7 +127,7 @@ async def compute():
     )
 
     logger.info("Metrics calculation processor started")
-    results = await processor.compute_metrics(traces_by_session)
+    results = await processor.compute_metrics(sessions_set)
 
     logger.info("Metrics calculation processor finished")
 
