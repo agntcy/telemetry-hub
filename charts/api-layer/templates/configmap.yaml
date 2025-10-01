@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-configmap
+  namespace: '{{ .Release.Namespace }}'
+data:
+  TEST: '{{ .Values.server.test }}'
+  {{- if eq .Values.clickhouseSettings.secret.usesSecretEnvVars false }}
+  CLICKHOUSE_URL: '{{ .Values.clickhouseSettings.url }}'
+  CLICKHOUSE_USER: '{{ .Values.clickhouseSettings.user }}'
+  CLICKHOUSE_PASS: '{{ .Values.clickhouseSettings.pass }}'
+  CLICKHOUSE_PORT: '{{ .Values.clickhouseSettings.port }}'
+  CLICKHOUSE_DB: '{{ .Values.clickhouseSettings.db }}'
+  {{- end }}
+  {{- if eq .Values.server.secret.usesSecretEnvVars false }}
+  PORT: '{{ .Values.server.service.port }}'
+  ALLOW_ORIGINS: '{{ .Values.server.allowOrigins }}'
+  BASE_URL: '{{ .Values.server.baseUrl }}'
+  {{- end }}

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-configmap
+  namespace: '{{ .Release.Namespace }}'
+data:
+  PORT: '{{ .Values.server.service.port }}'
+  BASE_URL: '{{ .Values.server.baseUrl }}'
+  API_BASE_URL: '{{ .Values.apiLayer.baseUrl }}'
