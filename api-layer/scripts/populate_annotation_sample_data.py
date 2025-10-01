@@ -401,7 +401,7 @@ class AnnotationDataPopulator:
                     total_annotations += 1
 
             self.log_success(
-                f"Generated {reviewer_annotations} annotations " f"for {reviewer_id}"
+                f"Generated {reviewer_annotations} annotations for {reviewer_id}"
             )
 
         self.log_success(f"Generated total of {total_annotations} annotations")
@@ -516,8 +516,7 @@ class AnnotationDataPopulator:
                         total_llm_annotations += 1
 
             self.log_success(
-                f"Generated {reviewer_annotations} LLM annotations "
-                f"for {reviewer_id}"
+                f"Generated {reviewer_annotations} LLM annotations for {reviewer_id}"
             )
 
         self.log_success(f"Generated total of {total_llm_annotations} LLM annotations")
@@ -527,44 +526,22 @@ class AnnotationDataPopulator:
         self.log_info("=== Creating Annotation Datasets ===")
 
         # Dataset 1: ds_1 with no tags and 3 items
-        ds1 = {
-            "name": "ds_1",
-            "tags": []
-        }
+        ds1 = {"name": "ds_1", "tags": []}
 
-        ds1_result = self.api_call(
-            "POST",
-            "/annotation-datasets",
-            ds1,
-            "Dataset ds_1"
-        )
+        ds1_result = self.api_call("POST", "/annotation-datasets", ds1, "Dataset ds_1")
         self.dataset_ds1_id = ds1_result["id"] if ds1_result else None
 
         # Dataset 2: ds_2 with tags and 11 items
-        ds2 = {
-            "name": "ds_2",
-            "tags": ["test_2_1", "test_2_2"]
-        }
+        ds2 = {"name": "ds_2", "tags": ["test_2_1", "test_2_2"]}
 
-        ds2_result = self.api_call(
-            "POST",
-            "/annotation-datasets",
-            ds2,
-            "Dataset ds_2"
-        )
+        ds2_result = self.api_call("POST", "/annotation-datasets", ds2, "Dataset ds_2")
         self.dataset_ds2_id = ds2_result["id"] if ds2_result else None
 
         # Dataset 3: ds_20 with tags and 51 items
-        ds20 = {
-            "name": "ds_20",
-            "tags": ["test_20_A", "test_2_B"]
-        }
+        ds20 = {"name": "ds_20", "tags": ["test_20_A", "test_2_B"]}
 
         ds20_result = self.api_call(
-            "POST",
-            "/annotation-datasets",
-            ds20,
-            "Dataset ds_20"
+            "POST", "/annotation-datasets", ds20, "Dataset ds_20"
         )
         self.dataset_ds20_id = ds20_result["id"] if ds20_result else None
 
@@ -587,12 +564,16 @@ class AnnotationDataPopulator:
         items = []
         for i in range(count):
             item = {
-                "session_id": f"session_{dataset_name}_{i+1}",
-                "session_date": f"2024-{random.randint(1,12):02d}-{random.randint(1,28):02d}T{random.randint(0,23):02d}:{random.randint(0,59):02d}:{random.randint(0,59):02d}Z" if random.random() > 0.1 else None,
-                "input": f"Sample input for {dataset_name} item {i+1}",
-                "output": f"Sample output for {dataset_name} item {i+1}",
-                "expected_output": f"Expected output for {dataset_name} item {i+1}",
-                "tags": [f"tag_{dataset_name}_{j}" for j in range(random.randint(0, 3))]
+                "session_id": f"session_{dataset_name}_{i + 1}",
+                "session_date": f"2024-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}T{random.randint(0, 23):02d}:{random.randint(0, 59):02d}:{random.randint(0, 59):02d}Z"
+                if random.random() > 0.1
+                else None,
+                "input": f"Sample input for {dataset_name} item {i + 1}",
+                "output": f"Sample output for {dataset_name} item {i + 1}",
+                "expected_output": f"Expected output for {dataset_name} item {i + 1}",
+                "tags": [
+                    f"tag_{dataset_name}_{j}" for j in range(random.randint(0, 3))
+                ],
             }
             items.append(item)
 
@@ -600,11 +581,13 @@ class AnnotationDataPopulator:
             "POST",
             f"/annotation-datasets/{dataset_id}/import",
             items,
-            f"Import items into dataset {dataset_name}"
+            f"Import items into dataset {dataset_name}",
         )
 
         if import_result:
-            self.log_success(f"Imported items into dataset {dataset_name}: {import_result.get('status', {}).get('state', 'UNKNOWN')}")
+            self.log_success(
+                f"Imported items into dataset {dataset_name}: {import_result.get('status', {}).get('state', 'UNKNOWN')}"
+            )
 
     def run(self):
         """Run the complete data population process"""
@@ -684,9 +667,7 @@ class AnnotationDataPopulator:
             self.log_info(
                 f"Session group: curl '{self.api_base_url}{session_group_endpoint}'"
             )
-            self.log_info(
-                f"LLM group: curl '{self.api_base_url}{llm_group_endpoint}'"
-            )
+            self.log_info(f"LLM group: curl '{self.api_base_url}{llm_group_endpoint}'")
 
         except Exception as e:
             self.log_error(f"Failed to populate sample data: {str(e)}")
