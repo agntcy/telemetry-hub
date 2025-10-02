@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from mce_opik_adapter.metric_test_case_creation import (
     AbstractTestCaseCalculator,
     OpikHallucinationTestCase,
+    OpikSpanTestCase,
 )
 from pydantic import BaseModel, Field
 
@@ -41,5 +42,14 @@ def build_metric_configurations() -> List[MetricConfiguration]:
                 aggregation_level="span",
                 required_input_parameters=["input_payload", "output_payload"],
             ),
-        )
+        ),
+        MetricConfiguration(
+            metric_name="Sentiment",
+            test_case_calculator=OpikSpanTestCase(),
+            requirements=MetricRequirements(
+                entity_type=["llm"],
+                aggregation_level="span",
+                required_input_parameters=["input_payload", "output_payload"],
+            ),
+        ),
     ]
