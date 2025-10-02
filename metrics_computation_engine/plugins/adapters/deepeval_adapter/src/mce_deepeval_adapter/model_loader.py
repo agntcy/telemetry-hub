@@ -11,7 +11,7 @@ except ImportError:
     )
 
 from metrics_computation_engine.models.requests import LLMJudgeConfig
-
+from .llms.custom_model import LiteLLMModel
 
 MODEL_PROVIDER_NAME = "deepeval"
 
@@ -36,8 +36,7 @@ def load_model(llm_config: LLMJudgeConfig) -> Any:
     if not llm_config.LLM_API_KEY:
         raise ValueError("LLM_API_KEY is required for DeepEval models")
 
-    # For now, we support only GPTModel
-    model = load_gpt_model(
+    model = load_lite_llm_model(
         llm_model_name=llm_config.LLM_MODEL_NAME,
         llm_api_key=llm_config.LLM_API_KEY,
         llm_base_url=llm_config.LLM_BASE_MODEL_URL,
@@ -45,6 +44,17 @@ def load_model(llm_config: LLMJudgeConfig) -> Any:
     return model
 
 
+def load_lite_llm_model(
+    llm_model_name: str,
+    llm_api_key: str,
+    llm_base_url: str,
+) -> LiteLLMModel:
+    return LiteLLMModel(
+        model=llm_model_name, api_key=llm_api_key, base_url=llm_base_url
+    )
+
+
+# TODO: To be deprecated
 def load_gpt_model(
     llm_model_name: str,
     llm_api_key: str,

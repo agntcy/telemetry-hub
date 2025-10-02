@@ -29,6 +29,7 @@ classifiers = [
 ]
 dependencies = [
     "deepeval>=3.3.9",
+    "instructor>=1.11.3",
     # Note: metrics-computation-engine is expected to be available in the runtime environment
     "metrics-computation-engine",
 ]
