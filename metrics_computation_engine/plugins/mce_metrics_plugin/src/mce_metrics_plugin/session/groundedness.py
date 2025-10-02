@@ -4,7 +4,7 @@
 from typing import List, Optional, Union
 
 from metrics_computation_engine.metrics.base import BaseMetric
-from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
+from metrics_computation_engine.models.eval import BinaryGrading
 from metrics_computation_engine.entities.models.session import SessionEntity
 from metrics_computation_engine.entities.core.agent_role_detector import (
     get_agent_role_and_skip_decision,
@@ -99,7 +99,6 @@ class Groundedness(BaseMetric):
 
                 prompt = GROUNDEDNESS_PROMPT.format(conversation=conversation_str)
                 score, reasoning = self.jury.judge(prompt, BinaryGrading)
-
                 # Get relevant span IDs for metadata
                 agent_span_ids = (
                     [span.span_id for span in session.agent_spans]
