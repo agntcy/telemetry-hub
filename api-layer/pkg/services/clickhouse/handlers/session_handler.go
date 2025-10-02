@@ -32,10 +32,10 @@ func (h Handler) GetSessionIDSUnique(startTime, endTime time.Time) ([]models.Ses
 	result := h.DB.
 		Table("otel_traces").
 		Select(`
-			SpanAttributes['session.id'] AS ID, 
-			MIN(Timestamp) AS StartTimestamp, 
+			SpanAttributes['session.id'] AS ID,
+			MIN(Timestamp) AS StartTimestamp,
 			argMin(
-				SpanAttributes['gen_ai.prompt.0.content'], 
+				SpanAttributes['gen_ai.prompt.0.content'],
 				Timestamp
 			) AS Prompt
 		`).
@@ -56,10 +56,10 @@ func (h Handler) GetSessionIDSUniqueWithPagination(startTime, endTime time.Time,
 	baseQuery := h.DB.
 		Table("otel_traces").
 		Select(`
-			splitByChar('_', SpanAttributes['session.id'])[2] as ID, 
-			MIN(Timestamp) as StartTimestamp, 
+			splitByChar('_', SpanAttributes['session.id'])[2] as ID,
+			MIN(Timestamp) as StartTimestamp,
 			argMin(
-				SpanAttributes['gen_ai.prompt.0.content'], 
+				SpanAttributes['gen_ai.prompt.0.content'],
 				Timestamp
 			) AS Prompt
 		`).
