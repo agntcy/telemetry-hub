@@ -31,10 +31,17 @@ func (h Handler) GetSessionIDSUnique(startTime, endTime time.Time) ([]models.Ses
 
 	result := h.DB.
 		Table("otel_traces").
-		Select("SpanAttributes['session.id'] AS ID, MIN(Timestamp) AS StartTimestamp").
+		Select(`
+			SpanAttributes['session.id'] AS ID, 
+			MIN(Timestamp) AS StartTimestamp, 
+			argMin(
+				SpanAttributes['gen_ai.prompt.0.content'], 
+				Timestamp
+			) AS Prompt
+		`).
 		Where("SpanAttributes['session.id'] != ''").
+		Where("SpanAttributes['gen_ai.prompt.0.role'] = 'user'").
 		Group("SpanAttributes['session.id']").
-		// Filter by the computed minimum per group (avoid alias in HAVING for portability)
 		Having("MIN(Timestamp) >= ? AND MIN(Timestamp) <= ?", startTime, endTime).
 		Order("StartTimestamp DESC").
 		Find(&sessionIDs)
@@ -48,9 +55,17 @@ func (h Handler) GetSessionIDSUnique(startTime, endTime time.Time) ([]models.Ses
 func (h Handler) GetSessionIDSUniqueWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) (sessionIDs []models.SessionUniqueID, total int, err error) {
 	baseQuery := h.DB.
 		Table("otel_traces").
-		Select("splitByChar('_', SpanAttributes['session.id'])[2] as ID, MIN(Timestamp) as StartTimestamp").
+		Select(`
+			splitByChar('_', SpanAttributes['session.id'])[2] as ID, 
+			MIN(Timestamp) as StartTimestamp, 
+			argMin(
+				SpanAttributes['gen_ai.prompt.0.content'], 
+				Timestamp
+			) AS Prompt
+		`).
 		Where("has(SpanAttributes, 'session.id') = 1").
 		Where("SpanAttributes['session.id'] != ''").
+		Where("SpanAttributes['gen_ai.prompt.0.role'] = 'user'").
 		Where("Timestamp >= ? AND Timestamp <= ?", startTime, endTime)
 
 	if nameFilter != nil && *nameFilter != "" {
