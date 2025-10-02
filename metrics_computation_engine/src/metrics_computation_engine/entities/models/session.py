@@ -100,8 +100,9 @@ class SessionEntity(BaseModel):
 
     tool_calls: Optional[List[ToolCall]] = None
 
-    input_query: Optional[str] = None
-    final_response: Optional[str] = None
+    input_query: str = ""
+    final_response: str = ""
+    ground_truth: str = "No ground truth available"
 
     def _build_entity_indices(self) -> None:
         """Build indices for efficient entity type filtering."""

@@ -80,6 +80,7 @@ class ApiClientConfig(BaseSettings):
     uri_sessions_spans: str = "/traces/sessions/spans"
     uri_session_metric: str = "/metrics/session"
     uri_span_metric: str = "/metrics/span"
+    uri_annotations: str = "/annotations"
     uri_population_metric: Optional[str] = None  # None means not implemented
 
 
@@ -589,6 +590,21 @@ class ApiClient:
         self.logger.info("Session enrichment completed")
 
         return session_set
+
+    def get_annotations_results_by_session(session_id: str) -> str:
+
+        _uri_get_annotations = (
+            f"{self._api_config.uri_annotations.rstrip('/')}/"
+        )
+
+        annotations = self._get_api_request(endpoint=_uri_get_an)
+
+        self.logger.info(f"Receiving Annotations: {str(annotations)}")
+        for d in annotations:
+            if d["session_id"] == session_id:
+                return d["annotation_value"]
+
+        return ""
 
     def get_session_metrics(self, session_id: str) -> SessionSet:
         """
