@@ -57,6 +57,18 @@ class BaseMetric(ABC):
         """Return list of required parameters for this metric"""
         pass
 
+    def supports_agent_computation(self) -> bool:
+        """
+        Indicate whether this metric supports agent-level computation.
+
+        By default, metrics do not support agent-level computation.
+        Subclasses can override this method to enable agent-level processing.
+
+        Returns:
+            bool: True if the metric supports agent-level computation, False otherwise
+        """
+        return False
+
     def _create_success_result(
         self,
         score: float,

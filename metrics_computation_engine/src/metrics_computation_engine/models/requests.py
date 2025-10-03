@@ -91,10 +91,30 @@ class DataFetchingConfig(BaseModel):
         return self.batch_config
 
 
+class MetricOptions(BaseModel):
+    """Configuration options for metric computation."""
+    computation_level: Optional[List[str]] = None
+
+    def get_computation_levels(self) -> List[str]:
+        """Get computation levels, defaulting to session if none specified."""
+        if self.computation_level is None:
+            return ["session"]
+        return self.computation_level
+
+    def supports_session(self) -> bool:
+        """Check if session-level computation is requested."""
+        return "session" in self.get_computation_levels()
+
+    def supports_agent(self) -> bool:
+        """Check if agent-level computation is requested."""
+        return "agent" in self.get_computation_levels()
+
+
 class MetricsConfigRequest(BaseModel):
     metrics: List[str] = ["AgentToToolInteractions", "GraphDeterminismScore"]
     llm_judge_config: LLMJudgeConfig = LLMJudgeConfig()
     data_fetching_infos: DataFetchingConfig = DataFetchingConfig()
+    metric_options: Optional[MetricOptions] = None
 
     def validate(self) -> bool:
         if not self.data_fetching_infos.validate():
@@ -109,3 +129,13 @@ class MetricsConfigRequest(BaseModel):
 
     def get_session_ids(self) -> List[str]:
         return self.data_fetching_infos.get_session_ids()
+
+    def get_metric_options(self) -> MetricOptions:
+        """Get metric options, creating default if none provided."""
+        if self.metric_options is None:
+            return MetricOptions()
+        return self.metric_options
+
+    def get_computation_levels(self) -> List[str]:
+        """Get computation levels from metric options."""
+        return self.get_metric_options().get_computation_levels()
