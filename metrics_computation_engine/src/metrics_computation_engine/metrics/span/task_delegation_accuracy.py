@@ -71,6 +71,7 @@ class TaskDelegationAccuracy(BaseMetric):
                 score,
                 category="agent",
                 app_name=data.app_name,
+                agent_id=data.agent_id,
                 reasoning=reasoning,
                 span_ids=[data.span_id],
                 session_ids=data.session_id,

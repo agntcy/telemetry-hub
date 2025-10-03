@@ -225,6 +225,7 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
 
         # Extract entity name
         entity_name = attrs.get(config["entity_name_key"], "unknown")
+        agent_id = attrs.get("agent_id", None)
 
         # Special handling for Autogen agent names
         if entity_type == "agent" and entity_name == "unknown":
@@ -278,6 +279,7 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
             span_id=row.get("SpanId", ""),
             entity_name=entity_name,
             app_name=app_name(row),
+            agent_id=agent_id,
             input_payload=input_payload,
             output_payload=output_payload,
             message=attrs.get("traceloop.entity.message"),

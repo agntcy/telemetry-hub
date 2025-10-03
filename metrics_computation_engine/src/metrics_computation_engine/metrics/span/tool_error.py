@@ -64,6 +64,7 @@ class ToolError(BaseMetric):
                 results[0],
                 category="agent",
                 app_name=data.app_name,
+                agent_id=data.agent_id,
                 span_ids=[data.span_id],
                 session_ids=data.session_id,
             )

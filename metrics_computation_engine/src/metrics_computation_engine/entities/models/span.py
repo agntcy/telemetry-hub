@@ -10,6 +10,7 @@ class SpanEntity(BaseModel):
     span_id: str
     entity_name: str
     app_name: str
+    agent_id: Optional[str] = None
     input_payload: Optional[Dict[str, Any]] = None
     output_payload: Optional[Dict[str, Any]] = None
     expected_output: Optional[Union[str, Dict[str, Any], List[Dict[str, Any]]]] = None

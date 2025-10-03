@@ -88,6 +88,7 @@ class ToolUtilizationAccuracy(BaseMetric):
                 score,
                 category="agent",
                 app_name=data.app_name,
+                agent_id=data.agent_id,
                 reasoning=reasoning,
                 entities_involved=[data.entity_name],
                 span_ids=[data.span_id],

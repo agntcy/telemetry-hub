@@ -144,8 +144,8 @@ class MetricsProcessor:
         # Initialize the metric with the model
         ok = metric_instance.init_with_model(model)
         if not ok:
-            print(
-                f"Warning: metric {metric_name} encountered an issue when initiating."
+            logger.warning(
+                f"metric {metric_name} encountered an issue when initiating."
             )
             return None
 

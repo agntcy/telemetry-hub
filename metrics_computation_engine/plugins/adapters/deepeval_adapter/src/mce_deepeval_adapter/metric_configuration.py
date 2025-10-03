@@ -31,7 +31,7 @@ from mce_deepeval_adapter.metric_test_case_creation import (
     DeepEvalTestCaseLLMWithTools,
     LLMAnswerCorrectnessTestCase,
     LLMGeneralStructureAndStyleTestCase,
-    SessionAnswerRelevancyTestCase,
+    LLMAnswerRelevancyTestCase,
 )
 from pydantic import BaseModel, Field
 
@@ -64,10 +64,10 @@ def build_metric_configurations() -> List[MetricConfiguration]:
     return [
         MetricConfiguration(
             metric_name=AnswerRelevancyMetric.__name__,
-            test_case_calculator=SessionAnswerRelevancyTestCase(),
+            test_case_calculator=LLMAnswerRelevancyTestCase(),
             requirements=MetricRequirements(
                 entity_type=["llm"],
-                aggregation_level="session",
+                aggregation_level="span",
                 required_input_parameters=["input_query", "final_response"],
             ),
             metric_class=AnswerRelevancyMetric,
