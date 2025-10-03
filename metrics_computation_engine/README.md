@@ -207,7 +207,7 @@ Once deployed, you can generate traces from an agentic app instrumented with our
 - `GET /status` - Health check and server status
 - `POST /compute_metrics` - Compute metrics from JSON configuration (see examples/service_test.py)
 
-The server provides automatic OpenAPI documentation at `http://localhost:8000/docs` when running.
+The server provides automatic OpenAPI documentation at `http://<HOST>:<PORT>/docs` when running.
 
 
 4. **Run the server**:
