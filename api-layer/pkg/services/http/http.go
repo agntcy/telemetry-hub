@@ -91,7 +91,7 @@ func (hs *HttpServer) Sessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	includePrompts := r.URL.Query().Get("include_prompts")
+	includePrompts := r.URL.Query().Get(common.INCLUDE_PROMPTS)
 	var sessionIDs []models.SessionUniqueID
     if includePrompts == "true" {
         sessionIDs, err = hs.DataService.GetSessionIDSWithPrompts(startTimeParsed, endTimeParsed)
