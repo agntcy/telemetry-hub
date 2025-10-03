@@ -264,20 +264,21 @@ def _make_sure_input_is_span_entity(
         raise TypeError("data must be an instance of SpanEntity")
     return data
 
+
 def _redact_images_from_payload(payload: dict) -> dict:
     for k in payload.keys():
         try:
             item = json.loads(payload[k])
             if type(item) is list:
                 for i in item:
-                        if type(i) is dict:
-                            if "image_url" in i.keys():
-                                i["image_url"] = "REDACTED"
+                    if type(i) is dict:
+                        if "image_url" in i.keys():
+                            i["image_url"] = "REDACTED"
             elif type(item) is dict:
                 if "image_url" in item.keys():
                     item["image_url"] = "REDACTED"
             payload[k] = json.dumps(item, indent=2)
-        except Exception as e:
+        except Exception:
             continue
 
     return payload
