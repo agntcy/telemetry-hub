@@ -624,7 +624,7 @@ class ApiClient:
         # Implement caching logic here
         for metric_category, metric_results in results.items():
             metric_category = metric_category.split("_")[0].lower()
-            if metric_category not in ["session", "span"] and len(metric_results) > 0:
+            if metric_category not in ["agent", "session", "span"] and len(metric_results) > 0:
                 self.logger.warning(
                     f"⚠️ Skipping {metric_category}: endpoint not implemented."
                 )

@@ -123,7 +123,7 @@ class ToolErrorRate(BaseMetric):
 
             # Create individual results for each agent
             results = []
-            
+
             for agent_name in agent_stats.keys():
                 agent_view = session.get_agent_view(agent_name)
 
@@ -135,7 +135,7 @@ class ToolErrorRate(BaseMetric):
                 # Create individual result for this agent
                 result = self._create_success_result(
                     score=agent_error_rate,
-                    category="application", 
+                    category="application",
                     app_name=session.app_name,
                     reasoning=f"Tool error rate for agent '{agent_name}': {agent_tool_errors} errors out of {agent_tool_calls} tool calls",
                     span_ids=agent_error_span_ids,
@@ -148,7 +148,7 @@ class ToolErrorRate(BaseMetric):
                 result.metadata = {
                     "agent_id": agent_name,
                     "agent_tool_calls": agent_tool_calls,
-                    "agent_tool_errors": agent_tool_errors, 
+                    "agent_tool_errors": agent_tool_errors,
                     "agent_error_span_ids": agent_error_span_ids,
                     "agent_tool_names": agent_view.unique_tool_names
                 }
