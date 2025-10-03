@@ -9,7 +9,6 @@ Install via MCE extras:
 pip install "metrics-computation-engine[ragas]"
 ```
 
-
 ## Prerequisites
 
 - [Metric Computation Engine (MCE)](https://github.com/agntcy/telemetry-hub/tree/main/metrics_computation_engine) installed
@@ -76,26 +75,6 @@ When using the MCE as a service, include Ragas metrics in your API request:
   }
 }
 ```
-
-## Configuration
-
-### Environment Variables
-
-Set up your environment variables for LLM access:
-
-```bash
-# .env file
-LLM_BASE_MODEL_URL=https://api.openai.com/v1
-LLM_MODEL_NAME=gpt-4o
-LLM_API_KEY=sk-your-openai-api-key
-```
-
-## Supported Aggregation Levels
-
-The adapter maps Ragas metrics to different aggregation levels:
-
-- **Span Level**: Evaluate individual agent interactions or tool calls
-- **Session Level**: Evaluate complete conversation sessions
 
 ## Contributing
 

@@ -87,26 +87,6 @@ When using the MCE as a service, include DeepEval metrics in your API request:
 }
 ```
 
-## Configuration
-
-### Environment Variables
-
-Set up your environment variables for LLM access:
-
-```bash
-# .env file
-LLM_BASE_MODEL_URL=https://api.openai.com/v1
-LLM_MODEL_NAME=gpt-4o
-LLM_API_KEY=sk-your-openai-api-key
-```
-
-## Supported Aggregation Levels
-
-The adapter maps DeepEval metrics to different aggregation levels:
-
-- **Span Level**: Evaluate individual agent interactions or tool calls
-- **Session Level**: Evaluate complete conversation sessions
-
 ## Contributing
 
 Contributions are welcome! Please follow these steps to contribute:
