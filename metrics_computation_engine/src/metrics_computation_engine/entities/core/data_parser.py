@@ -223,8 +223,9 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
         entity_type = row["entity_type"]
         config = PAYLOAD_CONFIG[entity_type]
 
-        # Extract entity name
-        entity_name = attrs.get(config["entity_name_key"], "unknown")
+        # Extract entity name with priority-based attribute checking
+        entity_name = _extract_entity_name(attrs, entity_type, config)
+        # Extract agent_id (main branch addition)
         agent_id = attrs.get("agent_id", None)
 
         # Special handling for Autogen agent names
@@ -301,6 +302,36 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
         span_entities.append(span_entity)
 
     return span_entities
+
+
+def _extract_entity_name(attrs: Dict[str, Any], entity_type: str, config: Dict[str, Any]) -> str:
+    """
+    Extract entity name with priority-based attribute checking for compatibility.
+
+    For tool entities, prioritizes:
+    1. ioa_observe.entity.name (current standard)
+    2. traceloop.entity.name (legacy/alternative source)
+
+    For other entity types, uses the configured attribute with fallbacks.
+    """
+    if entity_type == "tool":
+        # Tool-specific priority handling
+        return (
+            attrs.get("ioa_observe.entity.name") or
+            attrs.get("traceloop.entity.name") or
+            "unknown"
+        )
+
+    # For other entity types, use the configured key with potential fallbacks
+    primary_key = config.get("entity_name_key", "unknown")
+    entity_name = attrs.get(primary_key, "unknown")
+
+    # Add fallback logic for other entity types if needed
+    if entity_name == "unknown" and entity_type == "agent":
+        # Try alternative agent name sources
+        entity_name = attrs.get("traceloop.entity.name", "unknown")
+
+    return entity_name
 
 
 def _extract_tool_definitions(
