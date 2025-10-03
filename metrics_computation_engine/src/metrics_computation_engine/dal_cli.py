@@ -261,9 +261,12 @@ def run() -> None | Any:
         if args.dump and not args.file and args.session_id:
             # Dump the retrieved session data to a file for inspection
             dump_filename = f"{args.session_id}.json"
-            with open(dump_filename, "w") as f:
-                f.write(json.dumps(grouped_sessions, indent=1))
-            logger.info(f"Dumped session data to {dump_filename}")
+            if args.session_id in grouped_sessions:
+                with open(dump_filename, "w") as f:
+                    f.write(json.dumps(grouped_sessions[args.session_id], indent=1))
+                logger.info(f"Dumped session data to {dump_filename}")
+            else:
+                logger.warning(f"Session {args.session_id} not found, cannot dump data")
         if grouped_sessions:
             session_set = traces_processor(grouped_sessions)
         else:
