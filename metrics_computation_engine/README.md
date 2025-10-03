@@ -30,11 +30,18 @@ The current supported metrics are listed in the table below, along with their ag
 | :---------: | :---------- |
 | **Graph Determinism Score** | Measures variance in execution patterns across multiple sessions |
 
+## Plugin Architecture
+
+The MCE uses a plugin-based architecture for extensibility:
+
+- **Native Metrics Plugins**: Unique agent metrics to evaluate conversation, orchestration, tool usage quality
+- **Third-party Adapter Plugins**: Third-party framework integrations (RAGAS, DeepEval, Opik)
+
 ### Native Metrics Plugin
 
 The MCE includes a comprehensive **native metrics plugin** that provides 13 advanced session-level and span-level metrics for AI agent evaluation. These metrics use LLM-as-a-Judge techniques and confidence analysis for comprehensive assessment. For additional plugin metrics and detailed descriptions, see the Native Metrics Plugin README: [plugins/mce_metrics_plugin/README.md](./plugins/mce_metrics_plugin/README.md).
 
-## Third-party Integrations
+### Third-party Adapters
 
 The MCE supports integration with popular evaluation frameworks through adapter plugins:
 
@@ -98,6 +105,35 @@ Note for zsh users: If you encounter `zsh: no matches found` errors, quote the p
 
 Several [example scripts](./src/metrics_computation_engine/examples/) are available to help you get started with the MCE.
 
+### Environment Configuration
+
+Configure the following variables in your `.env` file:
+
+### Server Configuration
+```bash
+HOST=0.0.0.0                    # MCE Server bind address
+PORT=8000                       # MCE Server port
+RELOAD=false                    # Enable auto-reload for development
+LOG_LEVEL=info                  # Logging level (debug, info, warning, error)
+```
+
+### Data Access Configuration
+```bash
+API_BASE_URL=http://localhost:8080       # API-layer endpoint
+PAGINATION_LIMIT=50                      # Max sessions per API request
+PAGINATION_DEFAULT_MAX_SESSIONS=50       # Default max sessions when not specified
+SESSIONS_TRACES_MAX=20                   # Max sessions per batch for trace retrieval
+```
+
+### LLM Configuration
+```bash
+LLM_BASE_MODEL_URL=https://api.openai.com/v1  # LLM API endpoint
+LLM_MODEL_NAME=gpt-4o                          # LLM model name
+LLM_API_KEY=sk-...                             # LLM API key
+```
+
+**Note**: LLM configuration can be provided via environment variables (global defaults) or per-request in the `llm_judge_config` parameter. Request-level configuration takes precedence.
+
 ### Examples Directory
 
 The examples directory contains practical scripts:
@@ -107,13 +143,6 @@ The examples directory contains practical scripts:
 - **Sample data** (`data/sample_data.json`): Synthetic raw spans used by `mce-demo.py`.
 
 Each script includes inline documentation and can be run independently with proper environment setup.
-
-## Plugin Architecture
-
-The MCE uses a plugin-based architecture for extensibility:
-
-- **Core Metrics**: Built-in metrics for standard agent evaluation
-- **Adapter Plugins**: Third-party framework integrations (RAGAS, DeepEval, Opik)
 
 ### MCE usage
 
@@ -209,81 +238,6 @@ Once deployed, you can generate traces from an agentic app instrumented with our
 
 The server provides automatic OpenAPI documentation at `http://localhost:8000/docs` when running.
 
-### Installation
-
-#### Quick Start
-
-
-### Native Metrics Plugin - Complete List
-
-The `[metrics-plugin]` option provides **13 advanced session-level metrics** for comprehensive AI agent evaluation:
-
-#### 🤖 LLM-as-a-Judge Evaluation Session Metrics (10)
-1. **ComponentConflictRate** - Evaluates if components contradict or interfere with each other
-2. **Consistency** - Evaluates consistency across responses and actions
-3. **ContextPreservation** - Evaluates maintenance of context throughout conversations
-4. **GoalSuccessRate** - Measures if responses achieve user's specified goals
-5. **Groundedness** - Evaluates how well responses are grounded in verifiable data and avoid hallucinations
-6. **InformationRetention** - Assesses how well information is retained across interactions
-7. **IntentRecognitionAccuracy** - Measures accuracy of understanding user intents
-8. **ResponseCompleteness** - Evaluates how completely responses address user queries
-9. **WorkflowCohesionIndex** - Measures how cohesively workflow components work together
-10. **WorkflowEfficiency** - Measures efficiency using agent transition patterns
-
-#### 📊 LLM Confidence/Uncertainty Metrics (3)
-11. **LLMAverageConfidence** - Computes average confidence from LLM token probabilities
-12. **LLMMaximumConfidence** - Finds maximum confidence score in a session
-13. **LLMMinimumConfidence** - Finds minimum confidence score in a session
-
-**Usage Example:**
-```python
-{
-    "metrics": [
-        "GoalSuccessRate",
-        "Groundedness",
-        "ContextPreservation",
-        "LLMAverageConfidence"
-    ],
-    "llm_judge_config": {
-        "LLM_BASE_MODEL_URL": "https://api.openai.com/v1",
-        "LLM_API_KEY": "your_api_key",
-        "LLM_MODEL_NAME": "gpt-4o"
-    },
-    "data_fetching_infos": {
-        "batch_config": {},
-        "session_ids": ["session_123"]
-    }
-}
-```
-
-## Environment Configuration
-
-Configure the following variables in your `.env` file:
-
-### Server Configuration
-```bash
-HOST=0.0.0.0                    # Server bind address
-PORT=8000                       # Server port
-RELOAD=false                    # Enable auto-reload for development
-LOG_LEVEL=info                  # Logging level (debug, info, warning, error)
-```
-
-### Data Access Configuration
-```bash
-API_BASE_URL=http://localhost:8080       # API layer endpoint
-PAGINATION_LIMIT=50                      # Max sessions per API request
-PAGINATION_DEFAULT_MAX_SESSIONS=50       # Default max sessions when not specified
-SESSIONS_TRACES_MAX=20                   # Max sessions per batch for trace retrieval
-```
-
-### LLM Configuration
-```bash
-LLM_BASE_MODEL_URL=https://api.openai.com/v1  # LLM API endpoint
-LLM_MODEL_NAME=gpt-4o                          # LLM model name
-LLM_API_KEY=sk-...                             # LLM API key
-```
-
-**Note**: LLM configuration can be provided via environment variables (global defaults) or per-request in the `llm_judge_config` parameter. Request-level configuration takes precedence.
 
 4. **Run the server**:
 
