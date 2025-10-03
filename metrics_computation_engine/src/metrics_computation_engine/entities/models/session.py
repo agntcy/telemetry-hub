@@ -41,7 +41,8 @@ class AgentStats(BaseModel):
         default=0, description="Total tokens used by tools under this agent"
     )
     duration: float = Field(
-        default=0.0, description="Total duration of the agent's activity in milliseconds"
+        default=0.0,
+        description="Total duration of the agent's activity in milliseconds",
     )
     completion: bool = Field(
         default=True, description="Whether the agent completed its task"
@@ -823,8 +824,13 @@ class SessionEntity(BaseModel):
         # TODO: we should check with the agent span status directly, if present
         # And also make sure that the last LLM call was successful
         stats.completion = True
-        stats.completion = stats.completion and (stats.total_llm_calls == 0 or stats.llm_calls_failed < stats.total_llm_calls)
-        stats.completion = stats.completion and (stats.total_tool_calls == 0 or stats.tool_calls_failed < stats.total_tool_calls)
+        stats.completion = stats.completion and (
+            stats.total_llm_calls == 0 or stats.llm_calls_failed < stats.total_llm_calls
+        )
+        stats.completion = stats.completion and (
+            stats.total_tool_calls == 0
+            or stats.tool_calls_failed < stats.total_tool_calls
+        )
 
     def get_agent_view(self, agent_name: str) -> "AgentView":
         """
