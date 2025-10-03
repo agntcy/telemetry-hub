@@ -79,6 +79,7 @@ class BaseMetric(ABC):
         entities_involved: Optional[List[str]] = None,
         span_ids: Optional[List[str]] = None,
         session_ids: Optional[List[str]] = None,
+        description: Optional[str] = ""
     ) -> MetricResult:
         """
         Create a successful MetricResult for LLM-as-a-judge metrics.
@@ -94,7 +95,7 @@ class BaseMetric(ABC):
         """
         return MetricResult(
             metric_name=self.name,
-            description="",
+            description=description,
             value=score,
             unit="",
             aggregation_level=self.aggregation_level,
@@ -121,6 +122,7 @@ class BaseMetric(ABC):
         entities_involved: Optional[List[str]] = None,
         span_ids: Optional[List[str]] = None,
         session_ids: Optional[List[str]] = None,
+        description: Optional[str] = "",
     ) -> MetricResult:
         """
         Create an error MetricResult for when computation fails.
@@ -135,7 +137,7 @@ class BaseMetric(ABC):
         """
         return MetricResult(
             metric_name=self.name,
-            description="",
+            description=description,
             value=-1.0,
             reasoning="",
             unit="",
