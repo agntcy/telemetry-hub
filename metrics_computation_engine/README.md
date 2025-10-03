@@ -114,16 +114,12 @@ LLM_API_KEY=sk-...                             # LLM API key
 **Note**: LLM configuration can be provided via environment variables (global defaults) or per-request in the `llm_judge_config` parameter. Request-level configuration takes precedence.
 
 ### Examples Directory
-Several [example scripts](./src/metrics_computation_engine/examples/) are available to help you get started with the MCE.
 
-
-The examples directory contains practical scripts:
+Several [example scripts](./src/metrics_computation_engine/examples/) are available to help you get started with the MCE:
 
 - **Basic usage — service** (`service_test.py`): Sends a request to a running MCE server (POST `/compute_metrics`) with `metrics`, `llm_judge_config`, and `data_fetching_infos.batch_config.time_range`.
 - **Basic usage — library** (`mce-demo.py`): Runs MCE in-process. Loads `data/sample_data.json`, builds a `MetricRegistry`, registers core and native plugin metrics, demonstrates 3rd‑party adapters (DeepEval, Opik), and executes `MetricsProcessor` with `LLMJudgeConfig` from `.env`.
 - **Sample data** (`data/sample_data.json`): Synthetic raw spans used by `mce-demo.py`.
-
-Each script includes inline documentation and can be run independently with proper environment setup.
 
 ### MCE usage
 
@@ -167,16 +163,11 @@ The `llm_judge_config` parameter configures the LLM used for metrics that requir
 
 ```python
 "llm_judge_config": {
-    "LLM_API_KEY": "your_api_key",
-    "LLM_MODEL_NAME": "gpt-4o",
-    "LLM_BASE_MODEL_URL": "https://api.openai.com/v1"
+    "LLM_API_KEY": "your_api_key", # API key for your LLM provider
+    "LLM_MODEL_NAME": "gpt-4o", # The specific model to use (e.g., "gpt-4o") 
+    "LLM_BASE_MODEL_URL": "https://api.openai.com/v1" # API endpoint URL (supports OpenAI-compatible APIs)
 }
 ```
-
-**Configuration options:**
-- **LLM_API_KEY**: API key for your LLM provider
-- **LLM_MODEL_NAME**: The specific model to use (e.g., "gpt-4o")
-- **LLM_BASE_MODEL_URL**: API endpoint URL (supports OpenAI-compatible APIs)
 
 #### 3. Data Fetching Infos
 
@@ -202,8 +193,6 @@ Use `data_fetching_infos` to select which sessions to evaluate. You can provide 
   "session_ids": ["<session_id_1>", "<session_id_2>", ... "<session_id_n>"]
 }
 ```
-`session_ids` are the explicit session identifiers to evaluate.
-
 
 ### Deployment as a service
 
@@ -234,27 +223,27 @@ The server provides automatic OpenAPI documentation at `http://localhost:8000/do
    uv run --env-file .env  mce-server
    ```
 
-The server will be available at `http://localhost:8000`
-This assumes that you have the API layer deployed at the address defined through the env variable `API_BASE_URL`.
+You can run the MCE by making a curl call to the endpoint `<HOST>:<PORT>` as defined in the `.env`.
 
-### Running Unit Tests
-
-This project uses `pytest` for running unit tests.
-
-1. **Run All Tests**:
-   ```bash
-   uv run pytest
-   ```
-
-2. **Run Tests in a Specific Folder**:
-   ```bash
-   uv run pytest tests/test_metrics
-   ```
-
-3. **Run a Specific Test File**:
-   ```bash
-   uv run pytest tests/mce_tests/test_metrics/session/test_agent_to_tool_interactions.py
-   ```
+Example:
+```bash
+curl -sS -X POST "http://<HOST>:<PORT>/compute_metrics" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metrics": [
+      "Groundedness"
+    ],
+    "llm_judge_config": {
+      "LLM_BASE_MODEL_URL": "https://api.openai.com/v1",
+      "LLM_MODEL_NAME": "gpt-4o",
+      "LLM_API_KEY": "api-key"
+    },
+    "data_fetching_infos": {
+      "batch_config": {"time_range": {"start": "2000-06-20T15:04:05Z", "end": "2040-06-29T08:52:55Z"}},
+      "session_ids": []
+    }
+  }'
+```
 
 ## Troubleshooting
 
