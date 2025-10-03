@@ -114,6 +114,8 @@ class PassiveEvalAgents(BaseMetric):
                     "eval.agent.llm_cost_input": _anv.llm_input_tokens[idx],
                     "eval.agent.llm_cost_output": _anv.llm_output_tokens[idx],
                     "eval.agent.llm_duration": _anv.llm_duration[idx],
+                    "eval.agent.duration": _anv.duration[idx],
+                    "eval.agent.completion": _anv.completion[idx],
                 }
 
             _value = {
