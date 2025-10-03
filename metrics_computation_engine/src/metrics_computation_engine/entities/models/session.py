@@ -909,3 +909,37 @@ class AgentView:
             if span.entity_name:
                 tool_names.add(span.entity_name)
         return sorted(list(tool_names))
+
+    @property
+    def input_query(self) -> Optional[str]:
+        """
+        Extract the first user input query for this agent from LLM spans.
+
+        Returns:
+            The first user query content, or None if not found
+        """
+        from .conversation_utils import extract_conversation_endpoints
+
+        input_query, _ = extract_conversation_endpoints(
+            self.llm_spans,
+            min_content_length=3,  # AgentView's current threshold
+            support_prompt_format_in_output=True,  # AgentView supports both formats
+        )
+        return input_query
+
+    @property
+    def final_response(self) -> Optional[str]:
+        """
+        Extract the last meaningful response for this agent from LLM spans.
+
+        Returns:
+            The final response content, or None if not found
+        """
+        from .conversation_utils import extract_conversation_endpoints
+
+        _, final_response = extract_conversation_endpoints(
+            self.llm_spans,
+            min_content_length=3,  # AgentView's current threshold
+            support_prompt_format_in_output=True,  # AgentView supports both formats
+        )
+        return final_response
