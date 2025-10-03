@@ -52,6 +52,11 @@ func (m *MockDataService) GetTracesBySessionID(sessionID string) ([]models.OtelT
 	return args.Get(0).([]models.OtelTraces), args.Error(1)
 }
 
+func (m *MockDataService) GetSessionIDSWithPrompts(startTime, endTime time.Time) ([]models.SessionUniqueID, error) {
+	args := m.Called(startTime, endTime)
+	return args.Get(0).([]models.SessionUniqueID), args.Error(1)
+}
+
 // Helper function to create test server
 func createTestServer(mockDataService *MockDataService) *HttpServer {
 	return &HttpServer{
@@ -392,6 +397,38 @@ func TestSessions(t *testing.T) {
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Contains(t, w.Body.String(), "Error fetching sessions")
+
+		mockDataService.AssertExpectations(t)
+	})
+
+	t.Run("GET /traces/sessions with include_prompts=true should return sessions with prompts", func(t *testing.T) {
+		mockDataService := new(MockDataService)
+		server := createTestServer(mockDataService)
+
+		startTime := time.Date(2023, 6, 25, 15, 0, 0, 0, time.UTC)
+		endTime := time.Date(2023, 6, 25, 18, 0, 0, 0, time.UTC)
+
+		expectedSessions := []models.SessionUniqueID{
+			{ID: "session_abc123", StartTimestamp: "2023-06-25T15:30:00Z", Prompt: "hello"},
+		}
+
+		mockDataService.On("GetSessionIDSWithPrompts", mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).Return(expectedSessions, nil)
+
+		url := fmt.Sprintf("/traces/sessions?start_time=%s&end_time=%s&include_prompts=true",
+			startTime.Format(time.RFC3339),
+			endTime.Format(time.RFC3339))
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		w := httptest.NewRecorder()
+
+		server.Sessions(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+		var response models.SessionsResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedSessions, response.Data)
 
 		mockDataService.AssertExpectations(t)
 	})

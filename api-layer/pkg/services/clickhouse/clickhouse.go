@@ -48,6 +48,11 @@ func (cs *ClickhouseService) GetSessionIDSUnique(startTime, endTime time.Time) (
 	return cs.Handlers.GetSessionIDSUnique(startTime, endTime)
 }
 
+// GetSessionIDSWithPrompts implements the DataService interface
+func (cs *ClickhouseService) GetSessionIDSWithPrompts(startTime, endTime time.Time) ([]models.SessionUniqueID, error) {
+    return cs.Handlers.GetSessionIDSWithPrompts(startTime, endTime)
+}
+
 // AddMetric implements the DataService interface
 func (cs *ClickhouseService) AddMetric(metric models.Metric) (models.Metric, error) {
 	return cs.Handlers.AddMetric(metric)

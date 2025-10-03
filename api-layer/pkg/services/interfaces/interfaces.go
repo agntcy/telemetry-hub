@@ -12,6 +12,7 @@ import (
 // DataService defines the interface for data operations
 type DataService interface {
 	GetSessionIDSUnique(startTime, endTime time.Time) ([]models.SessionUniqueID, error)
+    GetSessionIDSWithPrompts(startTime, endTime time.Time) ([]models.SessionUniqueID, error)
 	AddMetric(metric models.Metric) (models.Metric, error)
 	GetMetricsBySessionIdAndScope(sessionID string, scope string) ([]models.Metric, error)
 	GetMetricsBySpanIdAndScope(spanID string, scope string) ([]models.Metric, error)
