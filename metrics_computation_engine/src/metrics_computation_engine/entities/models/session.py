@@ -469,7 +469,9 @@ class SessionEntity(BaseModel):
             # Collect all descendant spans for this agent
             descendant_spans = self._get_descendant_spans(node)
             self._calculate_agent_stats(agent_stats[agent_name], descendant_spans)
-            agent_stats[agent_name].duration += node.span.duration
+            agent_stats[agent_name].duration += (
+                node.span.duration if node.span.duration else 0.0
+            )
 
         # Strategy 2: Agent task span (e.g., "documentation_agent.task")
         elif node.span.entity_type == "task":
@@ -482,7 +484,9 @@ class SessionEntity(BaseModel):
                 # Collect all descendant spans for this agent task
                 descendant_spans = self._get_descendant_spans(node)
                 self._calculate_agent_stats(agent_stats[agent_name], descendant_spans)
-                agent_stats[agent_name].duration += node.span.duration
+                agent_stats[agent_name].duration += (
+                    node.span.duration if node.span.duration else 0.0
+                )
 
         # Continue traversing children
         for child in node.children:
