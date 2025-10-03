@@ -119,7 +119,5 @@ If the 'expected output' is missing or is empty, analyse the 'input' and the 'ac
 CRITERIA_GENERAL_STRUCTURE: str = f"""Evaluate the following aspects of the general structure and style of the 'actual output':
 1. is the 'actual output' grammatically correctness?
 2. how readable it is?
-3. how good is the logical flow?
-4. is the 'actual output' clear and informative?
-{EXPLANATION_OF_THE_INPUT}
+3. is the 'actual output' clear and informative?
 """

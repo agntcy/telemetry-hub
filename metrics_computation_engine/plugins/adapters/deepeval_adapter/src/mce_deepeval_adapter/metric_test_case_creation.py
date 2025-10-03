@@ -35,6 +35,8 @@ class DeepEvalTestCaseLLM(AbstractTestCaseCalculator):
         # input, actual_output, expected_output, retrieval_context would need to be extracted automatically to align with
         # the current data processing strategy.
         data = _make_sure_input_is_span_entity(data=data)
+        # We need to make sure that the input_payload is not growing out of control
+        data.input_payload = _redact_images_from_payload(data.input_payload)
         return LLMTestCase(
             input=json.dumps(data.input_payload, indent=2),
             actual_output=json.dumps(data.output_payload, indent=2),
@@ -102,6 +104,7 @@ class LLMAnswerRelevancyTestCase(AbstractTestCaseCalculator):
         self, data: Union[SpanEntity, SessionEntity]
     ) -> Union[ConversationalTestCase, LLMTestCase]:
         data = _make_sure_input_is_span_entity(data=data)
+        data.input_payload = _redact_images_from_payload(data.input_payload)
         chat_payload = data.input_payload
         raw_span_data = data.raw_span_data
         span_attributes = raw_span_data["SpanAttributes"]
@@ -202,6 +205,7 @@ class LLMAnswerCorrectnessTestCase(AbstractTestCaseCalculator):
         self, data: Union[SpanEntity, SessionEntity]
     ) -> Union[ConversationalTestCase, LLMTestCase]:
         data: SpanEntity = _make_sure_input_is_span_entity(data=data)
+        data.input_payload = _redact_images_from_payload(data.input_payload)
         raw_span_data = data.raw_span_data
         span_attributes = raw_span_data["SpanAttributes"]
         tool_definitions = get_tool_definitions_from_span_attributes(
@@ -233,23 +237,13 @@ class LLMGeneralStructureAndStyleTestCase(AbstractTestCaseCalculator):
         self, data: Union[SpanEntity, SessionEntity]
     ) -> Union[ConversationalTestCase, LLMTestCase]:
         data: SpanEntity = _make_sure_input_is_span_entity(data=data)
-        span_attributes = data.raw_span_data["SpanAttributes"]
-        tool_definitions = get_tool_definitions_from_span_attributes(
-            span_attributes=span_attributes
-        )
-        chat_payload = build_chat_history_from_payload(
-            payload=data.input_payload, prefix="gen_ai.prompt."
-        )
-        full_input_dict = {
-            "tool_definitions": tool_definitions,
-            "chat_payload": chat_payload,
-        }
+        input = {}
         actual_output = build_chat_history_from_payload(
             payload=data.output_payload, prefix="gen_ai.completion."
         )
 
         test_case = LLMTestCase(
-            input=json.dumps(full_input_dict, indent=2),
+            input=json.dumps(input, indent=2),
             actual_output=json.dumps(actual_output, indent=2),
         )
         return test_case
@@ -269,3 +263,21 @@ def _make_sure_input_is_span_entity(
     if not isinstance(data, SpanEntity):
         raise TypeError("data must be an instance of SpanEntity")
     return data
+
+def _redact_images_from_payload(payload: dict) -> dict:
+    for k in payload.keys():
+        try:
+            item = json.loads(payload[k])
+            if type(item) is list:
+                for i in item:
+                        if type(i) is dict:
+                            if "image_url" in i.keys():
+                                i["image_url"] = "REDACTED"
+            elif type(item) is dict:
+                if "image_url" in item.keys():
+                    item["image_url"] = "REDACTED"
+            payload[k] = json.dumps(item, indent=2)
+        except Exception as e:
+            continue
+
+    return payload

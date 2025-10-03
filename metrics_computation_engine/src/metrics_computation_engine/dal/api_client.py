@@ -640,7 +640,7 @@ class ApiClient:
                     continue
 
                 metric_data = format_metric_payload(
-                    metric=r, app_id="", app_name=r.app_name, trace_id=""
+                    metric=r, app_id=r.app_name, app_name=r.app_name, trace_id=""
                 )
 
                 if self.logger.isEnabledFor(logging.DEBUG):

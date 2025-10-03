@@ -88,6 +88,7 @@ class SessionEntity(BaseModel):
     graph_dynamism: Optional[Any] = None
     graph: Optional[Any] = None
 
+    agent_id: Optional[str] = None
     # Hierarchical execution tree showing parent-child relationships
     execution_tree: Optional[Any] = None
     hierarchy_summary: Optional[Dict[str, Any]] = None

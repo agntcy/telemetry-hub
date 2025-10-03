@@ -16,6 +16,7 @@ class MetricResult:
     aggregation_level: str
     category: str
     app_name: str
+    agent_id: Optional[str] = None
     description: str = ""
     reasoning: str = ""
     unit: str = ""
