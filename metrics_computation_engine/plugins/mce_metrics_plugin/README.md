@@ -13,8 +13,9 @@ A comprehensive collection of extended MCE Evaluation Metrics for the [Metric Co
 
 ## Installation
 
+Install via MCE extras:
 ```bash
-pip install mce_metrics_plugin
+pip install "metrics-computation-engine[metrics-plugin]"
 ```
 
 ## Prerequisites
@@ -131,26 +132,14 @@ When using MCE as a REST API service, include plugin metrics in your request:
     "LLM_MODEL_NAME": "gpt-4o",
     "LLM_BASE_MODEL_URL": "https://api.openai.com/v1"
   },
-  "batch_config": {
-    "num_sessions": 10
+  "data_fetching_infos": {
+    "batch_config": {
+      "time_range": { "start": "2000-06-20T15:04:05Z", "end": "2040-06-29T08:52:55Z" }
+    },
+    "session_ids": []
   }
 }
 ```
-
-## Configuration
-
-### Environment Variables
-
-Configure the following variables in your `.env` file:
-
-#### LLM Configuration
-```bash
-LLM_BASE_MODEL_URL=https://api.openai.com/v1  # LLM API endpoint
-LLM_MODEL_NAME=gpt-4o                          # LLM model name
-LLM_API_KEY=sk-...                             # LLM API key
-```
-
-**Note**: LLM configuration can be provided via environment variables (global defaults) or per-request in the `llm_judge_config` parameter. Request-level configuration takes precedence.
 
 ## Contributing
 
