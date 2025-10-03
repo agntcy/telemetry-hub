@@ -4,8 +4,9 @@ A Python adapter library that integrates [DeepEval](https://github.com/confident
 
 ## Installation
 
+Install via MCE extras:
 ```bash
-pip install mce-deepeval-adapter
+pip install "metrics-computation-engine[deepeval]"
 ```
 
 ## Prerequisites
@@ -15,18 +16,23 @@ pip install mce-deepeval-adapter
 
 ## Supported DeepEval Metrics
 
-The adapter supports a wide range of DeepEval metrics, including but not limited to:
+The following DeepEval metrics are supported by this adapter (use with the `deepeval.` prefix in service payloads):
 
-- **AnswerRelevancyMetric** - Measures how relevant the answer is to the question
-- **RoleAdherenceMetric** - Evaluates if the model adheres to specified roles
-- **FaithfulnessMetric** - Assesses faithfulness to source material
-- **BiasMetric** - Detects various forms of bias in responses
-- **ToxicityMetric** - Identifies toxic content in outputs
-- **HallucinationMetric** - Detects hallucinations in responses
-- **ContextualPrecisionMetric** - Measures precision in context usage
-- **ContextualRecallMetric** - Measures recall in context usage
+| Metric Name | Description |
+| :---------: | :---------- |
+| **AnswerRelevancyMetric** | Measures how relevant the model answer is to the user query |
+| **RoleAdherenceMetric** | Evaluates adherence to specified roles across a conversation |
+| **TaskCompletionMetric** | Assesses whether the task was completed given tool calls and responses |
+| **ConversationCompletenessMetric** | Evaluates whether the conversation covered necessary elements |
+| **BiasMetric** | Detects various forms of bias in responses |
+| **CoherenceMetric** | Scores coherence and logical flow of the output |
+| **GroundednessMetric** | Evaluates how well outputs are grounded in the provided input/context |
+| **TonalityMetric** | Evaluates tone and stylistic appropriateness of the output |
+| **ToxicityMetric** | Identifies toxic or unsafe content in outputs |
+| **AnswerCorrectnessMetric** | Measures correctness of the answer versus expected output |
+| **GeneralStructureAndStyleMetric** | Evaluates structure and style quality of the output |
 
-For a complete list of supported metrics, refer to the DeepEval documentation.
+For requests to support additional DeepEval metrics, please file an issue in our repo: [agntcy/telemetry-hub](https://github.com/agntcy/telemetry-hub).
 
 ## Usage
 
@@ -72,8 +78,11 @@ When using the MCE as a service, include DeepEval metrics in your API request:
     "LLM_MODEL_NAME": "gpt-4o",
     "LLM_BASE_MODEL_URL": "https://api.openai.com/v1"
   },
-  "batch_config": {
-    "num_sessions": 10
+  "data_fetching_infos": {
+    "batch_config": {
+      "time_range": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+    },
+    "session_ids": []
   }
 }
 ```
