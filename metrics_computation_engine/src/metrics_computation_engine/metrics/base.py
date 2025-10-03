@@ -185,7 +185,7 @@ class BaseMetric(ABC):
 
         Args:
             metric_name: Name of the metric
-            session_id: Session ID 
+            session_id: Session ID
             context: Optional context data (for agent-specific caching)
 
         Returns:
@@ -281,7 +281,7 @@ class BaseMetric(ABC):
         for obj in metrics:
             if isinstance(obj, dict) and "metrics" in obj:
                 metric_data = obj["metrics"]
-                
+
                 # Parse JSON string if metrics is stored as string
                 if isinstance(metric_data, str):
                     try:
@@ -289,30 +289,30 @@ class BaseMetric(ABC):
                         metric_data = json.loads(metric_data)
                     except (json.JSONDecodeError, TypeError):
                         continue
-                
+
                 if isinstance(metric_data, dict):
                     # Check if this matches our metric and agent
-                    if (metric_data.get("metric_name") == metric_name and 
+                    if (metric_data.get("metric_name") == metric_name and
                         metric_data.get("metadata", {}).get("agent_id") == agent_id):
-                        
+
                         metric_data["from_cache"] = True
                         # Ensure backward compatibility
                         if "category" not in metric_data:
                             metric_data["category"] = "application"
                         if "app_name" not in metric_data:
                             metric_data["app_name"] = "unknown"
-                        
+
                         return MetricResult(**metric_data)
         return None
 
     def _check_all_agents_cache(self, metrics: List, metric_name: str) -> Optional[List[MetricResult]]:
         """Check cache for all agent results for this session"""
         agent_results = []
-        
+
         for obj in metrics:
             if isinstance(obj, dict) and "metrics" in obj:
                 metric_data = obj["metrics"]
-                
+
                 # Parse JSON string if metrics is stored as string
                 if isinstance(metric_data, str):
                     try:
@@ -320,20 +320,20 @@ class BaseMetric(ABC):
                         metric_data = json.loads(metric_data)
                     except (json.JSONDecodeError, TypeError):
                         continue
-                
+
                 if isinstance(metric_data, dict):
                     # Check if this is an agent result for our metric
-                    if (metric_data.get("metric_name") == metric_name and 
+                    if (metric_data.get("metric_name") == metric_name and
                         "agent_id" in metric_data.get("metadata", {})):
-                        
+
                         metric_data["from_cache"] = True
                         if "category" not in metric_data:
                             metric_data["category"] = "application"
                         if "app_name" not in metric_data:
                             metric_data["app_name"] = "unknown"
-                        
+
                         agent_results.append(MetricResult(**metric_data))
-        
+
         return agent_results if agent_results else None
 
     def _check_session_cache(self, metrics: List, metric_name: str) -> tuple[bool, dict]:
@@ -341,7 +341,7 @@ class BaseMetric(ABC):
         for obj in metrics:
             if isinstance(obj, dict) and "metrics" in obj:
                 metric_data = obj["metrics"]
-                
+
                 # Parse JSON string if metrics is stored as string
                 if isinstance(metric_data, str):
                     try:
@@ -356,8 +356,8 @@ class BaseMetric(ABC):
                     has_agent_id = "agent_id" in metric_data.get("metadata", {})
 
                     # Only match session-level metrics (not agent-level)
-                    if (metric_name == read_metric_name and 
-                        aggregation_level == "session" and 
+                    if (metric_name == read_metric_name and
+                        aggregation_level == "session" and
                         not has_agent_id):
                         return True, obj
         return False, None

@@ -56,34 +56,34 @@ class MetricsProcessor:
         self, metric: BaseMetric, data: Any, context: Dict[str, Any]
     ) -> List[MetricResult]:
         """Handle caching and computation for agent-level metrics"""
-        
+
         # Discover agents first - ensure execution_tree is available
         if not hasattr(data, 'execution_tree') or data.execution_tree is None:
             from metrics_computation_engine.entities.models.execution_tree import ExecutionTree
             data.execution_tree = ExecutionTree()
-        
+
         agent_ids = list(data.agent_stats.keys()) if data.agent_stats else []
-        
+
         if not agent_ids:
             logger.debug(f"No agents found for {metric.name} in session {data.session_id}")
             return []  # No agents found
-        
+
         logger.debug(f"Found {len(agent_ids)} agents for {metric.name}: {agent_ids}")
-        
+
         # Try to get all agent results from cache at once
         cached_results = await metric.check_cache_metric(
             metric_name=metric.name,
             session_id=data.session_id,
             context=context  # This will trigger _check_all_agents_cache
         )
-        
+
         # Filter cached results to only include agents from current session
         if cached_results is not None:
             filtered_results = [
-                result for result in cached_results 
+                result for result in cached_results
                 if result.metadata.get("agent_id") in agent_ids
             ]
-            
+
             if len(filtered_results) == len(agent_ids):
                 # All agents cached
                 logger.debug(f"Cache hit for all {len(agent_ids)} agents of {metric.name}")
@@ -92,15 +92,15 @@ class MetricsProcessor:
                 logger.debug(f"Partial cache hit: {len(filtered_results)}/{len(agent_ids)} agents cached")
                 # For now, recompute all if not all cached (simpler logic)
                 pass
-        
+
         # Some or all agents missing from cache - compute all
         logger.debug(f"Cache miss for {metric.name} agents, computing...")
-        
+
         if self._metric_supports_context(metric):
             new_results = await metric.compute(data, context=context)
         else:
             new_results = await metric.compute(data)
-        
+
         # Ensure we return a list
         if isinstance(new_results, list):
             return new_results
@@ -114,11 +114,11 @@ class MetricsProcessor:
         try:
             # Check if this is agent computation
             is_agent_computation = context and context.get("agent_computation", False)
-            
+
             if is_agent_computation and hasattr(data, 'agent_stats'):
                 # Agent computation - use agent-aware caching
                 return await self._handle_agent_cache_and_compute(metric, data, context)
-            
+
             # Regular session/span computation - existing logic
             cached_result = None
 
