@@ -53,6 +53,14 @@ class SessionSetAgentAggregateStats(BaseModel):
         default=0.0,
         description="Average normalized LLM duration per session for this agent",
     )
+    avg_duration: float = Field(
+        default=0.0,
+        description="Average total duration of the agent's activity per session (ms)",
+    )
+    avg_completion: float = Field(
+        default=1.0,
+        description="Average completion rate of the agent per session (1.0 = always completed)",
+    )
 
 
 class SessionSetAgentHistogramStats(BaseModel):
@@ -91,6 +99,13 @@ class SessionSetAgentHistogramStats(BaseModel):
     llm_duration: List[float] = Field(
         default_factory=list, description="LLM duration per session for this agent (ms)"
     )
+    duration: List[float] = Field(
+        default_factory=list,
+        description="Total duration of the agent's activity per session (ms)",
+    )
+    completion: List[bool] = Field(
+        default_factory=list, description="Completion status per session for this agent"
+    )
 
 
 class SessionSetStatsAggregate(BaseModel):
@@ -113,6 +128,10 @@ class SessionSetStatsAggregate(BaseModel):
     avg_total_tokens: float = Field(default=0.0)
     avg_latency: float = Field(default=0.0)
     agents: Dict[str, SessionSetAgentAggregateStats] = Field(default_factory=dict)
+    avg_completion: float = Field(
+        default=1.0,
+        description="Average completion rate across all sessions (1.0 = all completed)",
+    )
 
 
 class SessionSetStatsHistogram(BaseModel):
@@ -134,6 +153,7 @@ class SessionSetStatsHistogram(BaseModel):
     latency: List[float] = Field(default_factory=list)
     accuracy: List[float] = Field(default_factory=list)
     agents: Dict[str, SessionSetAgentHistogramStats] = Field(default_factory=dict)
+    completion: List[bool] = Field(default_factory=list)
 
 
 class SessionSetStatsMeta(BaseModel):
@@ -263,6 +283,9 @@ class SessionSet(BaseModel):
         # Calculate latency (session duration)
         latency = session.duration if session.duration is not None else 0.0
 
+        # Determine completion status
+        completion = session.completion
+
         # Calculate normalized durations (duration per call)
         tool_duration_norm = (
             (session.total_tools_duration / session.total_tool_calls)
@@ -300,6 +323,7 @@ class SessionSet(BaseModel):
             "graph_dynamism": graph_dynamism,
             "total_tokens": session.llm_total_tokens,  # Total tokens = LLM tokens for now
             "latency": latency,
+            "completion": completion,
         }
 
     def _extract_agent_metrics(self, agent_stats) -> Dict:
@@ -317,6 +341,8 @@ class SessionSet(BaseModel):
         )
 
         return {
+            "completion": agent_stats.completion,
+            "duration": agent_stats.duration,
             "tool_calls": agent_stats.total_tool_calls,
             "tool_fails": agent_stats.tool_calls_failed,
             "tool_total_tokens": agent_stats.tool_total_tokens,
@@ -386,6 +412,11 @@ class SessionSet(BaseModel):
                         m["llm_duration_norm"] for m in metrics_list
                     )
                     / agent_count,
+                    avg_duration=sum(m["duration"] for m in metrics_list) / agent_count,
+                    avg_completion=sum(
+                        1.0 if m["completion"] else 0.0 for m in metrics_list
+                    )
+                    / agent_count,
                 )
 
         return SessionSetStatsAggregate(
@@ -406,6 +437,7 @@ class SessionSet(BaseModel):
             avg_total_tokens=avg("total_tokens"),
             avg_latency=avg("latency"),
             agents=agents,
+            avg_completion=avg("completion"),
         )
 
     def _build_histogram_stats(
@@ -440,6 +472,8 @@ class SessionSet(BaseModel):
                     "llm_input_tokens": [],
                     "llm_output_tokens": [],
                     "llm_duration": [],
+                    "duration": [],
+                    "completion": [],
                 }
 
                 # Map agent metrics to session order
@@ -466,6 +500,8 @@ class SessionSet(BaseModel):
                     llm_input_tokens=agent_values["llm_input_tokens"],
                     llm_output_tokens=agent_values["llm_output_tokens"],
                     llm_duration=agent_values["llm_duration"],
+                    duration=agent_values["duration"],
+                    completion=agent_values["completion"],
                 )
 
         return SessionSetStatsHistogram(
@@ -485,6 +521,7 @@ class SessionSet(BaseModel):
             latency=extract_values("latency"),
             accuracy=[],  # Empty for now, will be implemented later
             agents=agents,
+            completion=extract_values("completion"),
         )
 
     def _extract_uuid_and_app_name(self, session_id: str) -> tuple[str, str]:
