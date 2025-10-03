@@ -91,7 +91,13 @@ func (hs *HttpServer) Sessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionIDs, err := hs.DataService.GetSessionIDSUnique(startTimeParsed, endTimeParsed)
+	includePrompts := r.URL.Query().Get("include_prompts")
+	var sessionIDs []models.SessionUniqueID
+    if includePrompts == "true" {
+        sessionIDs, err = hs.DataService.GetSessionIDSWithPrompts(startTimeParsed, endTimeParsed)
+    } else {
+        sessionIDs, err = hs.DataService.GetSessionIDSUnique(startTimeParsed, endTimeParsed)
+    }
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching sessions: %v", err), http.StatusInternalServerError)
 		return

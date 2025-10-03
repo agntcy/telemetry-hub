@@ -33,14 +33,9 @@ func (h Handler) GetSessionIDSUnique(startTime, endTime time.Time) ([]models.Ses
 		Table("otel_traces").
 		Select(`
 			SpanAttributes['session.id'] AS ID,
-			MIN(Timestamp) AS StartTimestamp,
-			argMin(
-				SpanAttributes['gen_ai.prompt.0.content'],
-				Timestamp
-			) AS Prompt
+            MIN(Timestamp) AS StartTimestamp
 		`).
 		Where("SpanAttributes['session.id'] != ''").
-		Where("SpanAttributes['gen_ai.prompt.0.role'] = 'user'").
 		Group("SpanAttributes['session.id']").
 		Having("MIN(Timestamp) >= ? AND MIN(Timestamp) <= ?", startTime, endTime).
 		Order("StartTimestamp DESC").
@@ -52,20 +47,42 @@ func (h Handler) GetSessionIDSUnique(startTime, endTime time.Time) ([]models.Ses
 	return sessionIDs, nil
 }
 
+// GetSessionIDSWithPrompts returns unique session IDs with their first user prompt
+func (h Handler) GetSessionIDSWithPrompts(startTime, endTime time.Time) ([]models.SessionUniqueID, error) {
+    var sessionIDs []models.SessionUniqueID
+
+    result := h.DB.
+        Table("otel_traces").
+        Select(`
+            SpanAttributes['session.id'] AS ID,
+            MIN(Timestamp) AS StartTimestamp,
+            argMin(
+                SpanAttributes['gen_ai.prompt.0.content'],
+                Timestamp
+            ) AS Prompt
+        `).
+        Where("SpanAttributes['session.id'] != ''").
+        Where("SpanAttributes['gen_ai.prompt.0.role'] = 'user'").
+        Group("SpanAttributes['session.id']").
+        Having("MIN(Timestamp) >= ? AND MIN(Timestamp) <= ?", startTime, endTime).
+        Order("StartTimestamp DESC").
+        Find(&sessionIDs)
+
+    if result.Error != nil {
+        return nil, result.Error
+    }
+    return sessionIDs, nil
+}
+
 func (h Handler) GetSessionIDSUniqueWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) (sessionIDs []models.SessionUniqueID, total int, err error) {
 	baseQuery := h.DB.
 		Table("otel_traces").
 		Select(`
 			splitByChar('_', SpanAttributes['session.id'])[2] as ID,
-			MIN(Timestamp) as StartTimestamp,
-			argMin(
-				SpanAttributes['gen_ai.prompt.0.content'],
-				Timestamp
-			) AS Prompt
+            MIN(Timestamp) as StartTimestamp
 		`).
 		Where("has(SpanAttributes, 'session.id') = 1").
 		Where("SpanAttributes['session.id'] != ''").
-		Where("SpanAttributes['gen_ai.prompt.0.role'] = 'user'").
 		Where("Timestamp >= ? AND Timestamp <= ?", startTime, endTime)
 
 	if nameFilter != nil && *nameFilter != "" {
@@ -93,6 +110,50 @@ func (h Handler) GetSessionIDSUniqueWithPagination(startTime, endTime time.Time,
 		return sessionIDs, total, result.Error
 	}
 	return sessionIDs, total, nil
+}
+
+// GetSessionIDSWithPromptsWithPagination returns unique session IDs with prompts, paginated
+func (h Handler) GetSessionIDSWithPromptsWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) (sessionIDs []models.SessionUniqueID, total int, err error) {
+    baseQuery := h.DB.
+        Table("otel_traces").
+        Select(`
+            splitByChar('_', SpanAttributes['session.id'])[2] as ID,
+            MIN(Timestamp) as StartTimestamp,
+            argMin(
+                SpanAttributes['gen_ai.prompt.0.content'],
+                Timestamp
+            ) AS Prompt
+        `).
+        Where("has(SpanAttributes, 'session.id') = 1").
+        Where("SpanAttributes['session.id'] != ''").
+        Where("SpanAttributes['gen_ai.prompt.0.role'] = 'user'").
+        Where("Timestamp >= ? AND Timestamp <= ?", startTime, endTime)
+
+    if nameFilter != nil && *nameFilter != "" {
+        baseQuery = baseQuery.Where("SpanAttributes['session.id'] LIKE ?", *nameFilter+"%")
+    }
+
+    // Get total count
+    var totalCount int64
+    countQuery := baseQuery.Group("splitByChar('_', SpanAttributes['session.id'])[2]")
+    if err := h.DB.Table("(?) as sub", countQuery).Count(&totalCount).Error; err != nil {
+        return sessionIDs, 0, err
+    }
+    total = int(totalCount)
+
+    // Get paginated results
+    offset := page * limit
+    result := baseQuery.
+        Group("splitByChar('_', SpanAttributes['session.id'])[2]").
+        Order("StartTimestamp DESC").
+        Offset(offset).
+        Limit(limit).
+        Find(&sessionIDs)
+
+    if result.Error != nil {
+        return sessionIDs, total, result.Error
+    }
+    return sessionIDs, total, nil
 }
 
 func (h Handler) GetTracesForSessionID(sessionID string) ([]string, error) {
