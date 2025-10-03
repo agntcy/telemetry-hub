@@ -127,7 +127,7 @@ The MCE can be used in two ways: as a [REST API service](./src/metrics_computati
 
 There are three main input parameters to the MCE, as shown in the examples above: `metrics`, `llm_judge_config`, and `data_fetching_infos`.
 
-#### 1. Metrics Parameter
+#### Metrics Parameter
 
 The `metrics` parameter is a list of metric names that you want to compute. Each metric operates at different levels (span, session, or population) and may have different computational requirements. You can specify any combination of the available metrics:
 
@@ -157,7 +157,7 @@ You can request 3rd‑party framework metrics through adapter plugins by using a
 ]
 ```
 
-#### 2. LLM Judge Config
+#### LLM Judge Config
 
 The `llm_judge_config` parameter configures the LLM used for metrics that require LLM-as-a-Judge evaluation (such as `ToolUtilizationAccuracy` and `Groundedness`):
 
@@ -169,7 +169,7 @@ The `llm_judge_config` parameter configures the LLM used for metrics that requir
 }
 ```
 
-#### 3. Data Fetching Infos
+#### Data Fetching Infos
 
 Use `data_fetching_infos` to select which sessions to evaluate. You can provide a time range via `batch_config.time_range`, explicit `session_ids`, or both.
 
@@ -196,9 +196,23 @@ Use `data_fetching_infos` to select which sessions to evaluate. You can provide 
 
 ### Deployment as a service
 
-For easy deployment of the MCE as a service, a [docker compose file](../deploy/docker-compose.yaml) is provided. This file locally deploys an instance of an OTel collector, an instance of Clickhouse DB, an instance of the API layer, and an instance of the MCE. OTel+Clickhouse is the default setup for retrieving and storing traces from agentic apps. The API layer provides an interface for other components such as the MCE to interact with the corresponding data. The MCE enables developers to measure their agentic applications.
+There are two ways to run the MCE service:
 
-Once deployed, you can generate traces from an agentic app instrumented with our [Observe SDK](https://github.com/agntcy/observe/tree/main).
+1. Docker Compose (recommended for a full local stack)
+   - Use the provided [docker compose file](../deploy/docker-compose.yaml) to start OTel Collector, ClickHouse, the API layer, and the MCE.
+   - Once up, instrument an app with our [Observe SDK](https://github.com/agntcy/observe/tree/main) to generate traces.
+
+2. Run the server locally
+   - Activate your virtual environment and start the server:
+     ```bash
+     source .venv/bin/activate
+     mce-server
+     ```
+     or
+     ```bash
+     .venv/bin/activate
+     uv run --env-file .env mce-server
+     ```
 
 **API Endpoints**
 
@@ -209,21 +223,7 @@ Once deployed, you can generate traces from an agentic app instrumented with our
 
 The server provides automatic OpenAPI documentation at `http://<HOST>:<PORT>/docs` when running.
 
-
-4. **Run the server**:
-
-   ```bash
-   source .venv/bin/activate
-   mce-server
-   ```
-   or
-
-   ```bash
-    .venv/bin/activate
-   uv run --env-file .env  mce-server
-   ```
-
-You can run the MCE by making a curl call to the endpoint `<HOST>:<PORT>` as defined in the `.env`.
+You can run the MCE by making a curl call to the endpoint `<HOST>:<PORT>` as defined in the `.env`. Perform an evaluation by sending a request to `/compute_metrics`:
 
 Example:
 ```bash
