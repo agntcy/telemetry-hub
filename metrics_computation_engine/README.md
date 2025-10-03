@@ -123,7 +123,7 @@ Several [example scripts](./src/metrics_computation_engine/examples/) are availa
 
 ### MCE usage
 
-The MCE can be used in two ways: as a [REST API service](./src/metrics_computation_engine/examples/service_test.py) or as a [Python module](./src/metrics_computation_engine/examples/mce-demo.py). Both methods allow you to compute various metrics on your agent telemetry data. 
+The MCE can be used in two ways: as a [REST API service](./src/metrics_computation_engine/examples/service_test.py) or as a [Python module](./src/metrics_computation_engine/examples/mce-demo.py). Both methods allow you to compute various metrics on your agent telemetry data.
 
 There are three main input parameters to the MCE, as shown in the examples above: `metrics`, `llm_judge_config`, and `data_fetching_infos`.
 
@@ -164,7 +164,7 @@ The `llm_judge_config` parameter configures the LLM used for metrics that requir
 ```python
 "llm_judge_config": {
     "LLM_API_KEY": "your_api_key", # API key for your LLM provider
-    "LLM_MODEL_NAME": "gpt-4o", # The specific model to use (e.g., "gpt-4o") 
+    "LLM_MODEL_NAME": "gpt-4o", # The specific model to use (e.g., "gpt-4o")
     "LLM_BASE_MODEL_URL": "https://api.openai.com/v1" # API endpoint URL (supports OpenAI-compatible APIs)
 }
 ```
