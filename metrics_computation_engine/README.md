@@ -51,9 +51,9 @@ The MCE includes a comprehensive **native metrics plugin** that provides 13 adva
 
 The MCE supports integration with popular evaluation frameworks through adapter plugins:
 
-- **[RAGAS](https://github.com/explodinggradients/ragas)**
-- **[DeepEval](https://github.com/confident-ai/deepeval)**
-- **[Opik](https://github.com/comet-ml/opik)**
+- **[DeepEval](https://github.com/confident-ai/deepeval)** - [plugins/adapters/deepeval_adapter/README.md](./plugins/adapters/deepeval_adapter/README.md)
+- **[Opik](https://github.com/comet-ml/opik)** - [plugins/adapters/opik_adapter/README.md](./plugins/adapters/opik_adapter/README.md)
+- **[RAGAS](https://github.com/explodinggradients/ragas)** - [plugins/adapters/ragas_adapter/README.md](./plugins/adapters/ragas_adapter/README.md)
 
 
 ## Python Package Installation
@@ -88,8 +88,6 @@ Note for zsh users: If you encounter `zsh: no matches found` errors, quote the p
 
 ## Getting started
 
-Several [example scripts](./src/metrics_computation_engine/examples/) are available to help you get started with the MCE.
-
 ### Environment Configuration
 
 Configure the following variables in your `.env` file:
@@ -120,6 +118,8 @@ LLM_API_KEY=sk-...                             # LLM API key
 **Note**: LLM configuration can be provided via environment variables (global defaults) or per-request in the `llm_judge_config` parameter. Request-level configuration takes precedence.
 
 ### Examples Directory
+Several [example scripts](./src/metrics_computation_engine/examples/) are available to help you get started with the MCE.
+
 
 The examples directory contains practical scripts:
 
@@ -131,7 +131,7 @@ Each script includes inline documentation and can be run independently with prop
 
 ### MCE usage
 
-The MCE can be used in two ways: as a [REST API service](./src/metrics_computation_engine/examples/service_test.py) or as a [Python module](./src/metrics_computation_engine/examples/mce-demo.py). Both methods allow you to compute various metrics on your agent telemetry data. The preferred usage for the MCE is to deploy it as a service.
+The MCE can be used in two ways: as a [REST API service](./src/metrics_computation_engine/examples/service_test.py) or as a [Python module](./src/metrics_computation_engine/examples/mce-demo.py). Both methods allow you to compute various metrics on your agent telemetry data. 
 
 There are three main input parameters to the MCE, as shown in the examples above: `metrics`, `llm_judge_config`, and `data_fetching_infos`.
 
@@ -159,10 +159,11 @@ You can request 3rd‑party framework metrics through adapter plugins by using a
 - `opik.<MetricName>` (e.g., `opik.Hallucination`)
 - `ragas.<MetricName>` (see adapter README for available names)
 
-Adapter docs and supported metric names:
-- DeepEval adapter: [plugins/adapters/deepeval_adapter/README.md](./plugins/adapters/deepeval_adapter/README.md)
-- RAGAS adapter: [plugins/adapters/ragas_adapter/README.md](./plugins/adapters/ragas_adapter/README.md)
-- Opik adapter: [plugins/adapters/opik_adapter/README.md](./plugins/adapters/opik_adapter/README.md)
+```python
+"metrics": [
+    "deepeval.AnswerRelevancyMetric",
+]
+```
 
 #### 2. LLM Judge Config
 
