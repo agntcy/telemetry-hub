@@ -13,11 +13,11 @@ from typing import Dict, Any, Optional
 
 class SessionCacheTestMetric(BaseMetric):
     """Test metric implementation for session cache testing."""
-    
+
     def __init__(self):
         self.name = "test_session_metric"
         self.aggregation_level = "session"
-    
+
     # Required abstract method implementations
     async def compute(self, session: SessionEntity, context: Optional[Dict[str, Any]] = None):
         return MetricResult(
@@ -27,7 +27,7 @@ class SessionCacheTestMetric(BaseMetric):
             source="test", entities_involved=[], edges_involved=[], success=True,
             metadata={"session_id": session.session_id}
         )
-    
+
     def create_model(self): return None
     def get_model_provider(self): return "test"
     def init_with_model(self, model): pass
@@ -37,7 +37,7 @@ class SessionCacheTestMetric(BaseMetric):
 
 class TestSessionCacheFunctionality:
     """Test class for session-level cache functionality."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.metric = SessionCacheTestMetric()
@@ -66,10 +66,10 @@ class TestSessionCacheFunctionality:
                 }
             }
         ]
-        
+
         # Test cache lookup using _check_session_cache directly
         found, result = self.metric._check_session_cache(cached_session_metrics, "test_session_metric")
-        
+
         # Verify cache hit
         assert found is True
         assert result is not None
@@ -80,10 +80,10 @@ class TestSessionCacheFunctionality:
         """Test cache miss for session-level metric."""
         # Empty cached data
         cached_session_metrics = []
-        
+
         # Test cache lookup
         found, result = self.metric._check_session_cache(cached_session_metrics, "test_session_metric")
-        
+
         # Verify cache miss
         assert found is False
         assert result is None
@@ -111,10 +111,10 @@ class TestSessionCacheFunctionality:
                 }
             }
         ]
-        
+
         # Test cache lookup for different metric
         found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
-        
+
         # Verify cache miss due to name mismatch
         assert found is False
         assert result is None
@@ -126,7 +126,7 @@ class TestSessionCacheFunctionality:
                 "metrics": {
                     "metric_name": "test_session_metric",
                     "value": 0.6,
-                    "aggregation_level": "session", 
+                    "aggregation_level": "session",
                     "category": "application",
                     "app_name": "test_app",
                     "description": "Agent metric",
@@ -147,7 +147,7 @@ class TestSessionCacheFunctionality:
                     "value": 0.8,
                     "aggregation_level": "session",
                     "category": "application",
-                    "app_name": "test_app", 
+                    "app_name": "test_app",
                     "description": "Session metric",
                     "unit": "percentage",
                     "reasoning": "Session level",
@@ -161,10 +161,10 @@ class TestSessionCacheFunctionality:
                 }
             }
         ]
-        
-        # Test cache lookup 
+
+        # Test cache lookup
         found, result = self.metric._check_session_cache(mixed_metrics, "test_session_metric")
-        
+
         # Verify it returns the session-only metric (value 0.8), not the agent metric (value 0.6)
         assert found is True
         assert result is not None
@@ -183,7 +183,7 @@ class TestSessionCacheFunctionality:
                     "category": "application",
                     "app_name": "test_app",
                     "description": "JSON string metric",
-                    "unit": "percentage", 
+                    "unit": "percentage",
                     "reasoning": "Parsed from JSON",
                     "span_id": "",
                     "session_id": ["session_json"],
@@ -195,10 +195,10 @@ class TestSessionCacheFunctionality:
                 })
             }
         ]
-        
+
         # Test cache lookup with JSON string
         found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
-        
+
         # Verify JSON parsing works
         assert found is True
         assert result is not None
@@ -229,7 +229,7 @@ class TestSessionCacheFunctionality:
                     "reasoning": "Valid entry",
                     "span_id": "",
                     "session_id": ["session_valid"],
-                    "source": "test", 
+                    "source": "test",
                     "entities_involved": [],
                     "edges_involved": [],
                     "success": True,
@@ -237,10 +237,10 @@ class TestSessionCacheFunctionality:
                 }
             }
         ]
-        
+
         # Test cache lookup - should skip malformed JSON and return valid entry
         found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
-        
+
         # Verify it finds the valid metric despite malformed JSON
         assert found is True
         assert result is not None
@@ -268,10 +268,10 @@ class TestSessionCacheFunctionality:
                 }
             }
         ]
-        
+
         # Test cache lookup
         found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
-        
+
         # Verify cache hit and backward compatibility
         assert found is True
         assert result is not None
