@@ -54,10 +54,12 @@ class SessionSetAgentAggregateStats(BaseModel):
         description="Average normalized LLM duration per session for this agent",
     )
     avg_duration: float = Field(
-        default=0.0, description="Average total duration of the agent's activity per session (ms)"
+        default=0.0,
+        description="Average total duration of the agent's activity per session (ms)",
     )
     avg_completion: float = Field(
-        default=1.0, description="Average completion rate of the agent per session (1.0 = always completed)"
+        default=1.0,
+        description="Average completion rate of the agent per session (1.0 = always completed)",
     )
 
 
@@ -98,7 +100,8 @@ class SessionSetAgentHistogramStats(BaseModel):
         default_factory=list, description="LLM duration per session for this agent (ms)"
     )
     duration: List[float] = Field(
-        default_factory=list, description="Total duration of the agent's activity per session (ms)"
+        default_factory=list,
+        description="Total duration of the agent's activity per session (ms)",
     )
     completion: List[bool] = Field(
         default_factory=list, description="Completion status per session for this agent"
@@ -125,7 +128,10 @@ class SessionSetStatsAggregate(BaseModel):
     avg_total_tokens: float = Field(default=0.0)
     avg_latency: float = Field(default=0.0)
     agents: Dict[str, SessionSetAgentAggregateStats] = Field(default_factory=dict)
-    avg_completion: float = Field(default=1.0, description="Average completion rate across all sessions (1.0 = all completed)")
+    avg_completion: float = Field(
+        default=1.0,
+        description="Average completion rate across all sessions (1.0 = all completed)",
+    )
 
 
 class SessionSetStatsHistogram(BaseModel):
@@ -407,7 +413,9 @@ class SessionSet(BaseModel):
                     )
                     / agent_count,
                     avg_duration=sum(m["duration"] for m in metrics_list) / agent_count,
-                    avg_completion=sum(1.0 if m["completion"] else 0.0 for m in metrics_list)
+                    avg_completion=sum(
+                        1.0 if m["completion"] else 0.0 for m in metrics_list
+                    )
                     / agent_count,
                 )
 
