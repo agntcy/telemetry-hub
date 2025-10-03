@@ -16,10 +16,6 @@ The current supported metrics are listed in the table below, along with their ag
 | Metric Name | Description |
 | :---------: | :---------- |
 | **Tool Utilization Accuracy** | Measures tool selection and usage efficiency |
-| **Tool Error** | Indicates whether a tool failed or not |
-| **Agent Interpretation Score** | Measures the value of an agent interaction |
-| **Task Delegation Accuracy** | Assesses if task delegation was accurate with respect to input |
-| **Hallucination Detection** | Detects hallucinations in LLM outputs *(in development)* |
 
 #### Session-Level Metrics
 | Metric Name | Description |
@@ -36,7 +32,7 @@ The current supported metrics are listed in the table below, along with their ag
 
 ### Native Metrics Plugin
 
-The MCE includes a comprehensive **native metrics plugin** that provides 13 advanced session-level and span-level metrics for AI agent evaluation. These metrics use LLM-as-a-Judge techniques and confidence analysis for comprehensive assessment. See the complete list in the installation section below.
+The MCE includes a comprehensive **native metrics plugin** that provides 13 advanced session-level and span-level metrics for AI agent evaluation. These metrics use LLM-as-a-Judge techniques and confidence analysis for comprehensive assessment. For additional plugin metrics and detailed descriptions, see the Native Metrics Plugin README: [plugins/mce_metrics_plugin/README.md](./plugins/mce_metrics_plugin/README.md).
 
 ## Third-party Integrations
 
@@ -47,6 +43,49 @@ The MCE supports integration with popular evaluation frameworks through adapter 
 - **[Opik](https://github.com/comet-ml/opik)** - LLM observability and evaluation platform
 
 Each adapter automatically converts MCE data formats to framework-specific schemas for seamless integration.
+
+## Python Package Installation
+
+For local development or custom deployments, you can install the Metrics Computation Engine and its plugins directly via pip:
+
+### Quick Start - Complete Platform
+```bash
+# Install everything - core MCE + all adapters + native metrics
+pip install "metrics-computation-engine[all]"
+```
+
+### Selective Installation
+```bash
+# Core MCE only
+pip install metrics-computation-engine
+
+# Core + specific adapters
+pip install "metrics-computation-engine[deepeval]"
+pip install "metrics-computation-engine[ragas]"
+pip install "metrics-computation-engine[opik]"
+
+# Core + native LLM-based metrics
+pip install "metrics-computation-engine[metrics-plugin]"
+
+# Core + all external adapters (no native metrics)
+pip install "metrics-computation-engine[adapters]"
+
+# Mix and match as needed
+pip install "metrics-computation-engine[deepeval,metrics-plugin]"
+```
+
+Note for zsh users: If you encounter `zsh: no matches found` errors, quote the package name with extras (e.g., `"metrics-computation-engine[opik]"`).
+
+### What Each Option Provides
+
+| Option | Components | Use Case |
+|--------|------------|----------|
+| `[deepeval]` | DeepEval framework integration | Use DeepEval's comprehensive evaluation suite |
+| `[ragas]` | RAGAS framework integration | RAG-specific evaluation metrics |
+| `[opik]` | Opik framework integration | Comet ML's LLM evaluation platform |
+| `[metrics-plugin]` | 10 native LLM-based session and 3 native span metrics | Advanced AI agent evaluation (see detailed list below) |
+| `[adapters]` | All external framework adapters | Multi-framework evaluation capability |
+| `[all]` | Everything above | Complete evaluation platform |
 
 ## Prerequisites
 
@@ -61,12 +100,11 @@ Several [example scripts](./src/metrics_computation_engine/examples/) are availa
 
 ### Examples Directory
 
-The examples directory contains 40+ scripts organized by use case:
+The examples directory contains practical scripts:
 
-- **Basic Usage**: `service_test.py`, `simple_service_test.py` - API and module integration
-- **Metrics Testing**: `test_single_agent_metrics.py`, `test_span_metrics.py` - Individual metric validation
-- **Third-party Integration**: `plugin_w_mce_as_library.py` - DeepEval, RAGAS integration examples
-- **Debugging & Analysis**: `debug_tool_util.py`, `analyze_sessions.py` - Troubleshooting tools
+- **Basic usage — service** (`service_test.py`): Sends a request to a running MCE server (POST `/compute_metrics`) with `metrics`, `llm_judge_config`, and `data_fetching_infos.batch_config.time_range`.
+- **Basic usage — library** (`mce-demo.py`): Runs MCE in-process. Loads `data/sample_data.json`, builds a `MetricRegistry`, registers core and native plugin metrics, demonstrates 3rd‑party adapters (DeepEval, Opik), and executes `MetricsProcessor` with `LLMJudgeConfig` from `.env`.
+- **Sample data** (`data/sample_data.json`): Synthetic raw spans used by `mce-demo.py`.
 
 Each script includes inline documentation and can be run independently with proper environment setup.
 
@@ -76,15 +114,12 @@ The MCE uses a plugin-based architecture for extensibility:
 
 - **Core Metrics**: Built-in metrics for standard agent evaluation
 - **Adapter Plugins**: Third-party framework integrations (RAGAS, DeepEval, Opik)
-- **Custom Plugins**: User-defined metrics following the BaseMetric interface
-
-See [README-plugin.md](./README-plugin.md) for detailed plugin development guide.
 
 ### MCE usage
 
-The MCE can be used in two ways: as a [REST API service](./src/metrics_computation_engine/examples/service_test.py) or as a [Python module](./src/metrics_computation_engine/examples/mce_as_package_test.py). Both methods allow you to compute various metrics on your agent telemetry data. The preferred usage for the MCE is to deploy it as a service.
+The MCE can be used in two ways: as a [REST API service](./src/metrics_computation_engine/examples/service_test.py) or as a [Python module](./src/metrics_computation_engine/examples/mce-demo.py). Both methods allow you to compute various metrics on your agent telemetry data. The preferred usage for the MCE is to deploy it as a service.
 
-There are three main input parameters to the MCE, as you will see in the above test code: `metrics`, `llm_judge_config`, and `batch_config`.
+There are three main input parameters to the MCE, as shown in the examples above: `metrics`, `llm_judge_config`, and `data_fetching_infos`.
 
 #### 1. Metrics Parameter
 
@@ -101,6 +136,19 @@ The `metrics` parameter is a list of metric names that you want to compute. Each
     "Groundedness",
 ]
 ```
+
+##### Using 3rd‑party adapters (RAGAS, DeepEval, Opik)
+
+You can request 3rd‑party framework metrics through adapter plugins by using a dotted identifier in `metrics`:
+
+- `deepeval.<MetricName>` (e.g., `deepeval.AnswerRelevancyMetric`)
+- `opik.<MetricName>` (e.g., `opik.Hallucination`)
+- `ragas.<MetricName>` (see adapter README for available names)
+
+Adapter docs and supported metric names:
+- DeepEval adapter: [plugins/adapters/deepeval_adapter/README.md](./plugins/adapters/deepeval_adapter/README.md)
+- RAGAS adapter: [plugins/adapters/ragas_adapter/README.md](./plugins/adapters/ragas_adapter/README.md)
+- Opik adapter: [plugins/adapters/opik_adapter/README.md](./plugins/adapters/opik_adapter/README.md)
 
 #### 2. LLM Judge Config
 
@@ -119,44 +167,31 @@ The `llm_judge_config` parameter configures the LLM used for metrics that requir
 - **LLM_MODEL_NAME**: The specific model to use (e.g., "gpt-4o")
 - **LLM_BASE_MODEL_URL**: API endpoint URL (supports OpenAI-compatible APIs)
 
-#### 3. Batch Config
+#### 3. Data Fetching Infos
 
-The `batch_config` parameter determines which sessions from your database will be included in the metric computation. You have three options (they can be mixed):
+Use `data_fetching_infos` to select which sessions to evaluate. You can provide a time range via `batch_config.time_range`, explicit `session_ids`, or both.
 
-**Option 1: By Number of Sessions**
-```python
-"batch_config": {
-    "num_sessions": 10  # Get the last 10 sessions
-}
-```
-This retrieves the most recent N agent sessions from the database.
-
-**Option 2: By Time Range**
-```python
-"batch_config": {
+**By time range**
+```json
+"data_fetching_infos": {
+  "batch_config": {
     "time_range": {
-        "start": "2024-01-01T00:00:00Z",
-        "end": "2024-12-31T23:59:59Z"
+      "start": "2024-01-01T00:00:00Z",
+      "end": "2024-12-31T23:59:59Z"
     }
+  },
+  "session_ids": []
 }
 ```
-This retrieves all agent sessions that occurred within the specified time window.
 
-**Option 3: By App Name**
-```python
-"batch_config": {
-    "app_name": "my_agent_app"
+**By explicit session IDs**
+```json
+"data_fetching_infos": {
+  "batch_config": {},
+  "session_ids": ["<session_id_1>", "<session_id_2>", ... "<session_id_n>"]
 }
 ```
-This would retrieve agent sessions associated with a specific application or project name.
-
-#### 4. Group of session
-
-You can omit `batch_config` and use `session ids` for computing metrics for a given set of know session ids.
-```python
-"session_ids": ["1", "3"]
-```
-This retrieves sessions associated ids 1 and 3.
+`session_ids` are the explicit session identifiers to evaluate.
 
 
 ### Deployment as a service
@@ -177,43 +212,7 @@ The server provides automatic OpenAPI documentation at `http://localhost:8000/do
 ### Installation
 
 #### Quick Start
-For standard installation and available options, see the [main installation guide](../README.md#python-package-installation).
 
-#### Development Installation
-
-For development or when installing from source:
-
-**Requirements:**
-- Python 3.11 or higher
-- [uv](https://docs.astral.sh/uv/) package manager (recommended) or pip
-
-1. **Install uv** (if not installed):
-    ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
-
-2. **Install from source**:
-   ```bash
-   chmod +x install.sh
-   ./install.sh
-   ```
-
-#### Post-Installation Setup
-
-3. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys and configuration
-   ```
-
-#### Legacy Installation (Still Supported)
-
-**Previous method:**
-```bash
-pip install metrics-computation-engine mce_metrics_plugin mce-deepeval-adapter mce-ragas-adapter mce-opik-adapter
-```
-
-**New simplified method:** See the [main installation guide](../README.md#python-package-installation) for the recommended approach.
 
 ### Native Metrics Plugin - Complete List
 
@@ -250,7 +249,10 @@ The `[metrics-plugin]` option provides **13 advanced session-level metrics** for
         "LLM_API_KEY": "your_api_key",
         "LLM_MODEL_NAME": "gpt-4o"
     },
-    "session_ids": ["session_123"]
+    "data_fetching_infos": {
+        "batch_config": {},
+        "session_ids": ["session_123"]
+    }
 }
 ```
 
