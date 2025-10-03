@@ -92,24 +92,20 @@ Note for zsh users: If you encounter `zsh: no matches found` errors, quote the p
 
 Configure the following variables in your `.env` file:
 
-### Server Configuration
 ```bash
+# Server Configuration
 HOST=0.0.0.0                    # MCE Server bind address
 PORT=8000                       # MCE Server port
 RELOAD=false                    # Enable auto-reload for development
 LOG_LEVEL=info                  # Logging level (debug, info, warning, error)
-```
 
-### Data Access Configuration
-```bash
+# Data Access Configuration
 API_BASE_URL=http://localhost:8080       # API-layer endpoint
 PAGINATION_LIMIT=50                      # Max sessions per API request
 PAGINATION_DEFAULT_MAX_SESSIONS=50       # Default max sessions when not specified
 SESSIONS_TRACES_MAX=20                   # Max sessions per batch for trace retrieval
-```
 
-### LLM Configuration
-```bash
+# LLM Configuration
 LLM_BASE_MODEL_URL=https://api.openai.com/v1  # LLM API endpoint
 LLM_MODEL_NAME=gpt-4o                          # LLM model name
 LLM_API_KEY=sk-...                             # LLM API key
