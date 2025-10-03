@@ -7,7 +7,7 @@ from mce_ragas_adapter.metric_test_case_creation import (
     AbstractTestCaseCalculator,
     RagasMultiTurnTestCase,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from metrics_computation_engine.types import AggregationLevel
 
@@ -19,7 +19,7 @@ class MetricRequirements(BaseModel):
 
 
 class MetricConfiguration(BaseModel):
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     metric_name: str
     test_case_calculator: AbstractTestCaseCalculator
     requirements: MetricRequirements
