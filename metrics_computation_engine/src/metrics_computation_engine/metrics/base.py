@@ -3,7 +3,7 @@
 
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from metrics_computation_engine.models.requests import LLMJudgeConfig
 from metrics_computation_engine.llm_judge.jury import Jury
@@ -176,19 +176,20 @@ class BaseMetric(ABC):
         return hashlib.md5(combined.encode()).hexdigest()
 
     async def check_cache_metric(
-        self, metric_name: str, session_id: str
-    ) -> Optional[MetricResult]:
+        self, metric_name: str, session_id: str, context: Optional[Dict[str, Any]] = None
+    ) -> Optional[Union[MetricResult, List[MetricResult]]]:
         """Check if this metric result exists in cache/database.
 
         Returns the cached result if found, None otherwise.
         Only checks cache if METRICS_CACHE_ENABLED is True.
 
         Args:
-            data: The data being processed by the metric
-            context: Optional context data
+            metric_name: Name of the metric
+            session_id: Session ID 
+            context: Optional context data (for agent-specific caching)
 
         Returns:
-            Cached MetricResult if found, None otherwise
+            Cached MetricResult or List[MetricResult] if found, None otherwise
         """
 
         def _check_metrics_conditions(
@@ -240,31 +241,126 @@ class BaseMetric(ABC):
         # database retrieval here
         metrics = get_api_client().get_session_metrics(session_id=session_id)
 
-        # cached metric
-        is_cached_metric, metric = _check_metrics_conditions(metrics, metric_name)
+        # Handle agent-specific caching
+        if context and context.get("agent_computation"):
+            if "agent_id" in context:
+                # Looking for specific agent result
+                return self._check_agent_cache(metrics, metric_name, context["agent_id"])
+            else:
+                # Looking for all agent results for this session
+                return self._check_all_agents_cache(metrics, metric_name)
+        else:
+            # Regular session/span cache lookup - only look for session-level metrics
+            is_cached_metric, metric = self._check_session_cache(metrics, metric_name)
 
-        if is_cached_metric:
-            metric_data = metric.get("metrics", {})
+            if is_cached_metric:
+                metric_data = metric.get("metrics", {})
 
-            # Parse JSON string if metrics is stored as string
-            if isinstance(metric_data, str):
-                try:
-                    import json
+                # Parse JSON string if metrics is stored as string
+                if isinstance(metric_data, str):
+                    try:
+                        import json
 
-                    metric_data = json.loads(metric_data)
-                except (json.JSONDecodeError, TypeError):
-                    return None
+                        metric_data = json.loads(metric_data)
+                    except (json.JSONDecodeError, TypeError):
+                        return None
 
-            metric_data["from_cache"] = True
+                metric_data["from_cache"] = True
 
-            # Ensure required fields are present for backward compatibility with cached data
-            if "category" not in metric_data:
-                metric_data["category"] = "application"  # Default category
-            if "app_name" not in metric_data:
-                metric_data["app_name"] = "unknown"  # Default app_name
+                # Ensure required fields are present for backward compatibility with cached data
+                if "category" not in metric_data:
+                    metric_data["category"] = "application"  # Default category
+                if "app_name" not in metric_data:
+                    metric_data["app_name"] = "unknown"  # Default app_name
 
-            return MetricResult(**metric_data)
+                return MetricResult(**metric_data)
+            return None
+
+    def _check_agent_cache(self, metrics: List, metric_name: str, agent_id: str) -> Optional[MetricResult]:
+        """Check cache for specific agent result"""
+        for obj in metrics:
+            if isinstance(obj, dict) and "metrics" in obj:
+                metric_data = obj["metrics"]
+                
+                # Parse JSON string if metrics is stored as string
+                if isinstance(metric_data, str):
+                    try:
+                        import json
+                        metric_data = json.loads(metric_data)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                
+                if isinstance(metric_data, dict):
+                    # Check if this matches our metric and agent
+                    if (metric_data.get("metric_name") == metric_name and 
+                        metric_data.get("metadata", {}).get("agent_id") == agent_id):
+                        
+                        metric_data["from_cache"] = True
+                        # Ensure backward compatibility
+                        if "category" not in metric_data:
+                            metric_data["category"] = "application"
+                        if "app_name" not in metric_data:
+                            metric_data["app_name"] = "unknown"
+                        
+                        return MetricResult(**metric_data)
         return None
+
+    def _check_all_agents_cache(self, metrics: List, metric_name: str) -> Optional[List[MetricResult]]:
+        """Check cache for all agent results for this session"""
+        agent_results = []
+        
+        for obj in metrics:
+            if isinstance(obj, dict) and "metrics" in obj:
+                metric_data = obj["metrics"]
+                
+                # Parse JSON string if metrics is stored as string
+                if isinstance(metric_data, str):
+                    try:
+                        import json
+                        metric_data = json.loads(metric_data)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                
+                if isinstance(metric_data, dict):
+                    # Check if this is an agent result for our metric
+                    if (metric_data.get("metric_name") == metric_name and 
+                        "agent_id" in metric_data.get("metadata", {})):
+                        
+                        metric_data["from_cache"] = True
+                        if "category" not in metric_data:
+                            metric_data["category"] = "application"
+                        if "app_name" not in metric_data:
+                            metric_data["app_name"] = "unknown"
+                        
+                        agent_results.append(MetricResult(**metric_data))
+        
+        return agent_results if agent_results else None
+
+    def _check_session_cache(self, metrics: List, metric_name: str) -> tuple[bool, dict]:
+        """Check cache for session-level metrics only (excludes agent metrics)"""
+        for obj in metrics:
+            if isinstance(obj, dict) and "metrics" in obj:
+                metric_data = obj["metrics"]
+                
+                # Parse JSON string if metrics is stored as string
+                if isinstance(metric_data, str):
+                    try:
+                        import json
+                        metric_data = json.loads(metric_data)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+
+                if isinstance(metric_data, dict):
+                    read_metric_name = metric_data.get("metric_name", "")
+                    aggregation_level = metric_data.get("aggregation_level", "")
+                    has_agent_id = "agent_id" in metric_data.get("metadata", {})
+
+                    # Only match session-level metrics (not agent-level)
+                    if (metric_name == read_metric_name and 
+                        aggregation_level == "session" and 
+                        not has_agent_id):
+                        return True, obj
+        return False, None
 
     def get_default_provider(self) -> str:
         return DEFAULT_PROVIDER
