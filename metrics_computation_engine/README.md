@@ -2,7 +2,13 @@
 
 The Metric Computation Engine (MCE) is a tool for computing metrics from observability telemetry collected from our instrumentation SDK (https://github.com/agntcy/observe). The list of currently supported metrics is defined below, but the MCE was designed to make it easy to implement new metrics and extend the library over time.
 
-The MCE is available as a Docker image for service deployment or as a Python package for direct integration. It can also be installed manually, as described below.
+## Prerequisites
+
+- **Python 3.11 or higher**
+- **[uv](https://docs.astral.sh/uv/) package manager** for dependency management
+- **LLM API Key** (OpenAI, or custom endpoint) for LLM-based metrics
+- **Agentic App**: Get started with [coffeeAgntcy](https://github.com/agntcy/coffeeAgntcy) reference Agentic App implementation using the AGNTCY ecosystem.
+- **Instrumentation**: Agentic apps must be instrumented with [AGNTCY's observe SDK](https://github.com/agntcy/observe) as the MCE relies on its observability data schema
 
 ## Supported metrics
 
@@ -46,10 +52,9 @@ The MCE includes a comprehensive **native metrics plugin** that provides 13 adva
 The MCE supports integration with popular evaluation frameworks through adapter plugins:
 
 - **[RAGAS](https://github.com/explodinggradients/ragas)**
-- **[DeepEval](https://github.com/confident-ai/deepeval)** - Comprehensive LLM evaluation suite
-- **[Opik](https://github.com/comet-ml/opik)** - LLM observability and evaluation platform
+- **[DeepEval](https://github.com/confident-ai/deepeval)**
+- **[Opik](https://github.com/comet-ml/opik)**
 
-Each adapter automatically converts MCE data formats to framework-specific schemas for seamless integration.
 
 ## Python Package Installation
 
@@ -74,32 +79,12 @@ pip install "metrics-computation-engine[opik]"
 # Core + native LLM-based metrics
 pip install "metrics-computation-engine[metrics-plugin]"
 
-# Core + all external adapters (no native metrics)
-pip install "metrics-computation-engine[adapters]"
-
 # Mix and match as needed
 pip install "metrics-computation-engine[deepeval,metrics-plugin]"
 ```
 
 Note for zsh users: If you encounter `zsh: no matches found` errors, quote the package name with extras (e.g., `"metrics-computation-engine[opik]"`).
 
-### What Each Option Provides
-
-| Option | Components | Use Case |
-|--------|------------|----------|
-| `[deepeval]` | DeepEval framework integration | Use DeepEval's comprehensive evaluation suite |
-| `[ragas]` | RAGAS framework integration | RAG-specific evaluation metrics |
-| `[opik]` | Opik framework integration | Comet ML's LLM evaluation platform |
-| `[metrics-plugin]` | 10 native LLM-based session and 3 native span metrics | Advanced AI agent evaluation (see detailed list below) |
-| `[adapters]` | All external framework adapters | Multi-framework evaluation capability |
-| `[all]` | Everything above | Complete evaluation platform |
-
-## Prerequisites
-
-- **Python 3.11 or higher**
-- **[uv](https://docs.astral.sh/uv/) package manager** for dependency management
-- **LLM API Key** (OpenAI, or custom endpoint) for LLM-based metrics
-- **Instrumentation**: Agentic apps must be instrumented with [AGNTCY's observe SDK](https://github.com/agntcy/observe) as the MCE relies on its observability data schema
 
 ## Getting started
 
