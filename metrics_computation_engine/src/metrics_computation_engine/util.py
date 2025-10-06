@@ -307,13 +307,23 @@ def get_all_available_metrics():
         try:
             # Create instance to get metadata
             instance = metric_class()
+            # Check if metric supports agent computation
+            supports_agent = False
+            if hasattr(instance, "supports_agent_computation"):
+                try:
+                    supports_agent = instance.supports_agent_computation()
+                except Exception:
+                    supports_agent = False
+
             metrics[name] = {
                 "name": name,
                 "class": metric_class.__name__,
                 "module": metric_class.__module__,
                 "aggregation_level": getattr(instance, "aggregation_level", "unknown"),
+                "supports_agent_computation": supports_agent,
                 "description": (
-                    getattr(instance, "__doc__", None)
+                    getattr(instance, "description", None)
+                    or getattr(instance, "__doc__", None)
                     or getattr(metric_class, "__doc__", None)
                     or "No description available"
                 ),
@@ -343,13 +353,23 @@ def get_all_available_metrics():
         try:
             plugin_metric = entry_point.load()
             instance = plugin_metric()
+            # Check if metric supports agent computation
+            supports_agent = False
+            if hasattr(instance, "supports_agent_computation"):
+                try:
+                    supports_agent = instance.supports_agent_computation()
+                except Exception:
+                    supports_agent = False
+
             metrics[entry_point.name] = {
                 "name": entry_point.name,
                 "class": plugin_metric.__name__,
                 "module": plugin_metric.__module__,
                 "aggregation_level": getattr(instance, "aggregation_level", "unknown"),
+                "supports_agent_computation": supports_agent,
                 "description": (
-                    instance.__doc__
+                    getattr(instance, "description", None)
+                    or instance.__doc__
                     or plugin_metric.__doc__
                     or "No description available"
                 ),

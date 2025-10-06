@@ -46,22 +46,37 @@ def list_metrics():
         if native_metrics:
             click.echo(f"\nNative metrics ({len(native_metrics)}):")
             for name, info in native_metrics.items():
-                print(info)
                 aggregation = info.get("aggregation_level", "unknown")
+                supports_agent = info.get("supports_agent_computation", False)
+
+                # Build aggregation level display
+                if supports_agent:
+                    aggregation_display = f"{aggregation}, agent"
+                else:
+                    aggregation_display = aggregation
+
                 description = info.get("description", "").strip()
                 description = description.replace("\n", " ")
                 if len(description) > 80:
                     description = description[:80] + "..."
-                click.echo(f"  • {name} [{aggregation}] - {description}")
+                click.echo(f"  • {name} [{aggregation_display}] - {description}")
         if plugin_metrics:
             click.echo(f"\nPlugin metrics ({len(plugin_metrics)}):")
             for name, info in plugin_metrics.items():
                 aggregation = info.get("aggregation_level", "unknown")
+                supports_agent = info.get("supports_agent_computation", False)
+
+                # Build aggregation level display
+                if supports_agent:
+                    aggregation_display = f"{aggregation}, agent"
+                else:
+                    aggregation_display = aggregation
+
                 description = info.get("description", "").strip()
                 description = description.replace("\n", " ")
                 if len(description) > 80:
                     description = description[:80] + "..."
-                click.echo(f"  • {name} [{aggregation}] - {description}")
+                click.echo(f"  • {name} [{aggregation_display}] - {description}")
                 click.echo(f"    - {info.get('module', '?')} {info.get('class', '?')}")
 
     except Exception as e:
