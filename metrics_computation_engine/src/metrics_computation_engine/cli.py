@@ -105,12 +105,12 @@ def list_metrics():
                 if len(description) > 80:
                     description = description[:80] + "..."
                 click.echo(f"  • {name} [{aggregation_display}] - {description}")
-                
+
                 # Show module and class info like plugin metrics (harmonized format)
                 module_info = info.get("module", "?")
                 class_info = info.get("class", "?")
                 click.echo(f"    - {module_info} {class_info}")
-                
+
                 # Show additional info if available
                 required_params = info.get("required_parameters", [])
                 if required_params:

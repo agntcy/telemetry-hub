@@ -97,7 +97,7 @@ class MetricsProcessor:
         logger.debug(f"Cache miss for {metric.name} agents, computing...")
 
         if self._metric_supports_context(metric):
-            new_results = await metric.compute(data, context=context)
+            new_results = await metric.compute(data, **context)
         else:
             new_results = await metric.compute(data)
 
@@ -139,7 +139,7 @@ class MetricsProcessor:
                 logger.debug(
                     f"Calling {metric.name} with context: {list(context.keys()) if context else 'None'}"
                 )
-                result = await metric.compute(data, context=context)
+                result = await metric.compute(data, **context)
             else:
                 logger.debug(
                     f"Calling {metric.name} without context (supports_context: {self._metric_supports_context(metric)}, context is None: {context is None})"

@@ -390,11 +390,11 @@ def get_all_available_metrics():
         # Add the adapter info with correct usage examples
         usage_examples = {
             'opik': 'opik.Hallucination',
-            'deepeval': 'deepeval.AnswerRelevancyMetric', 
+            'deepeval': 'deepeval.AnswerRelevancyMetric',
             'ragas': 'ragas.ContextPrecision'
         }
         example_usage = usage_examples.get(adapter_name.lower(), f'{adapter_name}.MetricName')
-        
+
         metrics[f"{adapter_name}_adapter"] = {
             "name": f"{adapter_name}_adapter",
             "class": adapter_class.__name__,
@@ -403,7 +403,7 @@ def get_all_available_metrics():
             "source": "adapter",
             "adapter_for": adapter_name,
         }
-        
+
         # Try to enumerate specific metrics provided by this adapter
         try:
             if adapter_name.lower() == 'opik':

@@ -97,6 +97,9 @@ class SessionEntity(BaseModel):
     agent_transitions: Optional[List[str]] = None
     agent_transition_counts: Optional[Counter] = None
 
+    # Cache for agent-specific conversation data (shared across all metrics)
+    _agent_conversation_cache: Optional[Dict[str, Dict[str, Any]]] = PrivateAttr(default=None)
+
     conversation_elements: Optional[List[ConversationElement]] = None
 
     tool_calls: Optional[List[ToolCall]] = None
@@ -834,6 +837,168 @@ class SessionEntity(BaseModel):
         # Continue traversing children if this node doesn't match
         for child in node.children:
             self._collect_spans_for_agent(child, target_agent_name, agent_spans)
+
+    def get_agent_conversation_data(self, agent_name: str) -> Dict[str, Any]:
+        """
+        Get agent-specific conversation data with session-level caching.
+
+        This method caches conversation data at the SessionEntity level so that
+        multiple metrics can reuse the same agent conversation without recomputation.
+
+        Args:
+            agent_name: Name of the agent to get conversation data for
+
+        Returns:
+            Dictionary containing agent conversation elements and metadata
+        """
+        # Initialize cache if needed
+        if self._agent_conversation_cache is None:
+            self._agent_conversation_cache = {}
+
+        # Return cached data if available
+        if agent_name in self._agent_conversation_cache:
+            return self._agent_conversation_cache[agent_name]
+
+        # Build agent conversation data using existing patterns
+        conversation_elements = []
+        tool_calls = []
+
+        # Get all spans for this agent (uses existing hierarchical collection)
+        agent_spans = self._get_spans_for_agent(agent_name)
+
+        # Process LLM spans (reuse ConversationDataTransformer logic)
+        llm_spans = [s for s in agent_spans if s.entity_type == "llm"]
+        for span in llm_spans:
+            if span.input_payload:
+                for key, value in span.input_payload.items():
+                    if key.startswith("gen_ai.prompt") and ".content" in key:
+                        role_key = key.replace(".content", ".role")
+                        role = span.input_payload.get(role_key, "unknown")
+                        conversation_elements.append({
+                            "role": role,
+                            "content": value,
+                            "span_id": span.span_id,
+                            "timestamp": span.timestamp,
+                            "agent_name": agent_name,
+                        })
+
+            if span.output_payload:
+                for key, value in span.output_payload.items():
+                    if key.startswith("gen_ai.completion") and ".content" in key:
+                        role_key = key.replace(".content", ".role")
+                        role = span.output_payload.get(role_key, "assistant")
+                        conversation_elements.append({
+                            "role": role,
+                            "content": value,
+                            "span_id": span.span_id,
+                            "timestamp": span.timestamp,
+                            "agent_name": agent_name,
+                        })
+
+                    # Extract tool calls
+                    if key.startswith("gen_ai.completion") and ".tool_calls" in key:
+                        if isinstance(value, dict) or (isinstance(value, str) and value.startswith("{")):
+                            try:
+                                import json
+                                tool_call_data = json.loads(value) if isinstance(value, str) else value
+                                tool_calls.append({
+                                    "data": tool_call_data,
+                                    "span_id": span.span_id,
+                                    "timestamp": span.timestamp,
+                                    "agent_name": agent_name,
+                                })
+                            except (KeyError, AttributeError, TypeError):
+                                pass
+
+        # Process agent spans
+        agent_entity_spans = [s for s in agent_spans if s.entity_type == "agent"]
+        for span in agent_entity_spans:
+            if span.input_payload and "value" in span.input_payload:
+                conversation_elements.append({
+                    "role": "user",
+                    "content": span.input_payload["value"],
+                    "span_id": span.span_id,
+                    "timestamp": span.timestamp,
+                    "agent_name": agent_name,
+                })
+
+            if span.output_payload and "value" in span.output_payload:
+                conversation_elements.append({
+                    "role": "assistant",
+                    "content": span.output_payload["value"],
+                    "span_id": span.span_id,
+                    "timestamp": span.timestamp,
+                    "agent_name": agent_name,
+                })
+
+        # Include tool interactions for complete context
+        tool_spans = [s for s in agent_spans if s.entity_type == "tool"]
+        for span in tool_spans:
+            if span.input_payload:
+                conversation_elements.append({
+                    "role": "tool_input",
+                    "content": f"Tool call to {span.entity_name}: {span.input_payload}",
+                    "span_id": span.span_id,
+                    "timestamp": span.timestamp,
+                    "agent_name": agent_name,
+                })
+
+            if span.output_payload:
+                conversation_elements.append({
+                    "role": "tool_output",
+                    "content": f"Tool {span.entity_name} result: {span.output_payload}",
+                    "span_id": span.span_id,
+                    "timestamp": span.timestamp,
+                    "agent_name": agent_name,
+                })
+
+        # Sort by timestamp
+        conversation_elements.sort(key=lambda x: x.get("timestamp", ""))
+
+        # Cache the result
+        agent_conversation_data = {
+            "elements": conversation_elements,
+            "tool_calls": tool_calls,
+            "total_elements": len(conversation_elements),
+            "total_tool_calls": len(tool_calls),
+        }
+
+        self._agent_conversation_cache[agent_name] = agent_conversation_data
+        return agent_conversation_data
+
+    def get_agent_conversation_text(self, agent_name: str) -> str:
+        """
+        Get formatted agent conversation text for metric evaluation.
+
+        Args:
+            agent_name: Name of the agent
+
+        Returns:
+            Formatted conversation text suitable for LLM evaluation
+        """
+        conversation_data = self.get_agent_conversation_data(agent_name)
+        elements = conversation_data.get("elements", [])
+
+        if not elements:
+            return ""
+
+        conversation_lines = []
+        for element in elements:
+            role = element.get("role", "unknown")
+            content = element.get("content", "")
+
+            if role == "user":
+                conversation_lines.append(f"User: {content}")
+            elif role == "assistant":
+                conversation_lines.append(f"Assistant: {content}")
+            elif role == "system":
+                conversation_lines.append(f"System: {content}")
+            elif role == "tool_input":
+                conversation_lines.append(f"[{content}]")
+            elif role == "tool_output":
+                conversation_lines.append(f"[{content}]")
+
+        return "\n".join(conversation_lines)
 
 
 class AgentView:
