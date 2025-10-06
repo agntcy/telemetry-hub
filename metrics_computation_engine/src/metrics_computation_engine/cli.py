@@ -33,15 +33,23 @@ def list_metrics():
             click.echo("No metrics available.")
             return
 
-        # Separate native and plugin metrics
+        # Separate native, plugin, and adapter metrics
         native_metrics = {
             k: v for k, v in metrics.items() if v.get("source") == "native"
         }
         plugin_metrics = {
             k: v for k, v in metrics.items() if v.get("source") == "plugin"
         }
+        adapter_info = {
+            k: v for k, v in metrics.items() if v.get("source") == "adapter"
+        }
+        adapter_metrics = {
+            k: v for k, v in metrics.items() if v.get("source") == "adapter_metric"
+        }
 
-        click.echo(f"Available metrics ({len(metrics)} total):")
+        # Count only actual usable metrics (exclude adapter meta-info)
+        actual_metrics_count = len(native_metrics) + len(plugin_metrics) + len(adapter_metrics)
+        click.echo(f"Available metrics ({actual_metrics_count} total):")
 
         if native_metrics:
             click.echo(f"\nNative metrics ({len(native_metrics)}):")
@@ -78,6 +86,45 @@ def list_metrics():
                     description = description[:80] + "..."
                 click.echo(f"  • {name} [{aggregation_display}] - {description}")
                 click.echo(f"    - {info.get('module', '?')} {info.get('class', '?')}")
+
+        # Display adapter metrics
+        if adapter_metrics:
+            click.echo(f"\nAdapter-provided metrics ({len(adapter_metrics)}):")
+            for name, info in adapter_metrics.items():
+                aggregation = info.get("aggregation_level", "unknown")
+                supports_agent = info.get("supports_agent_computation", False)
+
+                # Build aggregation level display
+                if supports_agent:
+                    aggregation_display = f"{aggregation}, agent"
+                else:
+                    aggregation_display = aggregation
+
+                description = info.get("description", "").strip()
+                description = description.replace("\n", " ")
+                if len(description) > 80:
+                    description = description[:80] + "..."
+                click.echo(f"  • {name} [{aggregation_display}] - {description}")
+                
+                # Show module and class info like plugin metrics (harmonized format)
+                module_info = info.get("module", "?")
+                class_info = info.get("class", "?")
+                click.echo(f"    - {module_info} {class_info}")
+                
+                # Show additional info if available
+                required_params = info.get("required_parameters", [])
+                if required_params:
+                    click.echo(f"    Requires: {', '.join(required_params)}")
+
+        # Display adapter information
+        if adapter_info:
+            click.echo(f"\nAvailable adapters ({len(adapter_info)}):")
+            for name, info in adapter_info.items():
+                description = info.get("description", "").strip()
+                description = description.replace("\n", " ")
+                if len(description) > 80:
+                    description = description[:80] + "..."
+                click.echo(f"  • {name} - {description}")
 
     except Exception as e:
         click.echo(f"Error listing metrics: {e}", err=True)
