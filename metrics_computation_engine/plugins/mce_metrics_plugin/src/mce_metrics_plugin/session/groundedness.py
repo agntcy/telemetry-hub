@@ -164,7 +164,7 @@ class Groundedness(BaseMetric):
                 should_skip, role_metadata = get_agent_role_and_skip_decision(
                     session, agent_name, filter_coordinators=self.filter_coordinators
                 )
-                
+
                 if should_skip:
                     # Skip this agent entirely - don't include in results
                     # Log the skip for debugging purposes
@@ -226,7 +226,7 @@ class Groundedness(BaseMetric):
             except Exception as e:
                 # Handle errors gracefully for individual agents
                 import traceback
-                
+
                 # Log detailed error information for debugging
                 logger.error(f"ERROR in groundedness computation for agent {agent_name}:")
                 logger.error(f"Exception type: {type(e).__name__}")
