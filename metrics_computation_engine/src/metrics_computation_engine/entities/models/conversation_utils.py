@@ -41,7 +41,7 @@ def extract_conversation_endpoints(
     final_response = _extract_final_response(
         llm_spans,
         min_content_length=min_content_length,
-        support_prompt_format_in_output=support_prompt_format_in_output
+        support_prompt_format_in_output=support_prompt_format_in_output,
     )
 
     return input_query, final_response
@@ -198,10 +198,7 @@ def _is_system_control_message(content_str: str, min_content_length: int) -> boo
         (
             content_str.lower().startswith("the ")
             and len(content_str) < 50
-            and (
-                "next" in content_str.lower()
-                or "finish" in content_str.lower()
-            )
+            and ("next" in content_str.lower() or "finish" in content_str.lower())
         )
         or content_str.lower() == "next"
         or content_str.lower() == "finish"
@@ -210,9 +207,6 @@ def _is_system_control_message(content_str: str, min_content_length: int) -> boo
         or (
             "mentioned" in content_str.lower()
             and len(content_str) < 100
-            and (
-                "next" in content_str.lower()
-                or "finish" in content_str.lower()
-            )
+            and ("next" in content_str.lower() or "finish" in content_str.lower())
         )
     )

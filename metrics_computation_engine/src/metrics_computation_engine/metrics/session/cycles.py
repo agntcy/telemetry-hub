@@ -59,10 +59,14 @@ class CyclesCount(BaseMetric):
                 i += 1
         return cycle_count
 
-    async def compute(self, session: SessionEntity, **context) -> Union[MetricResult, List[MetricResult]]:
+    async def compute(
+        self, session: SessionEntity, **context
+    ) -> Union[MetricResult, List[MetricResult]]:
         # Extract nested context if present
-        actual_context = context.get('context', context)
-        is_agent_computation = actual_context.get("agent_computation", False) if actual_context else False
+        actual_context = context.get("context", context)
+        is_agent_computation = (
+            actual_context.get("agent_computation", False) if actual_context else False
+        )
 
         # Check if this is agent-level computation
         if is_agent_computation:
@@ -93,11 +97,13 @@ class CyclesCount(BaseMetric):
                 app_name=session.app_name,
                 reasoning="Count of contiguous cycles in agent and tool interactions",
                 span_ids=span_ids,
-                session_ids=[session.session_id]
+                session_ids=[session.session_id],
             )
 
             # Override specific fields for cycles count
-            result.description = "Count of contiguous cycles in agent and tool interactions"
+            result.description = (
+                "Count of contiguous cycles in agent and tool interactions"
+            )
             result.unit = "cycles"
             result.metadata = {
                 "span_ids": span_ids,
@@ -110,13 +116,18 @@ class CyclesCount(BaseMetric):
         except Exception as e:
             print(f"DEBUG: Exception in session-level computation: {e}")
             import traceback
+
             traceback.print_exc()
 
             result = self._create_error_result(
                 category="application",
-                app_name=session.app_name if hasattr(session, "app_name") else "unknown",
+                app_name=session.app_name
+                if hasattr(session, "app_name")
+                else "unknown",
                 error_message=str(e),
-                session_ids=[session.session_id] if hasattr(session, "session_id") else []
+                session_ids=[session.session_id]
+                if hasattr(session, "session_id")
+                else [],
             )
 
             # Override specific fields for cycles count
@@ -138,7 +149,7 @@ class CyclesCount(BaseMetric):
 
         try:
             # Check if session has agent_stats property
-            if not hasattr(session, 'agent_stats'):
+            if not hasattr(session, "agent_stats"):
                 # Session doesn't have agent_stats - return empty list
                 return []
 
@@ -155,12 +166,15 @@ class CyclesCount(BaseMetric):
 
                 # Get agent and tool spans for this specific agent
                 agent_tool_spans = [
-                    span for span in agent_view.all_spans
+                    span
+                    for span in agent_view.all_spans
                     if span.entity_type in ["agent", "tool"]
                 ]
 
                 # Extract entity names and compute cycles
-                events = [span.entity_name for span in agent_tool_spans if span.entity_name]
+                events = [
+                    span.entity_name for span in agent_tool_spans if span.entity_name
+                ]
                 cycle_count = self.count_contiguous_cycles(events)
                 span_ids = [span.span_id for span in agent_tool_spans]
 
@@ -171,7 +185,7 @@ class CyclesCount(BaseMetric):
                     app_name=session.app_name,
                     reasoning=f"Cycles count for agent '{agent_name}': {cycle_count} cycles found in {len(events)} events",
                     span_ids=span_ids,
-                    session_ids=[session.session_id]
+                    session_ids=[session.session_id],
                 )
 
                 # Set agent-specific fields
@@ -181,7 +195,7 @@ class CyclesCount(BaseMetric):
                     "agent_id": agent_name,
                     "agent_span_ids": span_ids,
                     "agent_event_sequence": events,
-                    "agent_total_events": len(events)
+                    "agent_total_events": len(events),
                 }
 
                 results.append(result)

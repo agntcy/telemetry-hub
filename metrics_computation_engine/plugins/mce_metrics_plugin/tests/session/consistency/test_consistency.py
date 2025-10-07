@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 from mce_metrics_plugin.session.consistency import Consistency
 from metrics_computation_engine.entities.models.session import SessionEntity
@@ -17,7 +16,7 @@ def create_agent_span(
     entity_name: str = "agent",
     agent_id: str = None,
     input_content: str = "test input",
-    output_content: str = "test output"
+    output_content: str = "test output",
 ):
     """Create an agent span for testing."""
     # Add raw_span_data with agent information to help with agent identification
@@ -44,7 +43,7 @@ def create_agent_span(
 def create_session_with_conversation(
     session_id="test_session",
     conversation_text="User: Hello\nBot: Hi there!",
-    agent_names=None
+    agent_names=None,
 ):
     """Helper to set up a session with conversation data and optional agents."""
     if agent_names is None:
@@ -53,12 +52,12 @@ def create_session_with_conversation(
     spans = []
     for i, agent_name in enumerate(agent_names):
         span = create_agent_span(
-            span_id=f"span_{i+1}",
+            span_id=f"span_{i + 1}",
             session_id=session_id,
             entity_name=agent_name,
             agent_id=agent_name,
             input_content=f"Input for {agent_name}",
-            output_content=f"Output from {agent_name}"
+            output_content=f"Output from {agent_name}",
         )
         spans.append(span)
 
@@ -67,7 +66,8 @@ def create_session_with_conversation(
 
     # Ensure session has execution tree for agent_stats to work
     from metrics_computation_engine.entities.models.execution_tree import ExecutionTree
-    if not hasattr(session, 'execution_tree') or session.execution_tree is None:
+
+    if not hasattr(session, "execution_tree") or session.execution_tree is None:
         session.execution_tree = ExecutionTree()
 
     # Mock conversation data
@@ -101,8 +101,12 @@ class TestConsistency:
         metric.jury = mock_jury
 
         # Create mock session with conversation
-        conversation_text = "User: Hello\nBot: Hi there!\nUser: How are you?\nBot: I'm doing well!"
-        session = create_session_with_conversation(conversation_text=conversation_text, agent_names=[])
+        conversation_text = (
+            "User: Hello\nBot: Hi there!\nUser: How are you?\nBot: I'm doing well!"
+        )
+        session = create_session_with_conversation(
+            conversation_text=conversation_text, agent_names=[]
+        )
 
         # Execute computation
         result = await metric.compute(session)
@@ -132,7 +136,9 @@ class TestConsistency:
 
         # Create mock session with inconsistent conversation
         conversation_text = "User: What's 2+2?\nBot: It's 4.\nUser: Are you sure?\nBot: Actually, it's 5."
-        session = create_session_with_conversation(conversation_text=conversation_text, agent_names=[])
+        session = create_session_with_conversation(
+            conversation_text=conversation_text, agent_names=[]
+        )
 
         # Execute computation
         result = await metric.compute(session)
@@ -151,7 +157,9 @@ class TestConsistency:
         metric.jury = None
 
         # Create mock session
-        session = create_session_with_conversation(conversation_text="Test conversation", agent_names=[])
+        session = create_session_with_conversation(
+            conversation_text="Test conversation", agent_names=[]
+        )
 
         # Execute computation
         result = await metric.compute(session)
@@ -167,10 +175,12 @@ class TestConsistency:
         # Setup metric with mock jury
         metric = Consistency()
         mock_jury = Mock()
-        mock_jury.judge = Mock(side_effect=[
-            (1, "Agent A is consistent"),
-            (0, "Agent B has contradictions")
-        ])
+        mock_jury.judge = Mock(
+            side_effect=[
+                (1, "Agent A is consistent"),
+                (0, "Agent B has contradictions"),
+            ]
+        )
         metric.jury = mock_jury
 
         # Create mock session with agents
@@ -189,9 +199,23 @@ class TestConsistency:
             return [Mock(span_id=f"{agent_name}_span_1")]
 
         # Mock the agent_stats property and methods together
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"agent_a": {}, "agent_b": {}})), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', side_effect=mock_get_agent_conversation_text), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity._get_spans_for_agent', side_effect=mock_get_spans_for_agent):
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(
+                    lambda self: {"agent_a": {}, "agent_b": {}}
+                ),
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                side_effect=mock_get_agent_conversation_text,
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity._get_spans_for_agent",
+                side_effect=mock_get_spans_for_agent,
+            ),
+        ):
             results = await metric.compute(session, agent_computation=True)
 
         # Verify results
@@ -225,8 +249,17 @@ class TestConsistency:
         session = create_session_with_conversation(agent_names=["silent_agent"])
 
         # Execute agent computation with mocked agent_stats and methods
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"silent_agent": {}})), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', return_value=""):  # No conversation
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(lambda self: {"silent_agent": {}}),
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                return_value="",
+            ),
+        ):  # No conversation
             results = await metric.compute(session, agent_computation=True)
 
         # Verify no results for silent agent
@@ -244,9 +277,21 @@ class TestConsistency:
         session = create_session_with_conversation(agent_names=["agent_a"])
 
         # Execute agent computation with mocked agent_stats and methods
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"agent_a": {}})), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', return_value="Agent conversation"), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity._get_spans_for_agent', return_value=[Mock(span_id="span_1")]):
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(lambda self: {"agent_a": {}}),
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                return_value="Agent conversation",
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity._get_spans_for_agent",
+                return_value=[Mock(span_id="span_1")],
+            ),
+        ):
             results = await metric.compute(session, agent_computation=True)
 
         # Verify error result
@@ -268,7 +313,9 @@ class TestConsistency:
         session = create_session_with_conversation(agent_names=[])
 
         # Execute agent computation with empty agent_stats
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {})):
+        with patch.object(
+            type(session), "agent_stats", new_callable=lambda: property(lambda self: {})
+        ):
             results = await metric.compute(session, agent_computation=True)
 
         # Verify empty results
@@ -285,15 +332,27 @@ class TestConsistency:
         session = create_session_with_conversation(agent_names=["problematic_agent"])
 
         # Execute agent computation with mocked agent_stats and failing method
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"problematic_agent": {}})), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', side_effect=Exception("Conversation extraction failed")):
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(lambda self: {"problematic_agent": {}}),
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                side_effect=Exception("Conversation extraction failed"),
+            ),
+        ):
             results = await metric.compute(session, agent_computation=True)
 
         # Verify error handling
         assert len(results) == 1
         result = results[0]
         assert result.success is False
-        assert "Error computing consistency for agent problematic_agent" in result.error_message
+        assert (
+            "Error computing consistency for agent problematic_agent"
+            in result.error_message
+        )
         assert "Conversation extraction failed" in result.error_message
         assert result.value == -1  # Error value
         assert result.metadata["agent_id"] == "problematic_agent"
@@ -309,7 +368,9 @@ class TestConsistency:
 
         # Create session with specific conversation
         conversation_text = "User: Test question\nBot: Test response"
-        session = create_session_with_conversation(conversation_text=conversation_text, agent_names=[])
+        session = create_session_with_conversation(
+            conversation_text=conversation_text, agent_names=[]
+        )
 
         # Execute computation
         result = await metric.compute(session)
@@ -331,7 +392,9 @@ class TestConsistency:
         metric.jury = mock_jury
 
         # Create session
-        session = create_session_with_conversation(conversation_text="test", agent_names=[])
+        session = create_session_with_conversation(
+            conversation_text="test", agent_names=[]
+        )
 
         # Execute computation
         await metric.compute(session)
@@ -410,15 +473,20 @@ class TestConsistency:
         # Create session with coordinator agent
         session = create_session_with_conversation(
             agent_names=["supervisor"],
-            conversation_text="System: Route to worker\nAssistant: {\"next\": \"coder\"}"
+            conversation_text='System: Route to worker\nAssistant: {"next": "coder"}',
         )
 
         # Mock the role detection function to return skip=True
-        with patch('mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision') as mock_role_func:
-            mock_role_func.return_value = (True, {
-                'detected_role': 'coordinator',
-                'skip_reason': 'Agent performs coordination tasks'
-            })
+        with patch(
+            "mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision"
+        ) as mock_role_func:
+            mock_role_func.return_value = (
+                True,
+                {
+                    "detected_role": "coordinator",
+                    "skip_reason": "Agent performs coordination tasks",
+                },
+            )
 
             # Debug: Verify the mock is set up correctly
             print(f"Mock return value: {mock_role_func.return_value}")
@@ -426,30 +494,34 @@ class TestConsistency:
             results = metric._compute_agent_level(session)
 
             # Verify coordinator was skipped - no results should be returned
-            assert len(results) == 0, f"Expected no results for skipped agents, but got: {results}"
+            assert len(results) == 0, (
+                f"Expected no results for skipped agents, but got: {results}"
+            )
 
             # Verify jury was not called (agent was skipped)
             mock_jury.judge.assert_not_called()
 
             # Verify role detection was called with correct parameters
-            mock_role_func.assert_called_once_with(session, "supervisor", filter_coordinators=True)
+            mock_role_func.assert_called_once_with(
+                session, "supervisor", filter_coordinators=True
+            )
 
-    @patch('mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision')
+    @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
     def test_consistency_agent_level_processor_evaluated(self, mock_role_detection):
         """Test that processor agents are evaluated when filtering is enabled."""
         # Setup mock role detection to identify agent as processor
         mock_role_detection.return_value = (
             False,  # should_skip = False
             {
-                'filtering_enabled': True,
-                'detected_role': 'processor',
-                'coordinator_score': 1,
-                'processor_score': 7,
-                'skip_reason': 'Processor agents handle information and should be evaluated',
-                'tool_calls': 2,
-                'coordination_signals': 0,
-                'processing_signals': 4
-            }
+                "filtering_enabled": True,
+                "detected_role": "processor",
+                "coordinator_score": 1,
+                "processor_score": 7,
+                "skip_reason": "Processor agents handle information and should be evaluated",
+                "tool_calls": 2,
+                "coordination_signals": 0,
+                "processing_signals": 4,
+            },
         )
 
         # Setup metric with filtering enabled
@@ -461,14 +533,24 @@ class TestConsistency:
         # Create session with processor agent
         session = create_session_with_conversation(
             agent_names=["coder"],
-            conversation_text="User: Calculate 2+2\nAssistant: The result is 4."
+            conversation_text="User: Calculate 2+2\nAssistant: The result is 4.",
         )
 
         # Execute agent-level computation with mocked agent_stats and methods
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"coder": Mock()})), \
-             patch.object(session, '_get_spans_for_agent', return_value=[create_agent_span()]), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', return_value="User: Calculate 2+2\nAssistant: The result is 4."):
-
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(lambda self: {"coder": Mock()}),
+            ),
+            patch.object(
+                session, "_get_spans_for_agent", return_value=[create_agent_span()]
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                return_value="User: Calculate 2+2\nAssistant: The result is 4.",
+            ),
+        ):
             results = metric._compute_agent_level(session)
 
             # Verify processor was evaluated
@@ -483,18 +565,20 @@ class TestConsistency:
             mock_jury.judge.assert_called_once()
 
             # Verify role detection was called
-            mock_role_detection.assert_called_once_with(session, "coder", filter_coordinators=True)
+            mock_role_detection.assert_called_once_with(
+                session, "coder", filter_coordinators=True
+            )
 
-    @patch('mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision')
+    @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
     def test_consistency_agent_level_filtering_disabled(self, mock_role_detection):
         """Test that all agents are evaluated when filtering is disabled."""
         # Setup mock role detection to indicate filtering is disabled
         mock_role_detection.return_value = (
             False,  # should_skip = False (filtering disabled)
             {
-                'filtering_enabled': False,
-                'skip_reason': 'Coordinator filtering disabled'
-            }
+                "filtering_enabled": False,
+                "skip_reason": "Coordinator filtering disabled",
+            },
         )
 
         # Setup metric with filtering disabled
@@ -506,14 +590,24 @@ class TestConsistency:
         # Create session with coordinator agent (should be evaluated despite role)
         session = create_session_with_conversation(
             agent_names=["supervisor"],
-            conversation_text="System: Route tasks\nAssistant: {\"next\": \"finish\"}"
+            conversation_text='System: Route tasks\nAssistant: {"next": "finish"}',
         )
 
         # Execute agent-level computation with mocked agent_stats and methods
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"supervisor": Mock()})), \
-             patch.object(session, '_get_spans_for_agent', return_value=[create_agent_span()]), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', return_value="System: Route tasks\nAssistant: {\"next\": \"finish\"}"):
-
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(lambda self: {"supervisor": Mock()}),
+            ),
+            patch.object(
+                session, "_get_spans_for_agent", return_value=[create_agent_span()]
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                return_value='System: Route tasks\nAssistant: {"next": "finish"}',
+            ),
+        ):
             results = metric._compute_agent_level(session)
 
             # Verify agent was evaluated despite being coordinator
@@ -526,35 +620,44 @@ class TestConsistency:
             mock_jury.judge.assert_called_once()
 
             # Verify role detection was called with filtering disabled
-            mock_role_detection.assert_called_once_with(session, "supervisor", filter_coordinators=False)
+            mock_role_detection.assert_called_once_with(
+                session, "supervisor", filter_coordinators=False
+            )
 
-    @patch('mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision')
+    @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
     def test_consistency_agent_level_mixed_agents(self, mock_role_detection):
         """Test mixed scenario with both coordinator and processor agents."""
+
         # Setup mock role detection for different agent types
         def mock_role_side_effect(session, agent_name, filter_coordinators):
             if agent_name == "supervisor":
-                return (True, {
-                    'filtering_enabled': True,
-                    'detected_role': 'coordinator',
-                    'coordinator_score': 6,
-                    'processor_score': 1,
-                    'skip_reason': 'Coordinator agents focus on task routing',
-                    'tool_calls': 0,
-                    'coordination_signals': 4,
-                    'processing_signals': 1
-                })
+                return (
+                    True,
+                    {
+                        "filtering_enabled": True,
+                        "detected_role": "coordinator",
+                        "coordinator_score": 6,
+                        "processor_score": 1,
+                        "skip_reason": "Coordinator agents focus on task routing",
+                        "tool_calls": 0,
+                        "coordination_signals": 4,
+                        "processing_signals": 1,
+                    },
+                )
             elif agent_name == "coder":
-                return (False, {
-                    'filtering_enabled': True,
-                    'detected_role': 'processor',
-                    'coordinator_score': 0,
-                    'processor_score': 8,
-                    'skip_reason': 'Processor agents handle information',
-                    'tool_calls': 3,
-                    'coordination_signals': 0,
-                    'processing_signals': 5
-                })
+                return (
+                    False,
+                    {
+                        "filtering_enabled": True,
+                        "detected_role": "processor",
+                        "coordinator_score": 0,
+                        "processor_score": 8,
+                        "skip_reason": "Processor agents handle information",
+                        "tool_calls": 3,
+                        "coordination_signals": 0,
+                        "processing_signals": 5,
+                    },
+                )
 
         mock_role_detection.side_effect = mock_role_side_effect
 
@@ -567,24 +670,47 @@ class TestConsistency:
         # Create session with both agent types
         session = create_session_with_conversation(
             agent_names=["supervisor", "coder"],
-            conversation_text="Mixed agent conversation"
+            conversation_text="Mixed agent conversation",
         )
 
         # Mock role detection for mixed agents
-        def mock_role_detection(session, agent_name, filter_coordinators=True, use_cache=True):
-            if agent_name == 'supervisor':
-                return (True, {'detected_role': 'coordinator', 'skip_reason': 'Agent performs coordination tasks'})
-            elif agent_name == 'coder':
-                return (False, {'detected_role': 'processor', 'skip_reason': None})
+        def mock_role_detection(
+            session, agent_name, filter_coordinators=True, use_cache=True
+        ):
+            if agent_name == "supervisor":
+                return (
+                    True,
+                    {
+                        "detected_role": "coordinator",
+                        "skip_reason": "Agent performs coordination tasks",
+                    },
+                )
+            elif agent_name == "coder":
+                return (False, {"detected_role": "processor", "skip_reason": None})
             else:
-                return (False, {'detected_role': 'unknown', 'skip_reason': None})
+                return (False, {"detected_role": "unknown", "skip_reason": None})
 
         # Execute agent-level computation with mocked agent_stats and methods
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"supervisor": Mock(), "coder": Mock()})), \
-             patch.object(session, '_get_spans_for_agent', return_value=[create_agent_span()]), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', return_value="Agent conversation"), \
-             patch('mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision', side_effect=mock_role_detection):
-
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(
+                    lambda self: {"supervisor": Mock(), "coder": Mock()}
+                ),
+            ),
+            patch.object(
+                session, "_get_spans_for_agent", return_value=[create_agent_span()]
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                return_value="Agent conversation",
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision",
+                side_effect=mock_role_detection,
+            ),
+        ):
             results = metric._compute_agent_level(session)
 
             # Should have 1 result: supervisor skipped (no result), coder evaluated
@@ -597,18 +723,18 @@ class TestConsistency:
             # Jury called once (for coder only)
             mock_jury.judge.assert_called_once()
 
-    @patch('mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision')
+    @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
     def test_consistency_agent_level_role_detection_error(self, mock_role_detection):
         """Test handling when role detection fails."""
         # Setup mock role detection to return analysis failure
         mock_role_detection.return_value = (
             False,  # should_skip = False (conservative)
             {
-                'filtering_enabled': True,
-                'detected_role': 'unknown',
-                'skip_reason': 'Could not analyze agent behavior - evaluating conservatively',
-                'analysis_failed': True
-            }
+                "filtering_enabled": True,
+                "detected_role": "unknown",
+                "skip_reason": "Could not analyze agent behavior - evaluating conservatively",
+                "analysis_failed": True,
+            },
         )
 
         # Setup metric
@@ -621,11 +747,24 @@ class TestConsistency:
         session = create_session_with_conversation(agent_names=["unknown_agent"])
 
         # Execute agent-level computation with mocked agent_stats and methods
-        with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {"unknown_agent": Mock()})), \
-             patch.object(session, '_get_spans_for_agent', return_value=[create_agent_span()]), \
-             patch('mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text', return_value="Some conversation"), \
-             patch('mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision', side_effect=Exception("Role detection error")):
-
+        with (
+            patch.object(
+                type(session),
+                "agent_stats",
+                new_callable=lambda: property(lambda self: {"unknown_agent": Mock()}),
+            ),
+            patch.object(
+                session, "_get_spans_for_agent", return_value=[create_agent_span()]
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.SessionEntity.get_agent_conversation_text",
+                return_value="Some conversation",
+            ),
+            patch(
+                "mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision",
+                side_effect=Exception("Role detection error"),
+            ),
+        ):
             results = metric._compute_agent_level(session)
 
             # Verify error was handled - should get error result

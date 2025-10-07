@@ -2,24 +2,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock
 from datetime import datetime
 
-from mce_metrics_plugin.session.intent_recognition_accuracy import IntentRecognitionAccuracy
-from metrics_computation_engine.models.eval import BinaryGrading
+from mce_metrics_plugin.session.intent_recognition_accuracy import (
+    IntentRecognitionAccuracy,
+)
 
 
 def setup_session_for_agents(session):
     """Ensure session has execution tree for agent_stats to work."""
     from metrics_computation_engine.entities.models.execution_tree import ExecutionTree
-    if not hasattr(session, 'execution_tree') or session.execution_tree is None:
+
+    if not hasattr(session, "execution_tree") or session.execution_tree is None:
         session.execution_tree = ExecutionTree()
     return session
 
 
 def create_mock_session_with_llm_data(session_id="test_session", app_name="test-app"):
     """Helper to create a mock session with LLM data for testing."""
-    from metrics_computation_engine.entities.models.session import SessionEntity, SpanEntity
+    from metrics_computation_engine.entities.models.session import (
+        SessionEntity,
+        SpanEntity,
+    )
 
     # Create a basic span to ensure app_name is available
     basic_span = SpanEntity(
@@ -74,7 +79,12 @@ async def test_compute_with_mock_jury_successful_intent():
 
     # Create mock jury that returns high score
     mock_jury = Mock()
-    mock_jury.judge = Mock(return_value=(1, "The assistant correctly identified the user's intent to get weather information and provided an appropriate response."))
+    mock_jury.judge = Mock(
+        return_value=(
+            1,
+            "The assistant correctly identified the user's intent to get weather information and provided an appropriate response.",
+        )
+    )
     metric.jury = mock_jury
 
     # Create session with test data
@@ -88,7 +98,10 @@ async def test_compute_with_mock_jury_successful_intent():
     # Verify result
     assert result.success is True
     assert result.value == 1
-    assert result.reasoning == "The assistant correctly identified the user's intent to get weather information and provided an appropriate response."
+    assert (
+        result.reasoning
+        == "The assistant correctly identified the user's intent to get weather information and provided an appropriate response."
+    )
     assert mock_jury.judge.called
 
 
@@ -100,7 +113,12 @@ async def test_compute_with_mock_jury_failed_intent():
 
     # Create mock jury that returns low score
     mock_jury = Mock()
-    mock_jury.judge = Mock(return_value=(0, "The assistant failed to identify the user's intent to get weather information and responded with irrelevant information."))
+    mock_jury.judge = Mock(
+        return_value=(
+            0,
+            "The assistant failed to identify the user's intent to get weather information and responded with irrelevant information.",
+        )
+    )
     metric.jury = mock_jury
 
     # Create session with test data
@@ -114,7 +132,10 @@ async def test_compute_with_mock_jury_failed_intent():
     # Verify result
     assert result.success is True
     assert result.value == 0
-    assert result.reasoning == "The assistant failed to identify the user's intent to get weather information and responded with irrelevant information."
+    assert (
+        result.reasoning
+        == "The assistant failed to identify the user's intent to get weather information and responded with irrelevant information."
+    )
     assert mock_jury.judge.called
 
 
@@ -151,6 +172,7 @@ async def test_intent_recognition_accuracy_agent_computation_empty_session():
     metric = IntentRecognitionAccuracy()
 
     from metrics_computation_engine.entities.models.session import SessionEntity
+
     session = SessionEntity(session_id="test_session", spans=[])
 
     context = {"agent_computation": True}
@@ -162,7 +184,10 @@ async def test_intent_recognition_accuracy_agent_computation_empty_session():
 @pytest.mark.asyncio
 async def test_intent_recognition_accuracy_agent_computation_single_agent():
     """Test agent computation with single agent."""
-    from metrics_computation_engine.entities.models.session import SessionEntity, SpanEntity
+    from metrics_computation_engine.entities.models.session import (
+        SessionEntity,
+        SpanEntity,
+    )
 
     # Create spans for a single agent
     spans = [
@@ -179,11 +204,11 @@ async def test_intent_recognition_accuracy_agent_computation_single_agent():
             end_time="1750455423.7407782",
             input_payload={
                 "gen_ai.prompt.0.role": "user",
-                "gen_ai.prompt.0.content": "What's the weather like today?"
+                "gen_ai.prompt.0.content": "What's the weather like today?",
             },
             output_payload={
                 "gen_ai.completion.0.role": "assistant",
-                "gen_ai.completion.0.content": "I'll check the current weather for you. Today it's sunny with a temperature of 22°C."
+                "gen_ai.completion.0.content": "I'll check the current weather for you. Today it's sunny with a temperature of 22°C.",
             },
             contains_error=False,
             raw_span_data={},
@@ -208,16 +233,24 @@ async def test_intent_recognition_accuracy_agent_computation_single_agent():
     result = results[0]
     assert result.success is True
     assert result.value == 1
-    assert result.aggregation_level == "agent"  # Should be "agent" for agent-level computation
+    assert (
+        result.aggregation_level == "agent"
+    )  # Should be "agent" for agent-level computation
     assert result.metadata["agent_id"] == "weather_agent"
     assert result.metadata["agent_input_query"] == "What's the weather like today?"
-    assert result.metadata["agent_final_response"] == "I'll check the current weather for you. Today it's sunny with a temperature of 22°C."
+    assert (
+        result.metadata["agent_final_response"]
+        == "I'll check the current weather for you. Today it's sunny with a temperature of 22°C."
+    )
 
 
 @pytest.mark.asyncio
 async def test_intent_recognition_accuracy_agent_computation_multiple_agents():
     """Test agent computation with multiple agents."""
-    from metrics_computation_engine.entities.models.session import SessionEntity, SpanEntity
+    from metrics_computation_engine.entities.models.session import (
+        SessionEntity,
+        SpanEntity,
+    )
 
     # Create spans for multiple agents
     spans = [
@@ -234,11 +267,11 @@ async def test_intent_recognition_accuracy_agent_computation_multiple_agents():
             end_time="1750455423.7407782",
             input_payload={
                 "gen_ai.prompt.0.role": "user",
-                "gen_ai.prompt.0.content": "What's the weather in Paris?"
+                "gen_ai.prompt.0.content": "What's the weather in Paris?",
             },
             output_payload={
                 "gen_ai.completion.0.role": "assistant",
-                "gen_ai.completion.0.content": "The weather in Paris is cloudy with 18°C."
+                "gen_ai.completion.0.content": "The weather in Paris is cloudy with 18°C.",
             },
             contains_error=False,
             raw_span_data={},
@@ -256,15 +289,15 @@ async def test_intent_recognition_accuracy_agent_computation_multiple_agents():
             end_time="1750455423.7407782",
             input_payload={
                 "gen_ai.prompt.0.role": "user",
-                "gen_ai.prompt.0.content": "Translate 'hello' to French"
+                "gen_ai.prompt.0.content": "Translate 'hello' to French",
             },
             output_payload={
                 "gen_ai.completion.0.role": "assistant",
-                "gen_ai.completion.0.content": "Bonjour"
+                "gen_ai.completion.0.content": "Bonjour",
             },
             contains_error=False,
             raw_span_data={},
-        )
+        ),
     ]
 
     session = SessionEntity(session_id="session1", spans=spans)
@@ -284,17 +317,29 @@ async def test_intent_recognition_accuracy_agent_computation_multiple_agents():
     assert len(results) == 2
 
     # Find results by agent
-    weather_result = next(r for r in results if r.metadata["agent_id"] == "weather_agent")
-    translation_result = next(r for r in results if r.metadata["agent_id"] == "translation_agent")
+    weather_result = next(
+        r for r in results if r.metadata["agent_id"] == "weather_agent"
+    )
+    translation_result = next(
+        r for r in results if r.metadata["agent_id"] == "translation_agent"
+    )
 
     # Verify both results have agent aggregation level
     assert weather_result.aggregation_level == "agent"
     assert translation_result.aggregation_level == "agent"
 
-    assert weather_result.metadata["agent_input_query"] == "What's the weather in Paris?"
-    assert weather_result.metadata["agent_final_response"] == "The weather in Paris is cloudy with 18°C."
+    assert (
+        weather_result.metadata["agent_input_query"] == "What's the weather in Paris?"
+    )
+    assert (
+        weather_result.metadata["agent_final_response"]
+        == "The weather in Paris is cloudy with 18°C."
+    )
 
-    assert translation_result.metadata["agent_input_query"] == "Translate 'hello' to French"
+    assert (
+        translation_result.metadata["agent_input_query"]
+        == "Translate 'hello' to French"
+    )
     assert translation_result.metadata["agent_final_response"] == "Bonjour"
 
 
@@ -308,7 +353,9 @@ async def test_intent_recognition_accuracy_session_level_computation():
     # Create metric with mock jury
     metric = IntentRecognitionAccuracy()
     mock_jury = Mock()
-    mock_jury.judge = Mock(return_value=(1, "Session-level intent recognition successful"))
+    mock_jury.judge = Mock(
+        return_value=(1, "Session-level intent recognition successful")
+    )
     metric.jury = mock_jury
 
     # Test session-level computation (no context)

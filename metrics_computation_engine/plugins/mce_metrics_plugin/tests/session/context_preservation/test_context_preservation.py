@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 
 from metrics_computation_engine.entities.models.span import SpanEntity
-from metrics_computation_engine.entities.core.session_aggregator import SessionAggregator
+from metrics_computation_engine.entities.core.session_aggregator import (
+    SessionAggregator,
+)
 from metrics_computation_engine.models.eval import BinaryGrading
 
 # Import the ContextPreservation metric directly from the plugin system
@@ -29,7 +31,7 @@ def create_agent_span(
     entity_name: str = "test_agent",
     agent_id: str = None,
     input_content: str = "test input",
-    output_content: str = "test output"
+    output_content: str = "test output",
 ):
     """Create an agent span for testing."""
     # Add raw_span_data with agent information to help with agent identification
@@ -56,7 +58,7 @@ def create_agent_span(
 def create_session_with_conversation(
     session_id="test_session",
     conversation_text="User: Hello\nAssistant: Hi there!",
-    agent_names=None
+    agent_names=None,
 ):
     """Helper to set up a session with conversation data and optional agents."""
     if agent_names is None:
@@ -65,22 +67,24 @@ def create_session_with_conversation(
     spans = []
     for i, agent_name in enumerate(agent_names):
         span = create_agent_span(
-            span_id=f"span_{i+1}",
+            span_id=f"span_{i + 1}",
             session_id=session_id,
             entity_name=agent_name,
             agent_id=agent_name,
             input_content=f"Input for {agent_name}",
-            output_content=f"Output from {agent_name}"
+            output_content=f"Output from {agent_name}",
         )
         spans.append(span)
 
     # Create SessionEntity directly like in LLM uncertainty tests
     from metrics_computation_engine.entities.models.session import SessionEntity
+
     session = SessionEntity(session_id=session_id, spans=spans)
 
     # Ensure session has execution tree for agent_stats to work
     from metrics_computation_engine.entities.models.execution_tree import ExecutionTree
-    if not hasattr(session, 'execution_tree') or session.execution_tree is None:
+
+    if not hasattr(session, "execution_tree") or session.execution_tree is None:
         session.execution_tree = ExecutionTree()
 
     # Mock conversation data
@@ -109,7 +113,10 @@ async def test_context_preservation_session_level_success():
 
     # Mock the jury to return a successful judgment
     mock_jury = Mock()
-    mock_jury.judge.return_value = (1.0, "The response is highly relevant and well-structured.")
+    mock_jury.judge.return_value = (
+        1.0,
+        "The response is highly relevant and well-structured.",
+    )
     metric.jury = mock_jury
 
     # Create session with conversation data
@@ -125,7 +132,9 @@ async def test_context_preservation_session_level_success():
     assert result.value == 1.0
     assert result.reasoning == "The response is highly relevant and well-structured."
     assert result.description == metric.description
-    assert result.app_name == "unknown-app"  # Default when session has no clear app name
+    assert (
+        result.app_name == "unknown-app"
+    )  # Default when session has no clear app name
     assert len(result.session_id) == 1
     assert result.session_id[0] == "test_session"
 
@@ -178,20 +187,22 @@ async def test_context_preservation_agent_computation():
     mock_jury = Mock()
     mock_jury.judge.side_effect = [
         (1.0, "Agent 1 response is excellent."),
-        (0.0, "Agent 2 response is poor.")
+        (0.0, "Agent 2 response is poor."),
     ]
     metric.jury = mock_jury
 
     # Create session with multiple agents
-    session = create_session_with_conversation(
-        agent_names=["agent1", "agent2"]
-    )
+    session = create_session_with_conversation(agent_names=["agent1", "agent2"])
 
     # Mock agent conversation data using proper mocking technique
-    with patch('mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text') as mock_get_conversation:
+    with patch(
+        "mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text"
+    ) as mock_get_conversation:
         mock_get_conversation.side_effect = lambda agent: f"Conversation for {agent}"
 
-        with patch('mce_metrics_plugin.session.context_preservation.SessionEntity._get_spans_for_agent') as mock_get_spans:
+        with patch(
+            "mce_metrics_plugin.session.context_preservation.SessionEntity._get_spans_for_agent"
+        ) as mock_get_spans:
             mock_get_spans.side_effect = lambda agent: [
                 create_agent_span(f"span_{agent}", agent_id=agent, entity_name=agent)
             ]
@@ -228,7 +239,9 @@ async def test_context_preservation_agent_no_conversation_data():
     session = create_session_with_conversation(agent_names=["agent1"])
 
     # Mock no conversation data for agent
-    with patch('mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text') as mock_get_conversation:
+    with patch(
+        "mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text"
+    ) as mock_get_conversation:
         mock_get_conversation.return_value = ""  # Empty conversation
 
         results = await metric.compute(session, agent_computation=True)
@@ -245,10 +258,14 @@ async def test_context_preservation_agent_no_model():
 
     session = create_session_with_conversation(agent_names=["agent1"])
 
-    with patch('mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text') as mock_get_conversation:
+    with patch(
+        "mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text"
+    ) as mock_get_conversation:
         mock_get_conversation.return_value = "Some conversation"
 
-        with patch('mce_metrics_plugin.session.context_preservation.SessionEntity._get_spans_for_agent') as mock_get_spans:
+        with patch(
+            "mce_metrics_plugin.session.context_preservation.SessionEntity._get_spans_for_agent"
+        ) as mock_get_spans:
             mock_get_spans.return_value = [
                 create_agent_span("span_1", agent_id="agent1", entity_name="agent1")
             ]
@@ -276,7 +293,9 @@ async def test_context_preservation_empty_session():
     session = create_session_with_conversation(agent_names=["dummy"])
 
     # Mock the agent_stats property to return empty dict
-    with patch.object(type(session), 'agent_stats', new_callable=lambda: property(lambda self: {})):
+    with patch.object(
+        type(session), "agent_stats", new_callable=lambda: property(lambda self: {})
+    ):
         results = await metric.compute(session, agent_computation=True)
 
     assert isinstance(results, list)
@@ -293,7 +312,9 @@ async def test_context_preservation_agent_exception_handling():
     session = create_session_with_conversation(agent_names=["agent1"])
 
     # Mock conversation method to raise exception
-    with patch('mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text') as mock_get_conversation:
+    with patch(
+        "mce_metrics_plugin.session.context_preservation.SessionEntity.get_agent_conversation_text"
+    ) as mock_get_conversation:
         mock_get_conversation.side_effect = Exception("Test error")
 
         results = await metric.compute(session, agent_computation=True)
@@ -303,7 +324,9 @@ async def test_context_preservation_agent_exception_handling():
 
     result = results[0]
     assert result.success is False
-    assert "Error computing context preservation for agent agent1" in result.error_message
+    assert (
+        "Error computing context preservation for agent agent1" in result.error_message
+    )
     assert "Test error" in result.error_message
     assert result.metadata["agent_id"] == "agent1"
     assert result.description == metric.description
@@ -383,13 +406,13 @@ async def test_context_preservation_model_initialization():
     assert metric.jury == mock_model
 
     # Test get_model_provider (inherits from base)
-    with patch.object(metric, 'get_default_provider') as mock_provider:
+    with patch.object(metric, "get_default_provider") as mock_provider:
         mock_provider.return_value = "openai"
         provider = metric.get_model_provider()
         assert provider == "openai"
 
     # Test create_model (inherits from base)
-    with patch.object(metric, 'create_native_model') as mock_create:
+    with patch.object(metric, "create_native_model") as mock_create:
         mock_create.return_value = mock_model
         llm_config = {"model": "gpt-4"}
         model = metric.create_model(llm_config)

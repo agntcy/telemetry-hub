@@ -38,7 +38,9 @@ class IntentRecognitionAccuracy(BaseMetric):
             metric_name = self.__class__.__name__
         self.name = metric_name
         self.aggregation_level = "session"
-        self.description = "Measures how well the assistant recognizes and responds to user intents."
+        self.description = (
+            "Measures how well the assistant recognizes and responds to user intents."
+        )
 
     @property
     def required_parameters(self) -> List[str]:
@@ -70,8 +72,10 @@ class IntentRecognitionAccuracy(BaseMetric):
             context: Optional context containing agent computation flag
         """
         # Extract nested context if present
-        actual_context = context.get('context', context) if context else {}
-        is_agent_computation = actual_context.get("agent_computation", False) if actual_context else False
+        actual_context = context.get("context", context) if context else {}
+        is_agent_computation = (
+            actual_context.get("agent_computation", False) if actual_context else False
+        )
 
         # Check if this is agent-level computation
         if is_agent_computation:
@@ -126,7 +130,6 @@ class IntentRecognitionAccuracy(BaseMetric):
 
     async def _compute_agent_level(self, session: SessionEntity):
         """Compute intent recognition accuracy for each agent in the session."""
-        from metrics_computation_engine.entities.models.session import AgentView
 
         # Temporarily override aggregation level for agent computation
         original_level = self.aggregation_level
@@ -136,7 +139,7 @@ class IntentRecognitionAccuracy(BaseMetric):
 
         try:
             # Check if session has agent_stats property
-            if not hasattr(session, 'agent_stats'):
+            if not hasattr(session, "agent_stats"):
                 # Session doesn't have agent_stats - return empty list
                 return []
 
@@ -165,15 +168,17 @@ class IntentRecognitionAccuracy(BaseMetric):
                         app_name=session.app_name,
                         entities_involved=entities_involved,
                         span_ids=agent_span_ids,
-                        session_ids=[session.session_id]
+                        session_ids=[session.session_id],
                     )
                     # Add metadata to the result after creation
-                    result.metadata.update({
-                        "metric_type": "llm-as-a-judge",
-                        "agent_id": agent_name,
-                        "agent_input_query": agent_input_query,
-                        "agent_final_response": agent_final_response
-                    })
+                    result.metadata.update(
+                        {
+                            "metric_type": "llm-as-a-judge",
+                            "agent_id": agent_name,
+                            "agent_input_query": agent_input_query,
+                            "agent_final_response": agent_final_response,
+                        }
+                    )
                     results.append(result)
                     continue
 
@@ -184,7 +189,7 @@ class IntentRecognitionAccuracy(BaseMetric):
                 prompt = INTENT_RECOGNITION_ACCURACY_PROMPT.format(
                     query=agent_input_query,
                     response=agent_final_response,
-                    ground_truth=ground_truth
+                    ground_truth=ground_truth,
                 )
 
                 entities_involved = [agent_name]
@@ -202,12 +207,14 @@ class IntentRecognitionAccuracy(BaseMetric):
                         session_ids=[session.session_id],
                     )
                     # Add agent-specific metadata
-                    result.metadata.update({
-                        "metric_type": "llm-as-a-judge",
-                        "agent_id": agent_name,
-                        "agent_input_query": agent_input_query,
-                        "agent_final_response": agent_final_response
-                    })
+                    result.metadata.update(
+                        {
+                            "metric_type": "llm-as-a-judge",
+                            "agent_id": agent_name,
+                            "agent_input_query": agent_input_query,
+                            "agent_final_response": agent_final_response,
+                        }
+                    )
                 else:
                     result = self._create_error_result(
                         error_message="No model available",
@@ -218,12 +225,14 @@ class IntentRecognitionAccuracy(BaseMetric):
                         session_ids=[session.session_id],
                     )
                     # Add metadata to the result after creation
-                    result.metadata.update({
-                        "metric_type": "llm-as-a-judge",
-                        "agent_id": agent_name,
-                        "agent_input_query": agent_input_query,
-                        "agent_final_response": agent_final_response
-                    })
+                    result.metadata.update(
+                        {
+                            "metric_type": "llm-as-a-judge",
+                            "agent_id": agent_name,
+                            "agent_input_query": agent_input_query,
+                            "agent_final_response": agent_final_response,
+                        }
+                    )
 
                 results.append(result)
 

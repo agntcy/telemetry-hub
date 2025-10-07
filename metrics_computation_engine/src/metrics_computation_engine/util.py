@@ -389,11 +389,13 @@ def get_all_available_metrics():
     for adapter_name, adapter_class in adapters.items():
         # Add the adapter info with correct usage examples
         usage_examples = {
-            'opik': 'opik.Hallucination',
-            'deepeval': 'deepeval.AnswerRelevancyMetric',
-            'ragas': 'ragas.ContextPrecision'
+            "opik": "opik.Hallucination",
+            "deepeval": "deepeval.AnswerRelevancyMetric",
+            "ragas": "ragas.ContextPrecision",
         }
-        example_usage = usage_examples.get(adapter_name.lower(), f'{adapter_name}.MetricName')
+        example_usage = usage_examples.get(
+            adapter_name.lower(), f"{adapter_name}.MetricName"
+        )
 
         metrics[f"{adapter_name}_adapter"] = {
             "name": f"{adapter_name}_adapter",
@@ -406,10 +408,13 @@ def get_all_available_metrics():
 
         # Try to enumerate specific metrics provided by this adapter
         try:
-            if adapter_name.lower() == 'opik':
+            if adapter_name.lower() == "opik":
                 # Special handling for Opik adapter
                 try:
-                    from mce_opik_adapter.metric_configuration import build_metric_configuration_map
+                    from mce_opik_adapter.metric_configuration import (
+                        build_metric_configuration_map,
+                    )
+
                     config_map = build_metric_configuration_map()
                     for metric_name, config in config_map.items():
                         full_metric_name = f"opik.{metric_name}"
@@ -426,15 +431,20 @@ def get_all_available_metrics():
                             "entity_types": config.requirements.entity_type,
                         }
                 except ImportError:
-                    logger.warning(f"Could not import Opik adapter configuration")
+                    logger.warning("Could not import Opik adapter configuration")
                 except Exception as opik_error:
                     logger.error(f"Error enumerating Opik metrics: {opik_error}")
-            elif adapter_name.lower() == 'deepeval':
+            elif adapter_name.lower() == "deepeval":
                 # Add common DeepEval metrics
                 common_deepeval_metrics = [
-                    "AnswerRelevancyMetric", "FaithfulnessMetric", "ContextualPrecisionMetric",
-                    "ContextualRecallMetric", "ContextualRelevancyMetric", "HallucinationMetric",
-                    "BiasMetric", "ToxicityMetric"
+                    "AnswerRelevancyMetric",
+                    "FaithfulnessMetric",
+                    "ContextualPrecisionMetric",
+                    "ContextualRecallMetric",
+                    "ContextualRelevancyMetric",
+                    "HallucinationMetric",
+                    "BiasMetric",
+                    "ToxicityMetric",
                 ]
                 for metric_name in common_deepeval_metrics:
                     full_metric_name = f"deepeval.{metric_name}"
@@ -448,11 +458,15 @@ def get_all_available_metrics():
                         "source": "adapter_metric",
                         "adapter_name": adapter_name,
                     }
-            elif adapter_name.lower() == 'ragas':
+            elif adapter_name.lower() == "ragas":
                 # Add common RAGAS metrics
                 common_ragas_metrics = [
-                    "ContextPrecision", "ContextRecall", "Faithfulness", "AnswerRelevancy",
-                    "AnswerSimilarity", "AnswerCorrectness"
+                    "ContextPrecision",
+                    "ContextRecall",
+                    "Faithfulness",
+                    "AnswerRelevancy",
+                    "AnswerSimilarity",
+                    "AnswerCorrectness",
                 ]
                 for metric_name in common_ragas_metrics:
                     full_metric_name = f"ragas.{metric_name}"

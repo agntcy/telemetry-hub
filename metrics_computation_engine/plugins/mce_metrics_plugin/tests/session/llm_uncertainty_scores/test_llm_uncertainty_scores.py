@@ -6,15 +6,15 @@ from unittest.mock import patch
 import math
 
 from metrics_computation_engine.entities.models.span import SpanEntity
-from metrics_computation_engine.entities.core.session_aggregator import SessionAggregator
+from metrics_computation_engine.entities.core.session_aggregator import (
+    SessionAggregator,
+)
 
 # Import the LLM uncertainty metrics directly from the plugin system
 from mce_metrics_plugin.session.llm_uncertainty_scores import (
     LLMAverageConfidence,
     LLMMaximumConfidence,
     LLMMinimumConfidence,
-    LogProbsModel,
-    TokenModel,
 )
 
 
@@ -34,7 +34,7 @@ def create_span_with_logprobs(
     session_id: str = "test_session",
     entity_name: str = "test_agent",
     agent_id: str = None,
-    logprobs_data: list = None
+    logprobs_data: list = None,
 ):
     """Create a span with logprobs data for testing."""
     if logprobs_data is None:
@@ -44,28 +44,34 @@ def create_span_with_logprobs(
                 "logprob": -0.1,
                 "bytes": [72, 101, 108, 108, 111],
                 "top_logprobs": [
-                    {"token": "Hello", "logprob": -0.1, "bytes": [72, 101, 108, 108, 111]},
-                    {"token": "Hi", "logprob": -1.5, "bytes": [72, 105]}
-                ]
+                    {
+                        "token": "Hello",
+                        "logprob": -0.1,
+                        "bytes": [72, 101, 108, 108, 111],
+                    },
+                    {"token": "Hi", "logprob": -1.5, "bytes": [72, 105]},
+                ],
             },
             {
                 "token": " world",
                 "logprob": -0.3,
                 "bytes": [32, 119, 111, 114, 108, 100],
                 "top_logprobs": [
-                    {"token": " world", "logprob": -0.3, "bytes": [32, 119, 111, 114, 108, 100]},
-                    {"token": " there", "logprob": -2.1, "bytes": [32, 116, 104, 101, 114, 101]}
-                ]
-            }
+                    {
+                        "token": " world",
+                        "logprob": -0.3,
+                        "bytes": [32, 119, 111, 114, 108, 100],
+                    },
+                    {
+                        "token": " there",
+                        "logprob": -2.1,
+                        "bytes": [32, 116, 104, 101, 114, 101],
+                    },
+                ],
+            },
         ]
 
-    output_payload = {
-        "choices": [{
-            "logprobs": {
-                "content": logprobs_data
-            }
-        }]
-    }
+    output_payload = {"choices": [{"logprobs": {"content": logprobs_data}}]}
 
     # Add raw_span_data with agent information to help with agent identification
     raw_span_data = {"SpanAttributes": {"agent_id": agent_id}} if agent_id else {}
@@ -94,29 +100,35 @@ def setup_session_for_agents(agent_names, session_id="test_session"):
 
     for i, agent_name in enumerate(agent_names):
         span = create_span_with_logprobs(
-            span_id=f"span_{i+1}",
+            span_id=f"span_{i + 1}",
             session_id=session_id,
             entity_name=agent_name,
             agent_id=agent_name,  # Pass agent_id for proper agent identification
             logprobs_data=[
                 {
-                    "token": f"Agent{i+1}",
-                    "logprob": -(i+1) * 0.2,  # Different confidence for each agent
+                    "token": f"Agent{i + 1}",
+                    "logprob": -(i + 1) * 0.2,  # Different confidence for each agent
                     "bytes": [65, 103, 101, 110, 116],
                     "top_logprobs": [
-                        {"token": f"Agent{i+1}", "logprob": -(i+1) * 0.2, "bytes": [65, 103, 101, 110, 116]}
-                    ]
+                        {
+                            "token": f"Agent{i + 1}",
+                            "logprob": -(i + 1) * 0.2,
+                            "bytes": [65, 103, 101, 110, 116],
+                        }
+                    ],
                 }
-            ]
+            ],
         )
         spans.append(span)
 
     from metrics_computation_engine.entities.models.session import SessionEntity
+
     session = SessionEntity(session_id=session_id, spans=spans)
 
     # Ensure session has execution tree for agent_stats to work
     from metrics_computation_engine.entities.models.execution_tree import ExecutionTree
-    if not hasattr(session, 'execution_tree') or session.execution_tree is None:
+
+    if not hasattr(session, "execution_tree") or session.execution_tree is None:
         session.execution_tree = ExecutionTree()
 
     return session
@@ -129,10 +141,13 @@ async def test_average_confidence_session_level_computation():
 
     # Create a session with logprobs
     spans = [
-        create_span_with_logprobs("span1", logprobs_data=[
-            {"token": "Hello", "logprob": -0.1, "bytes": [72], "top_logprobs": []},
-            {"token": "world", "logprob": -0.3, "bytes": [119], "top_logprobs": []}
-        ])
+        create_span_with_logprobs(
+            "span1",
+            logprobs_data=[
+                {"token": "Hello", "logprob": -0.1, "bytes": [72], "top_logprobs": []},
+                {"token": "world", "logprob": -0.3, "bytes": [119], "top_logprobs": []},
+            ],
+        )
     ]
     session = create_session_from_spans(spans)
 
@@ -153,10 +168,13 @@ async def test_minimum_confidence_session_level_computation():
     metric = LLMMinimumConfidence()
 
     spans = [
-        create_span_with_logprobs("span1", logprobs_data=[
-            {"token": "Hello", "logprob": -0.1, "bytes": [72], "top_logprobs": []},
-            {"token": "world", "logprob": -0.5, "bytes": [119], "top_logprobs": []}
-        ])
+        create_span_with_logprobs(
+            "span1",
+            logprobs_data=[
+                {"token": "Hello", "logprob": -0.1, "bytes": [72], "top_logprobs": []},
+                {"token": "world", "logprob": -0.5, "bytes": [119], "top_logprobs": []},
+            ],
+        )
     ]
     session = create_session_from_spans(spans)
 
@@ -176,10 +194,13 @@ async def test_maximum_confidence_session_level_computation():
     metric = LLMMaximumConfidence()
 
     spans = [
-        create_span_with_logprobs("span1", logprobs_data=[
-            {"token": "Hello", "logprob": -0.1, "bytes": [72], "top_logprobs": []},
-            {"token": "world", "logprob": -0.5, "bytes": [119], "top_logprobs": []}
-        ])
+        create_span_with_logprobs(
+            "span1",
+            logprobs_data=[
+                {"token": "Hello", "logprob": -0.1, "bytes": [72], "top_logprobs": []},
+                {"token": "world", "logprob": -0.5, "bytes": [119], "top_logprobs": []},
+            ],
+        )
     ]
     session = create_session_from_spans(spans)
 
@@ -317,7 +338,10 @@ async def test_agent_level_computation_agent_without_spans():
             self.all_spans = []  # No spans
 
     # Patch the method on the session class instead of instance
-    with patch('metrics_computation_engine.entities.models.session.SessionEntity.get_agent_view', return_value=MockAgentView()):
+    with patch(
+        "metrics_computation_engine.entities.models.session.SessionEntity.get_agent_view",
+        return_value=MockAgentView(),
+    ):
         context = {"agent_computation": True}
         results = await metric.compute(session, context=context)
 
@@ -353,9 +377,9 @@ async def test_description_properties():
     min_metric = LLMMinimumConfidence()
     max_metric = LLMMaximumConfidence()
 
-    assert hasattr(average_metric, 'description')
-    assert hasattr(min_metric, 'description')
-    assert hasattr(max_metric, 'description')
+    assert hasattr(average_metric, "description")
+    assert hasattr(min_metric, "description")
+    assert hasattr(max_metric, "description")
 
     assert "average confidence" in average_metric.description.lower()
     assert "minimum confidence" in min_metric.description.lower()

@@ -11,9 +11,10 @@ from metrics_computation_engine.models.eval import MetricResult
 
 def setup_session(session):
     """Ensure session has execution tree for agent_stats to work."""
-    if not hasattr(session, 'execution_tree') or session.execution_tree is None:
+    if not hasattr(session, "execution_tree") or session.execution_tree is None:
         session.execution_tree = ExecutionTree()
     return session
+
 
 def make_dummy_span(entity_type, contains_error, span_id):
     return SpanEntity(
@@ -88,7 +89,7 @@ def make_agent_span(entity_type, entity_name, contains_error, span_id, agent_id)
         start_time="1234567890.0",
         end_time="1234567891.0",
         raw_span_data={},
-        attrs={"agent_id": agent_id} if agent_id else {}
+        attrs={"agent_id": agent_id} if agent_id else {},
     )
 
 
@@ -148,7 +149,6 @@ async def test_tool_error_rate_agent_computation_multiple_agents():
         make_agent_span("agent", "search_agent", False, "agent1", "search_agent"),
         make_agent_span("tool", "web_search", False, "tool1", "search_agent"),
         make_agent_span("tool", "api_call", True, "tool2", "search_agent"),
-
         # Agent 2: analysis_agent (3 tools, 0 errors = 0% error rate)
         make_agent_span("agent", "analysis_agent", False, "agent2", "analysis_agent"),
         make_agent_span("tool", "data_processor", False, "tool3", "analysis_agent"),
@@ -191,7 +191,9 @@ async def test_tool_error_rate_agent_computation_no_tools():
 
     # Create spans for agents with no tool calls
     spans = [
-        make_agent_span("agent", "coordinator_agent", False, "agent1", "coordinator_agent"),
+        make_agent_span(
+            "agent", "coordinator_agent", False, "agent1", "coordinator_agent"
+        ),
         make_agent_span("llm", "gpt-4", False, "llm1", "coordinator_agent"),
     ]
 
@@ -340,10 +342,10 @@ async def test_tool_error_rate_session_with_tool_errors():
     # Session with mix of successful and failed tools
     spans = [
         make_dummy_span("tool", False, "tool1"),  # success
-        make_dummy_span("tool", True, "tool2"),   # error
+        make_dummy_span("tool", True, "tool2"),  # error
         make_dummy_span("tool", False, "tool3"),  # success
-        make_dummy_span("tool", True, "tool4"),   # error
-        make_dummy_span("llm", False, "llm1"),    # LLM (should be ignored)
+        make_dummy_span("tool", True, "tool4"),  # error
+        make_dummy_span("llm", False, "llm1"),  # LLM (should be ignored)
     ]
 
     session_entity = SessionEntity(session_id="session_with_errors", spans=spans)

@@ -159,7 +159,8 @@ def make_agent_span(entity_type, entity_name, contains_error, span_id, agent_id)
 def setup_session(session):
     """Ensure session has execution tree for agent_stats to work."""
     from metrics_computation_engine.entities.models.execution_tree import ExecutionTree
-    if not hasattr(session, 'execution_tree') or session.execution_tree is None:
+
+    if not hasattr(session, "execution_tree") or session.execution_tree is None:
         session.execution_tree = ExecutionTree()
     return session
 
@@ -220,7 +221,6 @@ async def test_cycles_count_agent_computation_multiple_agents():
         make_agent_span("tool", "web_search", False, "tool1", "search_agent"),
         make_agent_span("agent", "search_agent", False, "agent2", "search_agent"),
         make_agent_span("tool", "web_search", False, "tool2", "search_agent"),
-
         # Agent 2 with no cycles
         make_agent_span("agent", "data_agent", False, "agent3", "data_agent"),
         make_agent_span("tool", "data_fetch", False, "tool3", "data_agent"),
@@ -236,8 +236,12 @@ async def test_cycles_count_agent_computation_multiple_agents():
     assert len(results) == 2
 
     # Find results by agent_id
-    search_agent_result = next((r for r in results if r.metadata["agent_id"] == "search_agent"), None)
-    data_agent_result = next((r for r in results if r.metadata["agent_id"] == "data_agent"), None)
+    search_agent_result = next(
+        (r for r in results if r.metadata["agent_id"] == "search_agent"), None
+    )
+    data_agent_result = next(
+        (r for r in results if r.metadata["agent_id"] == "data_agent"), None
+    )
 
     assert search_agent_result is not None
     assert data_agent_result is not None

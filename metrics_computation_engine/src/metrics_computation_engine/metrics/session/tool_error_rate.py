@@ -39,10 +39,14 @@ class ToolErrorRate(BaseMetric):
         """Indicates that this metric supports agent-level computation."""
         return True
 
-    async def compute(self, session: SessionEntity, **context) -> Union[MetricResult, List[MetricResult]]:
+    async def compute(
+        self, session: SessionEntity, **context
+    ) -> Union[MetricResult, List[MetricResult]]:
         # Extract nested context if present
-        actual_context = context.get('context', context)
-        is_agent_computation = actual_context.get("agent_computation", False) if actual_context else False
+        actual_context = context.get("context", context)
+        is_agent_computation = (
+            actual_context.get("agent_computation", False) if actual_context else False
+        )
 
         # Check if this is agent-level computation
         if is_agent_computation:
@@ -67,7 +71,7 @@ class ToolErrorRate(BaseMetric):
                 app_name=session.app_name,
                 reasoning="",
                 span_ids=error_span_ids,
-                session_ids=[session.session_id]
+                session_ids=[session.session_id],
             )
 
             # Override specific fields for tool error rate
@@ -84,13 +88,18 @@ class ToolErrorRate(BaseMetric):
         except Exception as e:
             print(f"DEBUG: Exception in session-level computation: {e}")
             import traceback
+
             traceback.print_exc()
 
             result = self._create_error_result(
                 category="application",
-                app_name=session.app_name if hasattr(session, "app_name") else "unknown",
+                app_name=session.app_name
+                if hasattr(session, "app_name")
+                else "unknown",
                 error_message=str(e),
-                session_ids=[session.session_id] if hasattr(session, "session_id") else []
+                session_ids=[session.session_id]
+                if hasattr(session, "session_id")
+                else [],
             )
 
             # Override specific fields for tool error rate
@@ -112,7 +121,7 @@ class ToolErrorRate(BaseMetric):
 
         try:
             # Check if session has agent_stats property
-            if not hasattr(session, 'agent_stats'):
+            if not hasattr(session, "agent_stats"):
                 # Session doesn't have agent_stats - return empty list
                 return []
 
@@ -130,7 +139,9 @@ class ToolErrorRate(BaseMetric):
                 agent_tool_calls = agent_view.total_tool_calls
                 agent_tool_errors = agent_view.total_tool_errors
                 agent_error_rate = agent_view.tool_error_rate
-                agent_error_span_ids = [span.span_id for span in agent_view.error_tool_spans]
+                agent_error_span_ids = [
+                    span.span_id for span in agent_view.error_tool_spans
+                ]
 
                 # Create individual result for this agent
                 result = self._create_success_result(
@@ -139,7 +150,7 @@ class ToolErrorRate(BaseMetric):
                     app_name=session.app_name,
                     reasoning=f"Tool error rate for agent '{agent_name}': {agent_tool_errors} errors out of {agent_tool_calls} tool calls",
                     span_ids=agent_error_span_ids,
-                    session_ids=[session.session_id]
+                    session_ids=[session.session_id],
                 )
 
                 # Set agent-specific fields
@@ -150,7 +161,7 @@ class ToolErrorRate(BaseMetric):
                     "agent_tool_calls": agent_tool_calls,
                     "agent_tool_errors": agent_tool_errors,
                     "agent_error_span_ids": agent_error_span_ids,
-                    "agent_tool_names": agent_view.unique_tool_names
+                    "agent_tool_names": agent_view.unique_tool_names,
                 }
 
                 results.append(result)

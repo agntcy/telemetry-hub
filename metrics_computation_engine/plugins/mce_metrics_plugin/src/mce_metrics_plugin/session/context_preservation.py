@@ -23,7 +23,6 @@ CONTEXT_PRESERVATION_PROMPT = """
 
 
 class ContextPreservation(BaseMetric):
-
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()
         if metric_name is None:
@@ -53,7 +52,9 @@ class ContextPreservation(BaseMetric):
     def create_model(self, llm_config):
         return self.create_native_model(llm_config)
 
-    async def compute(self, session: SessionEntity, **context) -> Union[MetricResult, List[MetricResult]]:
+    async def compute(
+        self, session: SessionEntity, **context
+    ) -> Union[MetricResult, List[MetricResult]]:
         # Check if this is agent computation
         if context.get("agent_computation", False):
             return self._compute_agent_level(session)
@@ -133,7 +134,9 @@ class ContextPreservation(BaseMetric):
                     continue
 
                 # Use the same prompt format as session-level
-                prompt = CONTEXT_PRESERVATION_PROMPT.format(conversation=agent_conversation)
+                prompt = CONTEXT_PRESERVATION_PROMPT.format(
+                    conversation=agent_conversation
+                )
 
                 # Get agent-specific spans for metadata (reuses existing span collection)
                 agent_spans = session._get_spans_for_agent(agent_name)
@@ -164,7 +167,7 @@ class ContextPreservation(BaseMetric):
                 # Ensure agent-level metadata
                 result.description = self.description
                 result.aggregation_level = "agent"
-                if not hasattr(result, 'metadata') or result.metadata is None:
+                if not hasattr(result, "metadata") or result.metadata is None:
                     result.metadata = {}
                 result.metadata["agent_id"] = agent_name
                 result.metadata["metric_type"] = "llm-as-a-judge"
@@ -184,7 +187,7 @@ class ContextPreservation(BaseMetric):
                 # Ensure agent-level metadata for error results too
                 result.description = self.description
                 result.aggregation_level = "agent"
-                if not hasattr(result, 'metadata') or result.metadata is None:
+                if not hasattr(result, "metadata") or result.metadata is None:
                     result.metadata = {}
                 result.metadata["agent_id"] = agent_name
                 result.metadata["metric_type"] = "llm-as-a-judge"

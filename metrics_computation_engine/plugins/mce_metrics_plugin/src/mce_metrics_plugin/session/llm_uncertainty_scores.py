@@ -47,8 +47,10 @@ class LLMUncertaintyScoresBase(BaseMetric):
 
     async def compute(self, session: SessionEntity, **context):
         # Extract nested context if present
-        actual_context = context.get('context', context)
-        is_agent_computation = actual_context.get("agent_computation", False) if actual_context else False
+        actual_context = context.get("context", context)
+        is_agent_computation = (
+            actual_context.get("agent_computation", False) if actual_context else False
+        )
 
         # Check if this is agent-level computation
         if is_agent_computation:
@@ -109,7 +111,7 @@ class LLMUncertaintyScoresBase(BaseMetric):
 
         try:
             # Check if session has agent_stats property
-            if not hasattr(session, 'agent_stats'):
+            if not hasattr(session, "agent_stats"):
                 # Session doesn't have agent_stats - return empty list
                 self.aggregation_level = original_level
                 return []
@@ -160,7 +162,9 @@ class LLMUncertaintyScoresBase(BaseMetric):
 
                 if log_probs:
                     try:
-                        value = self.compute_uncertainty_score(log_probs_mapping=log_probs)
+                        value = self.compute_uncertainty_score(
+                            log_probs_mapping=log_probs
+                        )
                         success = True
                         error_message = None
                     except Exception as e:
@@ -192,7 +196,11 @@ class LLMUncertaintyScoresBase(BaseMetric):
                     success=success,
                     metadata={
                         "agent_id": agent_name,
-                        "logprobs": {k: [x.model_dump() for x in v] for k, v in log_probs.items()} if log_probs else {}
+                        "logprobs": {
+                            k: [x.model_dump() for x in v] for k, v in log_probs.items()
+                        }
+                        if log_probs
+                        else {},
                     },
                     error_message=error_message,
                 )

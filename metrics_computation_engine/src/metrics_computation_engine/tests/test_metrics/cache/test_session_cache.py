@@ -19,20 +19,41 @@ class SessionCacheTestMetric(BaseMetric):
         self.aggregation_level = "session"
 
     # Required abstract method implementations
-    async def compute(self, session: SessionEntity, context: Optional[Dict[str, Any]] = None):
+    async def compute(
+        self, session: SessionEntity, context: Optional[Dict[str, Any]] = None
+    ):
         return MetricResult(
-            metric_name=self.name, value=0.75, aggregation_level="session",
-            category="application", app_name="test", description="test",
-            unit="test", reasoning="test", span_id="", session_id=[session.session_id],
-            source="test", entities_involved=[], edges_involved=[], success=True,
-            metadata={"session_id": session.session_id}
+            metric_name=self.name,
+            value=0.75,
+            aggregation_level="session",
+            category="application",
+            app_name="test",
+            description="test",
+            unit="test",
+            reasoning="test",
+            span_id="",
+            session_id=[session.session_id],
+            source="test",
+            entities_involved=[],
+            edges_involved=[],
+            success=True,
+            metadata={"session_id": session.session_id},
         )
 
-    def create_model(self): return None
-    def get_model_provider(self): return "test"
-    def init_with_model(self, model): pass
-    def required_parameters(self): return []
-    def validate_config(self, config): return True
+    def create_model(self):
+        return None
+
+    def get_model_provider(self):
+        return "test"
+
+    def init_with_model(self, model):
+        pass
+
+    def required_parameters(self):
+        return []
+
+    def validate_config(self, config):
+        return True
 
 
 class TestSessionCacheFunctionality:
@@ -62,13 +83,15 @@ class TestSessionCacheFunctionality:
                     "entities_involved": [],
                     "edges_involved": [],
                     "success": True,
-                    "metadata": {"session_id": "session_456"}
+                    "metadata": {"session_id": "session_456"},
                 }
             }
         ]
 
         # Test cache lookup using _check_session_cache directly
-        found, result = self.metric._check_session_cache(cached_session_metrics, "test_session_metric")
+        found, result = self.metric._check_session_cache(
+            cached_session_metrics, "test_session_metric"
+        )
 
         # Verify cache hit
         assert found is True
@@ -82,7 +105,9 @@ class TestSessionCacheFunctionality:
         cached_session_metrics = []
 
         # Test cache lookup
-        found, result = self.metric._check_session_cache(cached_session_metrics, "test_session_metric")
+        found, result = self.metric._check_session_cache(
+            cached_session_metrics, "test_session_metric"
+        )
 
         # Verify cache miss
         assert found is False
@@ -107,13 +132,15 @@ class TestSessionCacheFunctionality:
                     "entities_involved": [],
                     "edges_involved": [],
                     "success": True,
-                    "metadata": {"session_id": "session_123"}
+                    "metadata": {"session_id": "session_123"},
                 }
             }
         ]
 
         # Test cache lookup for different metric
-        found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
+        found, result = self.metric._check_session_cache(
+            cached_metrics, "test_session_metric"
+        )
 
         # Verify cache miss due to name mismatch
         assert found is False
@@ -138,7 +165,10 @@ class TestSessionCacheFunctionality:
                     "entities_involved": [],
                     "edges_involved": [],
                     "success": True,
-                    "metadata": {"agent_id": "agent_1", "session_id": "session_123"}  # Has agent_id
+                    "metadata": {
+                        "agent_id": "agent_1",
+                        "session_id": "session_123",
+                    },  # Has agent_id
                 }
             },
             {
@@ -157,13 +187,17 @@ class TestSessionCacheFunctionality:
                     "entities_involved": [],
                     "edges_involved": [],
                     "success": True,
-                    "metadata": {"session_id": "session_123"}  # No agent_id - pure session metric
+                    "metadata": {
+                        "session_id": "session_123"
+                    },  # No agent_id - pure session metric
                 }
-            }
+            },
         ]
 
         # Test cache lookup
-        found, result = self.metric._check_session_cache(mixed_metrics, "test_session_metric")
+        found, result = self.metric._check_session_cache(
+            mixed_metrics, "test_session_metric"
+        )
 
         # Verify it returns the session-only metric (value 0.8), not the agent metric (value 0.6)
         assert found is True
@@ -174,30 +208,35 @@ class TestSessionCacheFunctionality:
     def test_session_cache_with_json_string_metrics(self):
         """Test cache handling when metrics are stored as JSON strings."""
         import json
+
         cached_metrics = [
             {
-                "metrics": json.dumps({
-                    "metric_name": "test_session_metric",
-                    "value": 0.9,
-                    "aggregation_level": "session",
-                    "category": "application",
-                    "app_name": "test_app",
-                    "description": "JSON string metric",
-                    "unit": "percentage",
-                    "reasoning": "Parsed from JSON",
-                    "span_id": "",
-                    "session_id": ["session_json"],
-                    "source": "test",
-                    "entities_involved": [],
-                    "edges_involved": [],
-                    "success": True,
-                    "metadata": {"session_id": "session_json"}
-                })
+                "metrics": json.dumps(
+                    {
+                        "metric_name": "test_session_metric",
+                        "value": 0.9,
+                        "aggregation_level": "session",
+                        "category": "application",
+                        "app_name": "test_app",
+                        "description": "JSON string metric",
+                        "unit": "percentage",
+                        "reasoning": "Parsed from JSON",
+                        "span_id": "",
+                        "session_id": ["session_json"],
+                        "source": "test",
+                        "entities_involved": [],
+                        "edges_involved": [],
+                        "success": True,
+                        "metadata": {"session_id": "session_json"},
+                    }
+                )
             }
         ]
 
         # Test cache lookup with JSON string
-        found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
+        found, result = self.metric._check_session_cache(
+            cached_metrics, "test_session_metric"
+        )
 
         # Verify JSON parsing works
         assert found is True
@@ -207,6 +246,7 @@ class TestSessionCacheFunctionality:
         if isinstance(metrics_data, str):
             # JSON was parsed by _check_session_cache
             import json
+
             metrics_data = json.loads(metrics_data)
         assert metrics_data["value"] == 0.9
         assert metrics_data["metadata"]["session_id"] == "session_json"
@@ -233,13 +273,15 @@ class TestSessionCacheFunctionality:
                     "entities_involved": [],
                     "edges_involved": [],
                     "success": True,
-                    "metadata": {"session_id": "session_valid"}
+                    "metadata": {"session_id": "session_valid"},
                 }
-            }
+            },
         ]
 
         # Test cache lookup - should skip malformed JSON and return valid entry
-        found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
+        found, result = self.metric._check_session_cache(
+            cached_metrics, "test_session_metric"
+        )
 
         # Verify it finds the valid metric despite malformed JSON
         assert found is True
@@ -264,13 +306,15 @@ class TestSessionCacheFunctionality:
                     "edges_involved": [],
                     "success": True,
                     # Missing category and app_name - should be added by cache logic
-                    "metadata": {"session_id": "session_compat"}
+                    "metadata": {"session_id": "session_compat"},
                 }
             }
         ]
 
         # Test cache lookup
-        found, result = self.metric._check_session_cache(cached_metrics, "test_session_metric")
+        found, result = self.metric._check_session_cache(
+            cached_metrics, "test_session_metric"
+        )
 
         # Verify cache hit and backward compatibility
         assert found is True

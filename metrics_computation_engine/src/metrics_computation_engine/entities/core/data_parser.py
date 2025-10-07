@@ -304,7 +304,9 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
     return span_entities
 
 
-def _extract_entity_name(attrs: Dict[str, Any], entity_type: str, config: Dict[str, Any]) -> str:
+def _extract_entity_name(
+    attrs: Dict[str, Any], entity_type: str, config: Dict[str, Any]
+) -> str:
     """
     Extract entity name with priority-based attribute checking for compatibility.
 
@@ -317,9 +319,9 @@ def _extract_entity_name(attrs: Dict[str, Any], entity_type: str, config: Dict[s
     if entity_type == "tool":
         # Tool-specific priority handling
         return (
-            attrs.get("ioa_observe.entity.name") or
-            attrs.get("traceloop.entity.name") or
-            "unknown"
+            attrs.get("ioa_observe.entity.name")
+            or attrs.get("traceloop.entity.name")
+            or "unknown"
         )
 
     # For other entity types, use the configured key with potential fallbacks

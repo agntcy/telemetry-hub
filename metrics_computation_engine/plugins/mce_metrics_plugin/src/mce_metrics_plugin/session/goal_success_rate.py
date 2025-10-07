@@ -55,10 +55,14 @@ class GoalSuccessRate(BaseMetric):
         """Indicates that this metric supports agent-level computation."""
         return True
 
-    async def compute(self, session: SessionEntity, **context) -> Union[MetricResult, List[MetricResult]]:
+    async def compute(
+        self, session: SessionEntity, **context
+    ) -> Union[MetricResult, List[MetricResult]]:
         # Extract nested context if present
-        actual_context = context.get('context', context)
-        is_agent_computation = actual_context.get("agent_computation", False) if actual_context else False
+        actual_context = context.get("context", context)
+        is_agent_computation = (
+            actual_context.get("agent_computation", False) if actual_context else False
+        )
 
         # Check if this is agent-level computation
         if is_agent_computation:
@@ -115,7 +119,7 @@ class GoalSuccessRate(BaseMetric):
 
         try:
             # Check if session has agent_stats property
-            if not hasattr(session, 'agent_stats'):
+            if not hasattr(session, "agent_stats"):
                 # Session doesn't have agent_stats - return empty list
                 return []
 
@@ -146,15 +150,17 @@ class GoalSuccessRate(BaseMetric):
                         app_name=session.app_name,
                         entities_involved=entities_involved,
                         span_ids=agent_span_ids,
-                        session_ids=[session.session_id]
+                        session_ids=[session.session_id],
                     )
                     # Add metadata to the result after creation
-                    result.metadata.update({
-                        "metric_type": "llm-as-a-judge",
-                        "agent_id": agent_name,
-                        "agent_input_query": agent_input_query,
-                        "agent_final_response": agent_final_response
-                    })
+                    result.metadata.update(
+                        {
+                            "metric_type": "llm-as-a-judge",
+                            "agent_id": agent_name,
+                            "agent_input_query": agent_input_query,
+                            "agent_final_response": agent_final_response,
+                        }
+                    )
 
                     results.append(result)
                     continue
@@ -164,7 +170,7 @@ class GoalSuccessRate(BaseMetric):
                 prompt = GOAL_SUCCESS_RATE_PROMPT.format(
                     query=agent_input_query,
                     response=agent_final_response,
-                    ground_truth=ground_truth
+                    ground_truth=ground_truth,
                 )
 
                 entities_involved = [agent_name] if agent_name else []
@@ -198,7 +204,7 @@ class GoalSuccessRate(BaseMetric):
                     "metric_type": "llm-as-a-judge",
                     "agent_id": agent_name,
                     "agent_input_query": agent_input_query,
-                    "agent_final_response": agent_final_response
+                    "agent_final_response": agent_final_response,
                 }
 
                 results.append(result)
@@ -211,5 +217,3 @@ class GoalSuccessRate(BaseMetric):
             # Error handling for agent computation - restore level and re-raise
             self.aggregation_level = original_level
             raise e
-
-

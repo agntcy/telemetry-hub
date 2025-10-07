@@ -48,7 +48,9 @@ def list_metrics():
         }
 
         # Count only actual usable metrics (exclude adapter meta-info)
-        actual_metrics_count = len(native_metrics) + len(plugin_metrics) + len(adapter_metrics)
+        actual_metrics_count = (
+            len(native_metrics) + len(plugin_metrics) + len(adapter_metrics)
+        )
         click.echo(f"Available metrics ({actual_metrics_count} total):")
 
         if native_metrics:

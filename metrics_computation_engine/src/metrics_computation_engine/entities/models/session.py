@@ -98,7 +98,9 @@ class SessionEntity(BaseModel):
     agent_transition_counts: Optional[Counter] = None
 
     # Cache for agent-specific conversation data (shared across all metrics)
-    _agent_conversation_cache: Optional[Dict[str, Dict[str, Any]]] = PrivateAttr(default=None)
+    _agent_conversation_cache: Optional[Dict[str, Dict[str, Any]]] = PrivateAttr(
+        default=None
+    )
 
     conversation_elements: Optional[List[ConversationElement]] = None
 
@@ -501,7 +503,9 @@ class SessionEntity(BaseModel):
             # We'll calculate stats additively and let the calculate method handle deduplication
             self._calculate_agent_stats_additive(agent_stats[agent_name], spans)
 
-    def _calculate_agent_stats_additive(self, stats: AgentStats, spans: List[SpanEntity]) -> None:
+    def _calculate_agent_stats_additive(
+        self, stats: AgentStats, spans: List[SpanEntity]
+    ) -> None:
         """
         Calculate agent statistics additively, avoiding double-counting.
         This is a helper for direct span collection that ensures we don't
@@ -521,21 +525,41 @@ class SessionEntity(BaseModel):
 
         # Merge with existing stats (taking the maximum to avoid double-counting)
         # This is a simplified approach - in practice, you might want more sophisticated merging
-        stats.total_tool_calls = max(stats.total_tool_calls, temp_stats.total_tool_calls)
+        stats.total_tool_calls = max(
+            stats.total_tool_calls, temp_stats.total_tool_calls
+        )
         stats.total_llm_calls = max(stats.total_llm_calls, temp_stats.total_llm_calls)
-        stats.tool_calls_failed = max(stats.tool_calls_failed, temp_stats.tool_calls_failed)
-        stats.llm_calls_failed = max(stats.llm_calls_failed, temp_stats.llm_calls_failed)
+        stats.tool_calls_failed = max(
+            stats.tool_calls_failed, temp_stats.tool_calls_failed
+        )
+        stats.llm_calls_failed = max(
+            stats.llm_calls_failed, temp_stats.llm_calls_failed
+        )
 
         # For durations and tokens, take the maximum as well to avoid double-counting
-        stats.total_tools_duration = max(stats.total_tools_duration, temp_stats.total_tools_duration)
-        stats.total_llm_duration = max(stats.total_llm_duration, temp_stats.total_llm_duration)
-        stats.llm_input_tokens = max(stats.llm_input_tokens, temp_stats.llm_input_tokens)
-        stats.llm_output_tokens = max(stats.llm_output_tokens, temp_stats.llm_output_tokens)
-        stats.llm_total_tokens = max(stats.llm_total_tokens, temp_stats.llm_total_tokens)
-        stats.tool_total_tokens = max(stats.tool_total_tokens, temp_stats.tool_total_tokens)
+        stats.total_tools_duration = max(
+            stats.total_tools_duration, temp_stats.total_tools_duration
+        )
+        stats.total_llm_duration = max(
+            stats.total_llm_duration, temp_stats.total_llm_duration
+        )
+        stats.llm_input_tokens = max(
+            stats.llm_input_tokens, temp_stats.llm_input_tokens
+        )
+        stats.llm_output_tokens = max(
+            stats.llm_output_tokens, temp_stats.llm_output_tokens
+        )
+        stats.llm_total_tokens = max(
+            stats.llm_total_tokens, temp_stats.llm_total_tokens
+        )
+        stats.tool_total_tokens = max(
+            stats.tool_total_tokens, temp_stats.tool_total_tokens
+        )
 
         # For unique tool names, merge the lists
-        stats.unique_tool_names = list(set(stats.unique_tool_names + temp_stats.unique_tool_names))
+        stats.unique_tool_names = list(
+            set(stats.unique_tool_names + temp_stats.unique_tool_names)
+        )
 
     def _identify_span_agent(self, span) -> Optional[str]:
         """
@@ -561,48 +585,59 @@ class SessionEntity(BaseModel):
 
         # Strategy 1: Direct agent_id attribute (highest priority)
         # Check in attrs first
-        if hasattr(span, 'attrs') and span.attrs:
-            agent_id = span.attrs.get('agent_id')
+        if hasattr(span, "attrs") and span.attrs:
+            agent_id = span.attrs.get("agent_id")
             if agent_id and isinstance(agent_id, str) and agent_id.strip():
                 return agent_id.strip()
 
         # Check in raw_span_data as fallback
-        if hasattr(span, 'raw_span_data') and span.raw_span_data:
-            span_attrs = span.raw_span_data.get('SpanAttributes', {})
-            agent_id = span_attrs.get('agent_id')
+        if hasattr(span, "raw_span_data") and span.raw_span_data:
+            span_attrs = span.raw_span_data.get("SpanAttributes", {})
+            agent_id = span_attrs.get("agent_id")
             if agent_id and isinstance(agent_id, str) and agent_id.strip():
                 return agent_id.strip()
 
             # Strategy 2: Entity path analysis (medium priority)
-            entity_path = span_attrs.get('traceloop.entity.path')
-            if entity_path and isinstance(entity_path, str) and '.' in entity_path:
-                potential_agent = entity_path.split('.')[0]
+            entity_path = span_attrs.get("traceloop.entity.path")
+            if entity_path and isinstance(entity_path, str) and "." in entity_path:
+                potential_agent = entity_path.split(".")[0]
                 # Only use if it looks like an agent name
-                if ('agent' in potential_agent.lower() and
-                    potential_agent.lower() != 'agent' and
-                    len(potential_agent) > 5):  # Avoid too generic names
+                if (
+                    "agent" in potential_agent.lower()
+                    and potential_agent.lower() != "agent"
+                    and len(potential_agent) > 5
+                ):  # Avoid too generic names
                     return potential_agent
 
         # Strategy 3: Entity name patterns (lowest priority)
-        entity_name = getattr(span, 'entity_name', None)
+        entity_name = getattr(span, "entity_name", None)
         if entity_name and isinstance(entity_name, str):
             # Remove common suffixes
-            base_name = entity_name.replace('.task', '').replace('.agent', '')
+            base_name = entity_name.replace(".task", "").replace(".agent", "")
 
             # Check for agent-like patterns - be more restrictive to avoid false positives
             # Only match if "agent" appears as a separate word or at the end
             lower_name = base_name.lower()
-            if (lower_name != 'agent' and
-                len(base_name) > 5 and
+            if (
+                lower_name != "agent"
+                and len(base_name) > 5
+                and
                 # More precise agent pattern matching
-                (lower_name.endswith('_agent') or
-                 lower_name.endswith('-agent') or
-                 lower_name.startswith('agent_') or
-                 lower_name.startswith('agent-') or
-                 '_agent_' in lower_name or
-                 '-agent-' in lower_name) and
+                (
+                    lower_name.endswith("_agent")
+                    or lower_name.endswith("-agent")
+                    or lower_name.startswith("agent_")
+                    or lower_name.startswith("agent-")
+                    or "_agent_" in lower_name
+                    or "-agent-" in lower_name
+                )
+                and
                 # Exclude common false positives
-                not any(word in lower_name for word in ['graph', 'workflow', 'multi_agent_graph', 'service'])):
+                not any(
+                    word in lower_name
+                    for word in ["graph", "workflow", "multi_agent_graph", "service"]
+                )
+            ):
                 return base_name
 
         return None
@@ -759,7 +794,7 @@ class SessionEntity(BaseModel):
         # Update unique tool names as sorted list
         stats.unique_tool_names = sorted(list(unique_tools))
 
-    def get_agent_view(self, agent_name: str) -> 'AgentView':
+    def get_agent_view(self, agent_name: str) -> "AgentView":
         """
         Get a cached view of spans for a specific agent.
 
@@ -773,7 +808,7 @@ class SessionEntity(BaseModel):
         Returns:
             AgentView instance with pre-computed span collections
         """
-        if not hasattr(self, '_agent_views'):
+        if not hasattr(self, "_agent_views"):
             self._agent_views = {}
 
         if agent_name not in self._agent_views:
@@ -811,7 +846,9 @@ class SessionEntity(BaseModel):
 
         return agent_spans
 
-    def _collect_spans_for_agent(self, node, target_agent_name: str, agent_spans: List[SpanEntity]) -> None:
+    def _collect_spans_for_agent(
+        self, node, target_agent_name: str, agent_spans: List[SpanEntity]
+    ) -> None:
         """
         Recursively traverse the execution tree to collect spans for a specific agent.
 
@@ -874,39 +911,52 @@ class SessionEntity(BaseModel):
                     if key.startswith("gen_ai.prompt") and ".content" in key:
                         role_key = key.replace(".content", ".role")
                         role = span.input_payload.get(role_key, "unknown")
-                        conversation_elements.append({
-                            "role": role,
-                            "content": value,
-                            "span_id": span.span_id,
-                            "timestamp": span.timestamp,
-                            "agent_name": agent_name,
-                        })
+                        conversation_elements.append(
+                            {
+                                "role": role,
+                                "content": value,
+                                "span_id": span.span_id,
+                                "timestamp": span.timestamp,
+                                "agent_name": agent_name,
+                            }
+                        )
 
             if span.output_payload:
                 for key, value in span.output_payload.items():
                     if key.startswith("gen_ai.completion") and ".content" in key:
                         role_key = key.replace(".content", ".role")
                         role = span.output_payload.get(role_key, "assistant")
-                        conversation_elements.append({
-                            "role": role,
-                            "content": value,
-                            "span_id": span.span_id,
-                            "timestamp": span.timestamp,
-                            "agent_name": agent_name,
-                        })
+                        conversation_elements.append(
+                            {
+                                "role": role,
+                                "content": value,
+                                "span_id": span.span_id,
+                                "timestamp": span.timestamp,
+                                "agent_name": agent_name,
+                            }
+                        )
 
                     # Extract tool calls
                     if key.startswith("gen_ai.completion") and ".tool_calls" in key:
-                        if isinstance(value, dict) or (isinstance(value, str) and value.startswith("{")):
+                        if isinstance(value, dict) or (
+                            isinstance(value, str) and value.startswith("{")
+                        ):
                             try:
                                 import json
-                                tool_call_data = json.loads(value) if isinstance(value, str) else value
-                                tool_calls.append({
-                                    "data": tool_call_data,
-                                    "span_id": span.span_id,
-                                    "timestamp": span.timestamp,
-                                    "agent_name": agent_name,
-                                })
+
+                                tool_call_data = (
+                                    json.loads(value)
+                                    if isinstance(value, str)
+                                    else value
+                                )
+                                tool_calls.append(
+                                    {
+                                        "data": tool_call_data,
+                                        "span_id": span.span_id,
+                                        "timestamp": span.timestamp,
+                                        "agent_name": agent_name,
+                                    }
+                                )
                             except (KeyError, AttributeError, TypeError):
                                 pass
 
@@ -914,43 +964,51 @@ class SessionEntity(BaseModel):
         agent_entity_spans = [s for s in agent_spans if s.entity_type == "agent"]
         for span in agent_entity_spans:
             if span.input_payload and "value" in span.input_payload:
-                conversation_elements.append({
-                    "role": "user",
-                    "content": span.input_payload["value"],
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "user",
+                        "content": span.input_payload["value"],
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
 
             if span.output_payload and "value" in span.output_payload:
-                conversation_elements.append({
-                    "role": "assistant",
-                    "content": span.output_payload["value"],
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "assistant",
+                        "content": span.output_payload["value"],
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
 
         # Include tool interactions for complete context
         tool_spans = [s for s in agent_spans if s.entity_type == "tool"]
         for span in tool_spans:
             if span.input_payload:
-                conversation_elements.append({
-                    "role": "tool_input",
-                    "content": f"Tool call to {span.entity_name}: {span.input_payload}",
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "tool_input",
+                        "content": f"Tool call to {span.entity_name}: {span.input_payload}",
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
 
             if span.output_payload:
-                conversation_elements.append({
-                    "role": "tool_output",
-                    "content": f"Tool {span.entity_name} result: {span.output_payload}",
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "tool_output",
+                        "content": f"Tool {span.entity_name} result: {span.output_payload}",
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
 
         # Sort by timestamp
         conversation_elements.sort(key=lambda x: x.get("timestamp", ""))
@@ -1009,7 +1067,7 @@ class AgentView:
     avoiding repeated filtering operations during metric computation.
     """
 
-    def __init__(self, agent_name: str, session: 'SessionEntity'):
+    def __init__(self, agent_name: str, session: "SessionEntity"):
         """
         Initialize AgentView with pre-computed span collections.
 
@@ -1039,14 +1097,18 @@ class AgentView:
     def error_tool_spans(self) -> List[SpanEntity]:
         """Get tool spans with errors for this agent."""
         if self._error_tool_spans is None:
-            self._error_tool_spans = [span for span in self.tool_spans if span.contains_error]
+            self._error_tool_spans = [
+                span for span in self.tool_spans if span.contains_error
+            ]
         return self._error_tool_spans
 
     @property
     def successful_tool_spans(self) -> List[SpanEntity]:
         """Get successful tool spans (no errors) for this agent."""
         if self._successful_tool_spans is None:
-            self._successful_tool_spans = [span for span in self.tool_spans if not span.contains_error]
+            self._successful_tool_spans = [
+                span for span in self.tool_spans if not span.contains_error
+            ]
         return self._successful_tool_spans
 
     @property

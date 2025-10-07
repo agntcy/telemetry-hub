@@ -93,6 +93,7 @@ class DataFetchingConfig(BaseModel):
 
 class MetricOptions(BaseModel):
     """Configuration options for metric computation."""
+
     computation_level: Optional[List[str]] = None
 
     def get_computation_levels(self) -> List[str]:

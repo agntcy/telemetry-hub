@@ -6,7 +6,9 @@ from typing import List, Optional, Union
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
-from metrics_computation_engine.entities.core.agent_role_detector import get_agent_role_and_skip_decision, AgentFilterMetadata
+from metrics_computation_engine.entities.core.agent_role_detector import (
+    get_agent_role_and_skip_decision,
+)
 from metrics_computation_engine.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -30,7 +32,9 @@ GROUNDEDNESS_PROMPT = """
 class Groundedness(BaseMetric):
     REQUIRED_PARAMETERS = {"Groundedness": ["conversation_data"]}
 
-    def __init__(self, metric_name: Optional[str] = None, filter_coordinators: bool = True):
+    def __init__(
+        self, metric_name: Optional[str] = None, filter_coordinators: bool = True
+    ):
         super().__init__()
         if metric_name is None:
             metric_name = self.__class__.__name__
@@ -60,7 +64,9 @@ class Groundedness(BaseMetric):
     def create_model(self, llm_config):
         return self.create_native_model(llm_config)
 
-    async def compute(self, session: SessionEntity, **context) -> Union[MetricResult, List[MetricResult]]:
+    async def compute(
+        self, session: SessionEntity, **context
+    ) -> Union[MetricResult, List[MetricResult]]:
         """
         Compute groundedness using pre-populated SessionEntity data.
 
@@ -168,7 +174,9 @@ class Groundedness(BaseMetric):
                 if should_skip:
                     # Skip this agent entirely - don't include in results
                     # Log the skip for debugging purposes
-                    logger.info(f"Skipping agent '{agent_name}' for Groundedness metric: {role_metadata.get('skip_reason', 'Detected as coordinator agent')}")
+                    logger.info(
+                        f"Skipping agent '{agent_name}' for Groundedness metric: {role_metadata.get('skip_reason', 'Detected as coordinator agent')}"
+                    )
                     continue
 
                 # Use SessionEntity-level cached conversation data
@@ -211,16 +219,22 @@ class Groundedness(BaseMetric):
                 # Ensure agent-level metadata including role detection info
                 result.description = self.description
                 result.aggregation_level = "agent"
-                if not hasattr(result, 'metadata') or result.metadata is None:
+                if not hasattr(result, "metadata") or result.metadata is None:
                     result.metadata = {}
                 # Handle both AgentFilterMetadata objects and plain dicts (for tests)
-                role_dict = role_metadata.to_dict() if hasattr(role_metadata, 'to_dict') else role_metadata
-                result.metadata.update({
-                    "agent_id": agent_name,
-                    "metric_type": "llm-as-a-judge",
-                    "skipped": False,
-                    **role_dict
-                })
+                role_dict = (
+                    role_metadata.to_dict()
+                    if hasattr(role_metadata, "to_dict")
+                    else role_metadata
+                )
+                result.metadata.update(
+                    {
+                        "agent_id": agent_name,
+                        "metric_type": "llm-as-a-judge",
+                        "skipped": False,
+                        **role_dict,
+                    }
+                )
                 results.append(result)
 
             except Exception as e:
@@ -228,18 +242,20 @@ class Groundedness(BaseMetric):
                 import traceback
 
                 # Log detailed error information for debugging
-                logger.error(f"ERROR in groundedness computation for agent {agent_name}:")
+                logger.error(
+                    f"ERROR in groundedness computation for agent {agent_name}:"
+                )
                 logger.error(f"Exception type: {type(e).__name__}")
                 logger.error(f"Exception message: {str(e)}")
                 logger.error(f"Full traceback:\n{traceback.format_exc()}")
 
                 # Also print to stdout for immediate visibility in tests
-                print(f"\n=== GROUNDEDNESS ERROR DEBUG ===")
+                print("\n=== GROUNDEDNESS ERROR DEBUG ===")
                 print(f"Agent: {agent_name}")
                 print(f"Error type: {type(e).__name__}")
                 print(f"Error message: {str(e)}")
                 print(f"Traceback:\n{traceback.format_exc()}")
-                print(f"================================\n")
+                print("================================\n")
 
                 result = self._create_error_result(
                     error_message=f"Error computing groundedness for agent {agent_name}: {str(e)}",
@@ -253,14 +269,16 @@ class Groundedness(BaseMetric):
                 # Ensure agent-level metadata for error results too
                 result.description = self.description
                 result.aggregation_level = "agent"
-                if not hasattr(result, 'metadata') or result.metadata is None:
+                if not hasattr(result, "metadata") or result.metadata is None:
                     result.metadata = {}
-                result.metadata.update({
-                    "agent_id": agent_name,
-                    "metric_type": "llm-as-a-judge",
-                    "skipped": False,
-                    "error_in_processing": True
-                })
+                result.metadata.update(
+                    {
+                        "agent_id": agent_name,
+                        "metric_type": "llm-as-a-judge",
+                        "skipped": False,
+                        "error_in_processing": True,
+                    }
+                )
 
                 results.append(result)
 

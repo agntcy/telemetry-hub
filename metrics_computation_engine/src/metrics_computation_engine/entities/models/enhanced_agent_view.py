@@ -6,8 +6,8 @@ Enhanced AgentView with conversation context caching.
 This extends the existing AgentView to include agent-specific conversation data.
 """
 
-from typing import List, Dict, Any, Optional
-from metrics_computation_engine.entities.models.session import AgentView, SpanEntity
+from typing import Dict, Any
+from metrics_computation_engine.entities.models.session import AgentView
 
 
 class EnhancedAgentView(AgentView):
@@ -18,7 +18,7 @@ class EnhancedAgentView(AgentView):
     to agent-specific spans, with proper caching to avoid recomputation.
     """
 
-    def __init__(self, agent_name: str, session: 'SessionEntity'):
+    def __init__(self, agent_name: str, session: "SessionEntity"):
         """Initialize with existing AgentView caching + conversation context."""
         super().__init__(agent_name, session)
 
@@ -67,13 +67,15 @@ class EnhancedAgentView(AgentView):
                     if key.startswith("gen_ai.prompt") and ".content" in key:
                         role_key = key.replace(".content", ".role")
                         role = span.input_payload.get(role_key, "unknown")
-                        conversation_elements.append({
-                            "role": role,
-                            "content": value,
-                            "span_id": span.span_id,
-                            "timestamp": span.timestamp,
-                            "agent_name": self.agent_name,
-                        })
+                        conversation_elements.append(
+                            {
+                                "role": role,
+                                "content": value,
+                                "span_id": span.span_id,
+                                "timestamp": span.timestamp,
+                                "agent_name": self.agent_name,
+                            }
+                        )
 
             if span.output_payload:
                 # Extract completions from output (same logic as ConversationDataTransformer)
@@ -81,26 +83,37 @@ class EnhancedAgentView(AgentView):
                     if key.startswith("gen_ai.completion") and ".content" in key:
                         role_key = key.replace(".content", ".role")
                         role = span.output_payload.get(role_key, "assistant")
-                        conversation_elements.append({
-                            "role": role,
-                            "content": value,
-                            "span_id": span.span_id,
-                            "timestamp": span.timestamp,
-                            "agent_name": self.agent_name,
-                        })
+                        conversation_elements.append(
+                            {
+                                "role": role,
+                                "content": value,
+                                "span_id": span.span_id,
+                                "timestamp": span.timestamp,
+                                "agent_name": self.agent_name,
+                            }
+                        )
 
                     # Extract tool calls (same logic as ConversationDataTransformer)
                     if key.startswith("gen_ai.completion") and ".tool_calls" in key:
-                        if isinstance(value, dict) or (isinstance(value, str) and value.startswith("{")):
+                        if isinstance(value, dict) or (
+                            isinstance(value, str) and value.startswith("{")
+                        ):
                             try:
                                 import json
-                                tool_call_data = json.loads(value) if isinstance(value, str) else value
-                                tool_calls.append({
-                                    "data": tool_call_data,
-                                    "span_id": span.span_id,
-                                    "timestamp": span.timestamp,
-                                    "agent_name": self.agent_name,
-                                })
+
+                                tool_call_data = (
+                                    json.loads(value)
+                                    if isinstance(value, str)
+                                    else value
+                                )
+                                tool_calls.append(
+                                    {
+                                        "data": tool_call_data,
+                                        "span_id": span.span_id,
+                                        "timestamp": span.timestamp,
+                                        "agent_name": self.agent_name,
+                                    }
+                                )
                             except (KeyError, AttributeError, TypeError):
                                 pass
 
@@ -108,42 +121,50 @@ class EnhancedAgentView(AgentView):
         agent_spans = [s for s in self.all_spans if s.entity_type == "agent"]
         for span in agent_spans:
             if span.input_payload and "value" in span.input_payload:
-                conversation_elements.append({
-                    "role": "user",
-                    "content": span.input_payload["value"],
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": self.agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "user",
+                        "content": span.input_payload["value"],
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": self.agent_name,
+                    }
+                )
 
             if span.output_payload and "value" in span.output_payload:
-                conversation_elements.append({
-                    "role": "assistant",
-                    "content": span.output_payload["value"],
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": self.agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "assistant",
+                        "content": span.output_payload["value"],
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": self.agent_name,
+                    }
+                )
 
         # Include tool interactions for complete context
         for span in self.tool_spans:
             if span.input_payload:
-                conversation_elements.append({
-                    "role": "tool_input",
-                    "content": f"Tool call to {span.entity_name}: {span.input_payload}",
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": self.agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "tool_input",
+                        "content": f"Tool call to {span.entity_name}: {span.input_payload}",
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": self.agent_name,
+                    }
+                )
 
             if span.output_payload:
-                conversation_elements.append({
-                    "role": "tool_output",
-                    "content": f"Tool {span.entity_name} result: {span.output_payload}",
-                    "span_id": span.span_id,
-                    "timestamp": span.timestamp,
-                    "agent_name": self.agent_name,
-                })
+                conversation_elements.append(
+                    {
+                        "role": "tool_output",
+                        "content": f"Tool {span.entity_name} result: {span.output_payload}",
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": self.agent_name,
+                    }
+                )
 
         # Sort by timestamp (same as ConversationDataTransformer)
         conversation_elements.sort(key=lambda x: x.get("timestamp", ""))
@@ -189,7 +210,9 @@ class EnhancedAgentView(AgentView):
 
 
 # Extension method for SessionEntity to create enhanced agent views
-def get_enhanced_agent_view(session: 'SessionEntity', agent_name: str) -> EnhancedAgentView:
+def get_enhanced_agent_view(
+    session: "SessionEntity", agent_name: str
+) -> EnhancedAgentView:
     """
     Factory method to create enhanced agent views with conversation caching.
 
