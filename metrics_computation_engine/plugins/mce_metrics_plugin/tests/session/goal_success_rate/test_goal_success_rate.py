@@ -411,7 +411,7 @@ def setup_session_for_agents(session):
 async def test_goal_success_rate_supports_agent_computation():
     """Test that the metric indicates it supports agent computation."""
     metric = GoalSuccessRate()
-    assert metric.supports_agent_computation() == True
+    assert metric.supports_agent_computation()
 
 
 @pytest.mark.asyncio
@@ -472,7 +472,7 @@ async def test_goal_success_rate_agent_computation_single_agent():
     assert result.metadata["agent_id"] == "knowledge_agent"
     assert result.metadata["agent_input_query"] == "What is the capital of France?"
     assert result.metadata["agent_final_response"] == "The capital of France is Paris."
-    assert result.success == False  # No jury model available
+    assert not result.success  # No jury model available
     assert "No model available" in result.error_message
 
 

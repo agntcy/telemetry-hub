@@ -374,6 +374,7 @@ class TestConsistency:
 
         # Execute computation
         result = await metric.compute(session)
+        assert result is not None
 
         # Verify prompt contains conversation
         mock_jury.judge.assert_called_once()
@@ -418,6 +419,7 @@ class TestConsistency:
 
         # Execute computation
         result = await metric.compute(session)
+        assert result is not None
 
         # Verify empty conversation is handled
         mock_jury.judge.assert_called_once()

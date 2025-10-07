@@ -392,6 +392,7 @@ class TestGroundedness:
 
         # Execute computation
         result = await metric.compute(session)
+        assert result is not None
 
         # Verify prompt contains conversation
         mock_jury.judge.assert_called_once()
@@ -436,6 +437,7 @@ class TestGroundedness:
 
         # Execute computation
         result = await metric.compute(session)
+        assert result is not None
 
         # Verify empty conversation was used
         mock_jury.judge.assert_called_once()

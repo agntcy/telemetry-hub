@@ -203,7 +203,7 @@ async def test_cycles_count_agent_computation_single_agent():
     assert len(results) == 1
 
     result = results[0]
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "agent"
     assert result.metadata["agent_id"] == "search_agent"
     assert result.value == 1  # One cycle detected
@@ -246,10 +246,10 @@ async def test_cycles_count_agent_computation_multiple_agents():
     assert search_agent_result is not None
     assert data_agent_result is not None
 
-    assert search_agent_result.success == True
+    assert search_agent_result.success
     assert search_agent_result.value == 1  # Has cycle
 
-    assert data_agent_result.success == True
+    assert data_agent_result.success
     assert data_agent_result.value == 0  # No cycles
 
 
@@ -257,7 +257,7 @@ async def test_cycles_count_agent_computation_multiple_agents():
 async def test_cycles_count_supports_agent_computation():
     """Test that the metric indicates it supports agent computation."""
     metric = CyclesCount()
-    assert metric.supports_agent_computation() == True
+    assert metric.supports_agent_computation()
 
 
 @pytest.mark.asyncio
@@ -300,12 +300,12 @@ async def test_cycles_count_backward_compatibility():
 
     # Test without context (should default to session-level)
     result = await metric.compute(session_entity)
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "session"
     assert isinstance(result.value, (int, float))
 
     # Test with explicit session-level context
     result = await metric.compute(session_entity, context={"agent_computation": False})
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "session"
     assert isinstance(result.value, (int, float))

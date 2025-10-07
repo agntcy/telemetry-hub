@@ -6,8 +6,11 @@ Enhanced AgentView with conversation context caching.
 This extends the existing AgentView to include agent-specific conversation data.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING
 from metrics_computation_engine.entities.models.session import AgentView
+
+if TYPE_CHECKING:
+    from metrics_computation_engine.entities.models.session import SessionEntity
 
 
 class EnhancedAgentView(AgentView):

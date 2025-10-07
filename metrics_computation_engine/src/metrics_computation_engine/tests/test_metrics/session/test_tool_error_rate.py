@@ -130,7 +130,7 @@ async def test_tool_error_rate_agent_computation_single_agent():
     assert len(results) == 1
 
     result = results[0]
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "agent"
     assert result.metadata["agent_id"] == "search_agent"
     assert result.metadata["agent_tool_calls"] == 3
@@ -169,7 +169,7 @@ async def test_tool_error_rate_agent_computation_multiple_agents():
 
     # Search agent verification
     search_result = results_by_agent["search_agent"]
-    assert search_result.success == True
+    assert search_result.success
     assert search_result.aggregation_level == "agent"
     assert search_result.metadata["agent_tool_calls"] == 2
     assert search_result.metadata["agent_tool_errors"] == 1
@@ -177,7 +177,7 @@ async def test_tool_error_rate_agent_computation_multiple_agents():
 
     # Analysis agent verification
     analysis_result = results_by_agent["analysis_agent"]
-    assert analysis_result.success == True
+    assert analysis_result.success
     assert analysis_result.aggregation_level == "agent"
     assert analysis_result.metadata["agent_tool_calls"] == 3
     assert analysis_result.metadata["agent_tool_errors"] == 0
@@ -206,7 +206,7 @@ async def test_tool_error_rate_agent_computation_no_tools():
     assert len(results) == 1
 
     result = results[0]
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "agent"
     assert result.metadata["agent_id"] == "coordinator_agent"
     assert result.metadata["agent_tool_calls"] == 0
@@ -235,7 +235,7 @@ async def test_tool_error_rate_agent_computation_all_errors():
     assert len(results) == 1
 
     result = results[0]
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "agent"
     assert result.metadata["agent_id"] == "faulty_agent"
     assert result.metadata["agent_tool_calls"] == 2
@@ -260,20 +260,20 @@ async def test_tool_error_rate_session_level_computation():
     # Test session-level computation (no context)
     result = await metric.compute(session_entity)
     assert not isinstance(result, list)  # Should be single MetricResult
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "session"
     assert abs(result.value - 33.33) < 0.1  # 1 error out of 3 tools
 
     # Test session-level computation (empty context)
     result = await metric.compute(session_entity, context={})
     assert not isinstance(result, list)  # Should be single MetricResult
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "session"
 
     # Test session-level computation (explicit false flag)
     result = await metric.compute(session_entity, context={"agent_computation": False})
     assert not isinstance(result, list)  # Should be single MetricResult
-    assert result.success == True
+    assert result.success
     assert result.aggregation_level == "session"
 
 
