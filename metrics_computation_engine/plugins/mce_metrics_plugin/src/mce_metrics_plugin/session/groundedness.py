@@ -5,7 +5,7 @@ import json
 from typing import List, Optional, Union
 
 from metrics_computation_engine.metrics.base import BaseMetric
-from metrics_computation_engine.models.eval import BinaryGrading
+from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
 from metrics_computation_engine.entities.core.agent_role_detector import (
     get_agent_role_and_skip_decision,
