@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 from typing import List, Optional, Union
 
 from metrics_computation_engine.metrics.base import BaseMetric
@@ -12,8 +13,6 @@ from metrics_computation_engine.entities.core.agent_role_detector import (
 from metrics_computation_engine.logger import setup_logger
 
 logger = setup_logger(__name__)
-
-import json
 
 # Co-located prompt for better readability and maintainability
 GROUNDEDNESS_PROMPT = """
