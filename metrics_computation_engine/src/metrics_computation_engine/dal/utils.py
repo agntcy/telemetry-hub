@@ -1,7 +1,6 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-import json
 from dataclasses import asdict, is_dataclass
 
 
@@ -21,29 +20,25 @@ def format_metric_payload(metric, app_id, app_name, trace_id):
         metric = asdict(metric)
     metric = sanitize_metric(metric)
 
-    session_id = metric.get("session_id", [])
-    span_id_list = metric.get("span_id", [])
+    session_ids = metric.get("session_id", [])
+    span_ids = metric.get("span_id", [])
 
     session_id = (
-        session_id[0]
-        if isinstance(session_id, list) and session_id
+        session_ids[0]
+        if isinstance(session_ids, list) and session_ids
         else "default_session_id"
     )
     span_id = (
-        span_id_list[0]
-        if isinstance(span_id_list, list) and span_id_list
-        else "default_span_id"
+        span_ids[0] if isinstance(span_ids, list) and span_ids else "default_span_id"
     )
     trace_id = trace_id or "default_trace_id"
     app_id = app_id or "default_app_id"
     app_name = app_name or "default_app_name"
 
-    metrics_json_str = json.dumps(metric)
-
     return {
         "app_id": app_id,
         "app_name": app_name,
-        "metrics": metrics_json_str,
+        "metrics": metric,
         "session_id": session_id,
         "span_id": span_id,
         "trace_id": trace_id,
