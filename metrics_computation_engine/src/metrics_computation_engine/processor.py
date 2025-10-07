@@ -4,6 +4,7 @@
 import logging
 import asyncio
 import inspect
+import os
 from typing import Any, Dict, List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
@@ -26,6 +27,7 @@ class MetricsProcessor:
         model_handler: ModelHandler,
         llm_config=None,
         dataset=None,  # TODO: remove dataset
+        max_concurrent_tasks: Optional[int] = None,
     ):
         self.registry = registry
         self._metric_instances: Dict[str, BaseMetric] = {}
@@ -35,6 +37,31 @@ class MetricsProcessor:
         self.model_handler = model_handler
         # Cache for introspection results
         self._context_support_cache: Dict[str, bool] = {}
+
+        if max_concurrent_tasks is None:
+            env_limit = os.getenv("METRICS_MAX_CONCURRENCY")
+            if env_limit:
+                try:
+                    max_concurrent_tasks = int(env_limit)
+                except ValueError:
+                    logger.warning(
+                        "Invalid METRICS_MAX_CONCURRENCY value '%s', ignoring.",
+                        env_limit,
+                    )
+
+        if max_concurrent_tasks is not None and max_concurrent_tasks <= 0:
+            logger.warning(
+                "max_concurrent_tasks=%s is not positive; proceeding without throttling.",
+                max_concurrent_tasks,
+            )
+            max_concurrent_tasks = None
+
+        self._max_concurrency = max_concurrent_tasks
+        self._semaphore = (
+            asyncio.Semaphore(self._max_concurrency)
+            if self._max_concurrency is not None
+            else None
+        )
 
     def _metric_supports_context(self, metric: BaseMetric) -> bool:
         """Check if metric's compute method accepts context parameter (cached)"""
@@ -113,6 +140,17 @@ class MetricsProcessor:
                 metadata={},
                 error_message=str(e),
             )
+
+    async def _bounded_safe_compute(
+        self, metric: BaseMetric, data: Any, context: Optional[Dict[str, Any]] = None
+    ) -> MetricResult:
+        """Run metric computation while respecting concurrency limits."""
+
+        if self._semaphore is None:
+            return await self._safe_compute(metric, data, context=context)
+
+        async with self._semaphore:
+            return await self._safe_compute(metric, data, context=context)
 
     async def _initialize_metric(self, metric_name: str, metric_class) -> BaseMetric:
         """Initialize a metric with its required model"""
@@ -342,7 +380,9 @@ class MetricsProcessor:
                     )
 
                     if metric_instance is not None:
-                        tasks.append(self._safe_compute(metric_instance, span))
+                        tasks.append(
+                            self._bounded_safe_compute(metric_instance, span)
+                        )
 
             # Session-level metrics: pass the SessionEntity directly
             for metric_name in self.registry.list_metrics():
@@ -380,7 +420,7 @@ class MetricsProcessor:
                         )
                     # Pass the SessionEntity directly to session-level metrics
                     tasks.append(
-                        self._safe_compute(
+                        self._bounded_safe_compute(
                             metric_instance, session_entity, context=context
                         )
                     )
@@ -395,7 +435,9 @@ class MetricsProcessor:
                 and metric_instance.aggregation_level == "population"
             ):
                 # Pass the entire sessions_data dict for population metrics
-                tasks.append(self._safe_compute(metric_instance, sessions_set))
+                tasks.append(
+                    self._bounded_safe_compute(metric_instance, sessions_set)
+                )
 
         # Execute all tasks concurrently
         if tasks:
