@@ -4,8 +4,9 @@ A Python adapter library that integrates [Opik](https://github.com/comet-ml/opik
 
 ## Installation
 
+Install via MCE extras:
 ```bash
-pip install mce-opik-adapter
+pip install "metrics-computation-engine[opik]"
 ```
 
 ## Prerequisites
@@ -15,13 +16,14 @@ pip install mce-opik-adapter
 
 ## Supported Opik Metrics
 
-The adapter supports a wide range of Opik metrics, including but not limited to:
+The following Opik metrics are supported by this adapter (use with the `opik.` prefix in service payloads):
 
-- **Hallucination** - Evaluates whether the model response contains hallucinations
-- **Usefulness** - Evaluates the usefulness of a model response
-- **Sentiment** - Measures the sentiment of a model response
+| Metric Name | Description |
+| :---------: | :---------- |
+| **Hallucination** | Evaluates whether the model response contains hallucinations |
+| **Sentiment** | Measures the sentiment of a model response |
 
-For a complete list of supported metrics, refer to the Opik documentation. Many metrics in this library will require which this adapter does not yet support. As we confirm compatibility of metrics, we will add it to the above list.
+For requests to support additional Opik metrics, please file an issue in our repo: [agntcy/telemetry-hub](https://github.com/agntcy/telemetry-hub).
 
 ## Usage
 
@@ -60,7 +62,6 @@ When using the MCE as a service, include Opik metrics in your API request:
 {
   "metrics": [
     "opik.Hallucination",
-    "opik.Usefulness",
     "opik.Sentiment"
   ],
   "llm_judge_config": {
@@ -68,31 +69,14 @@ When using the MCE as a service, include Opik metrics in your API request:
     "LLM_MODEL_NAME": "gpt-4o",
     "LLM_BASE_MODEL_URL": "https://api.openai.com/v1"
   },
-  "batch_config": {
-    "num_sessions": 10
+  "data_fetching_infos": {
+    "batch_config": {
+      "time_range": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+    },
+    "session_ids": []
   }
 }
 ```
-
-## Configuration
-
-### Environment Variables
-
-Set up your environment variables for LLM access:
-
-```bash
-# .env file
-LLM_BASE_MODEL_URL=https://api.openai.com/v1
-LLM_MODEL_NAME=gpt-4o
-LLM_API_KEY=sk-your-openai-api-key
-```
-
-## Supported Aggregation Levels
-
-The adapter maps Opik metrics to different aggregation levels:
-
-- **Span Level**: Evaluate individual agent interactions or tool calls
-- **Session Level**: Evaluate complete conversation sessions
 
 ## Contributing
 
