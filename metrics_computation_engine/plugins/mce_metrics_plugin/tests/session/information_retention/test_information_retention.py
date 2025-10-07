@@ -3,7 +3,7 @@
 
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from unittest.mock import Mock, AsyncMock, MagicMock, patch, PropertyMock
 
 from mce_metrics_plugin.session.information_retention import InformationRetention
 from metrics_computation_engine.entities.models.session import SessionEntity
@@ -382,3 +382,311 @@ class TestInformationRetention:
         model = metric.create_model(llm_config)
         assert model == "test_model"
         metric.create_native_model.assert_called_once_with(llm_config)
+
+    # ===== Agent Role Detection Tests =====
+
+    def test_information_retention_filter_coordinators_setting(self):
+        """Test that the filter_coordinators setting is properly configured."""
+        # Test default behavior (filtering enabled)
+        metric_default = InformationRetention()
+        assert metric_default.filter_coordinators is True
+
+        # Test explicit filtering enabled
+        metric_enabled = InformationRetention(filter_coordinators=True)
+        assert metric_enabled.filter_coordinators is True
+
+        # Test filtering disabled
+        metric_disabled = InformationRetention(filter_coordinators=False)
+        assert metric_disabled.filter_coordinators is False
+
+    @patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision')
+    def test_information_retention_agent_level_coordinator_skipped(self, mock_role_detection):
+        """Test that coordinator agents are skipped when filtering is enabled."""
+        # Setup mock role detection to identify agent as coordinator
+        mock_role_detection.return_value = (
+            True,  # should_skip = True
+            {
+                'filtering_enabled': True,
+                'detected_role': 'coordinator',
+                'coordinator_score': 6,
+                'processor_score': 2,
+                'skip_reason': 'Coordinator agents focus on task routing/workflow management',
+                'tool_calls': 0,
+                'coordination_signals': 5,
+                'processing_signals': 1
+            }
+        )
+
+        # Setup metric with filtering enabled
+        metric = InformationRetention(filter_coordinators=True)
+        mock_jury = Mock()
+        metric.jury = mock_jury
+
+        # Create session with coordinator agent
+        session = create_session_with_conversation(
+            agent_names=["supervisor"],
+            conversation_text="System: Route to worker\nAssistant: {\"next\": \"coder\"}"
+        )
+
+        # Create session with coordinator agent
+        session = create_session_with_conversation(
+            agent_names=["supervisor"],
+            conversation_text="System: Route to worker\nAssistant: {\"next\": \"coder\"}"
+        )
+
+        # Mock the role detection function to return skip=True
+        with patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision') as mock_role_func:
+            mock_role_func.return_value = (True, {
+                'detected_role': 'coordinator',
+                'skip_reason': 'Agent performs coordination tasks'
+            })
+
+            results = metric._compute_agent_level(session)
+
+            # Verify coordinator was skipped - no results should be returned
+            assert len(results) == 0, f"Expected no results for skipped agents, but got: {results}"
+
+            # Verify jury was not called (agent was skipped)
+            mock_jury.judge.assert_not_called()
+
+            # Verify role detection was called with correct parameters
+            mock_role_func.assert_called_once_with(session, "supervisor", filter_coordinators=True)
+
+    @patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision')
+    def test_information_retention_agent_level_processor_evaluated(self, mock_role_detection):
+        """Test that processor agents are evaluated when filtering is enabled."""
+        # Setup mock role detection to identify agent as processor
+        mock_role_detection.return_value = (
+            False,  # should_skip = False
+            {
+                'filtering_enabled': True,
+                'detected_role': 'processor',
+                'coordinator_score': 1,
+                'processor_score': 7,
+                'skip_reason': 'Processor agents handle information and should be evaluated',
+                'tool_calls': 2,
+                'coordination_signals': 0,
+                'processing_signals': 4
+            }
+        )
+
+        # Setup metric with filtering enabled
+        metric = InformationRetention(filter_coordinators=True)
+        mock_jury = Mock()
+        mock_jury.judge = Mock(return_value=(1, "Agent retains information well"))
+        metric.jury = mock_jury
+
+        # Create session with processor agent
+        session = create_session_with_conversation(
+            agent_names=["coder"],
+            conversation_text="User: Remember that 2+2=4\nAssistant: Got it, 2+2 equals 4.\nUser: What did I just tell you?\nAssistant: You told me that 2+2=4."
+        )
+
+        # Create session with processor agent
+        session = create_session_with_conversation(
+            agent_names=["coder"],
+            conversation_text="User: Remember that 2+2=4\nAssistant: Got it, 2+2 equals 4.\nUser: What did I just tell you?\nAssistant: You told me that 2+2=4."
+        )
+
+        # Mock the role detection function and conversation method
+        with patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision') as mock_role_func, \
+             patch.object(type(session), 'get_agent_conversation_text') as mock_conv:
+
+            mock_role_func.return_value = (False, {
+                'detected_role': 'processor',
+                'skip_reason': 'Processor agents should be evaluated'
+            })
+            mock_conv.return_value = "User: Remember that 2+2=4\nAssistant: Got it, 2+2 equals 4.\nUser: What did I just tell you?\nAssistant: You told me that 2+2=4."
+
+            results = metric._compute_agent_level(session)
+
+            # Verify processor was evaluated
+            assert len(results) == 1
+            result = results[0]
+
+            # Check result indicates evaluation occurred
+            assert result.value == 1
+            assert result.reasoning == "Agent retains information well"
+
+            # Verify jury was called for evaluation
+            mock_jury.judge.assert_called_once()
+
+            # Verify role detection was called
+            mock_role_func.assert_called_once_with(session, "coder", filter_coordinators=True)
+
+    @patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision')
+    def test_information_retention_agent_level_filtering_disabled(self, mock_role_detection):
+        """Test that all agents are evaluated when filtering is disabled."""
+        # Setup mock role detection to indicate filtering is disabled
+        mock_role_detection.return_value = (
+            False,  # should_skip = False (filtering disabled)
+            {
+                'filtering_enabled': False,
+                'skip_reason': 'Coordinator filtering disabled'
+            }
+        )
+
+        # Setup metric with filtering disabled
+        metric = InformationRetention(filter_coordinators=False)
+        mock_jury = Mock()
+        mock_jury.judge = Mock(return_value=(1, "Information retained properly"))
+        metric.jury = mock_jury
+
+        # Create session with coordinator agent (should be evaluated despite role)
+        session = create_session_with_conversation(
+            agent_names=["supervisor"],
+            conversation_text="System: Remember task context\nAssistant: Context noted for task routing"
+        )
+
+        # Create session with coordinator agent (should be evaluated despite role)
+        session = create_session_with_conversation(
+            agent_names=["supervisor"],
+            conversation_text="System: Remember task context\nAssistant: Context noted for task routing"
+        )
+
+        # Mock the role detection function and conversation method
+        with patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision') as mock_role_func, \
+             patch.object(type(session), 'get_agent_conversation_text') as mock_conv:
+
+            mock_role_func.return_value = (False, {
+                'detected_role': 'coordinator',
+                'skip_reason': 'Filtering disabled - evaluating all agents'
+            })
+            mock_conv.return_value = "System: Remember task context\nAssistant: Context noted for task routing"
+
+            results = metric._compute_agent_level(session)
+
+            # Verify agent was evaluated despite being coordinator
+            assert len(results) == 1
+            result = results[0]
+
+            assert result.value == 1
+
+            # Verify jury was called
+            mock_jury.judge.assert_called_once()
+
+            # Verify role detection was called with filtering disabled
+            mock_role_func.assert_called_once_with(session, "supervisor", filter_coordinators=False)
+
+    @patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision')
+    def test_information_retention_agent_level_mixed_agents(self, mock_role_detection):
+        """Test mixed scenario with both coordinator and processor agents."""
+        # Setup mock role detection for different agent types
+        def mock_role_side_effect(session, agent_name, filter_coordinators):
+            if agent_name == "supervisor":
+                return (True, {
+                    'filtering_enabled': True,
+                    'detected_role': 'coordinator',
+                    'coordinator_score': 6,
+                    'processor_score': 1,
+                    'skip_reason': 'Coordinator agents focus on task routing',
+                    'tool_calls': 0,
+                    'coordination_signals': 4,
+                    'processing_signals': 1
+                })
+            elif agent_name == "researcher":
+                return (False, {
+                    'filtering_enabled': True,
+                    'detected_role': 'processor',
+                    'coordinator_score': 0,
+                    'processor_score': 8,
+                    'skip_reason': 'Processor agents handle information',
+                    'tool_calls': 3,
+                    'coordination_signals': 0,
+                    'processing_signals': 5
+                })
+
+        mock_role_detection.side_effect = mock_role_side_effect
+
+        # Setup metric
+        metric = InformationRetention(filter_coordinators=True)
+        mock_jury = Mock()
+        mock_jury.judge = Mock(return_value=(1, "Researcher agent retains information well"))
+        metric.jury = mock_jury
+
+        # Create session with both agent types
+        session = create_session_with_conversation(
+            agent_names=["supervisor", "researcher"],
+            conversation_text="Mixed agent information retention test"
+        )
+
+        # Create session with mixed agents
+        session = create_session_with_conversation(
+            agent_names=["supervisor", "researcher"],
+            conversation_text="Mixed agent information retention test"
+        )
+
+        # Mock the role detection function and conversation method
+        with patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision') as mock_role_func, \
+             patch.object(type(session), 'get_agent_conversation_text') as mock_conv:
+
+            mock_role_func.side_effect = mock_role_side_effect
+            mock_conv.return_value = "Agent conversation with information"
+
+            results = metric._compute_agent_level(session)
+
+            # Should have 1 result: supervisor skipped, researcher evaluated
+            assert len(results) == 1
+
+            # The result should be from the researcher (processor)
+            result = results[0]
+            assert result.value == 1
+
+            # Jury called once (for researcher only)
+            mock_jury.judge.assert_called_once()
+
+            # Role detection called twice (once for each agent)
+            assert mock_role_func.call_count == 2
+
+    @patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision')
+    def test_information_retention_agent_level_role_detection_error(self, mock_role_detection):
+        """Test handling when role detection fails."""
+        # Setup mock role detection to return analysis failure
+        mock_role_detection.return_value = (
+            False,  # should_skip = False (conservative)
+            {
+                'filtering_enabled': True,
+                'detected_role': 'unknown',
+                'skip_reason': 'Could not analyze agent behavior - evaluating conservatively',
+                'analysis_failed': True
+            }
+        )
+
+        # Setup metric
+        metric = InformationRetention(filter_coordinators=True)
+        mock_jury = Mock()
+        mock_jury.judge = Mock(return_value=(1, "Evaluated despite analysis failure"))
+        metric.jury = mock_jury
+
+        # Create session
+        session = create_session_with_conversation(agent_names=["unknown_agent"])
+
+        # Create session
+        session = create_session_with_conversation(agent_names=["unknown_agent"])
+
+        # Mock the role detection function and conversation method
+        with patch('mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision') as mock_role_func, \
+             patch.object(type(session), 'get_agent_conversation_text') as mock_conv:
+
+            mock_role_func.return_value = (False, {
+                'detected_role': 'unknown',
+                'skip_reason': 'Could not analyze agent behavior - evaluating conservatively'
+            })
+            mock_conv.return_value = "Some conversation about information"
+
+            results = metric._compute_agent_level(session)
+
+            # Verify agent was evaluated conservatively
+            assert len(results) == 1
+            result = results[0]
+
+            assert result.value == 1
+
+            # Verify jury was called
+            mock_jury.judge.assert_called_once()
+
+            # Verify role detection was called
+            mock_role_func.assert_called_once_with(session, "unknown_agent", filter_coordinators=True)
+
+        # Verify jury was called (conservative evaluation)
+        mock_jury.judge.assert_called_once()

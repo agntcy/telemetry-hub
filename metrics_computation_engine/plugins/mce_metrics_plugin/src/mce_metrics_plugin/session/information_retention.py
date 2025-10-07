@@ -5,6 +5,10 @@ from typing import List, Optional, Union
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.core.agent_role_detector import get_agent_role_and_skip_decision, AgentFilterMetadata
+from metrics_computation_engine.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 INFORMATION_RETENTION_PROMPT = """
     You are an evaluator of Information Retention.
@@ -28,13 +32,14 @@ class InformationRetention(BaseMetric):
 
     REQUIRED_PARAMETERS = {"InformationRetention": ["conversation_data"]}
 
-    def __init__(self, metric_name: Optional[str] = None):
+    def __init__(self, metric_name: Optional[str] = None, filter_coordinators: bool = True):
         super().__init__()
         if metric_name is None:
             metric_name = self.__class__.__name__
         self.name = metric_name
         self.aggregation_level = "session"
         self.description = "Evaluates how well information is retained and recalled across multiple interactions by checking accurate memory of previously provided information, absence of forgotten key details or inconsistencies, and appropriate application of recalled information. Returns 1 for consistent accurate retention across all interactions, or 0 for failures in retention leading to inaccuracies or contradictions."
+        self.filter_coordinators = filter_coordinators
 
     @property
     def required_parameters(self) -> List[str]:
@@ -122,6 +127,17 @@ class InformationRetention(BaseMetric):
 
         for agent_name in session.agent_stats.keys():
             try:
+                # Check if agent should be skipped based on role detection
+                should_skip, role_metadata = get_agent_role_and_skip_decision(
+                    session, agent_name, filter_coordinators=self.filter_coordinators
+                )
+
+                if should_skip:
+                    # Skip this agent entirely - don't include in results
+                    # Log the skip for debugging purposes
+                    logger.info(f"Skipping agent '{agent_name}' for InformationRetention metric: {role_metadata.get('skip_reason', 'Detected as coordinator agent')}")
+                    continue
+
                 # Use SessionEntity-level cached conversation data
                 # This leverages existing conversation extraction logic + execution tree filtering
                 agent_conversation = session.get_agent_conversation_text(agent_name)
@@ -159,17 +175,39 @@ class InformationRetention(BaseMetric):
                         session_ids=[session.session_id],
                     )
 
-                # Ensure agent-level metadata
+                # Ensure agent-level metadata including role detection info
                 result.description = self.description
                 result.aggregation_level = "agent"
                 if not hasattr(result, 'metadata') or result.metadata is None:
                     result.metadata = {}
-                result.metadata["agent_id"] = agent_name
-                result.metadata["metric_type"] = "llm-as-a-judge"
+                # Handle both AgentFilterMetadata objects and plain dicts (for tests)
+                role_dict = role_metadata.to_dict() if hasattr(role_metadata, 'to_dict') else role_metadata
+                result.metadata.update({
+                    "agent_id": agent_name,
+                    "metric_type": "llm-as-a-judge",
+                    "skipped": False,
+                    **role_dict
+                })
                 results.append(result)
 
             except Exception as e:
                 # Handle errors gracefully for individual agents
+                import traceback
+
+                # Log detailed error information for debugging
+                logger.error(f"ERROR in information retention computation for agent {agent_name}:")
+                logger.error(f"Exception type: {type(e).__name__}")
+                logger.error(f"Exception message: {str(e)}")
+                logger.error(f"Full traceback:\n{traceback.format_exc()}")
+
+                # Also print to stdout for immediate visibility in tests
+                print(f"\n=== INFORMATION_RETENTION ERROR DEBUG ===")
+                print(f"Agent: {agent_name}")
+                print(f"Error type: {type(e).__name__}")
+                print(f"Error message: {str(e)}")
+                print(f"Traceback:\n{traceback.format_exc()}")
+                print(f"=========================================\n")
+
                 result = self._create_error_result(
                     error_message=f"Error computing information retention for agent {agent_name}: {str(e)}",
                     category="agent",
@@ -184,8 +222,12 @@ class InformationRetention(BaseMetric):
                 result.aggregation_level = "agent"
                 if not hasattr(result, 'metadata') or result.metadata is None:
                     result.metadata = {}
-                result.metadata["agent_id"] = agent_name
-                result.metadata["metric_type"] = "llm-as-a-judge"
+                result.metadata.update({
+                    "agent_id": agent_name,
+                    "metric_type": "llm-as-a-judge",
+                    "skipped": False,
+                    "error_in_processing": True
+                })
 
                 results.append(result)
 
