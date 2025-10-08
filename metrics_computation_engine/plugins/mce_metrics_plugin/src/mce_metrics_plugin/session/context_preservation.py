@@ -23,6 +23,8 @@ CONTEXT_PRESERVATION_PROMPT = """
 
 
 class ContextPreservation(BaseMetric):
+    REQUIRED_PARAMETERS = {"ContextPreservation": ["conversation_data"]}
+
     def __init__(self, metric_name: Optional[str] = None):
         super().__init__()
         if metric_name is None:
