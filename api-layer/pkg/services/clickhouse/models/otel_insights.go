@@ -31,11 +31,11 @@ type CallGraph struct {
 	Timestamp    string `json:"timestamp"`
 }
 
-
 type SessionID struct {
 	ID          string `json:"id"`
 	SpanName    string `json:"name"`
 	Timestamp   string `json:"timestamp"`
+	Prompt      string `json:"prompt,omitempty"`
 	ScopeName   string `json:"scope_name"`
 	ServiceName string `json:"service_name"`
 }
@@ -43,6 +43,7 @@ type SessionID struct {
 type SessionUniqueID struct {
 	ID             string `json:"id"`
 	StartTimestamp string `json:"start_timestamp"`
+	Prompt         string `json:"prompt,omitempty"`
 }
 
 type TraceId struct {

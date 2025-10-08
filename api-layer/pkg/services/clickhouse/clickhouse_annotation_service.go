@@ -696,7 +696,37 @@ func (cas *ClickhouseAnnotationService) CreateAnnotationGroupItems(groupID strin
 		return nil, result.Error
 	}
 
-	return items, nil
+	// Reload inserted items so their IDs and timestamps are populated
+	var persistedItems []models.AnnotationGroupItem
+	if err := cas.clickhouseDB.
+		Where("group_id = ? AND session_id IN ?", groupID, sessionIDs).
+		Find(&persistedItems).Error; err != nil {
+		logger.Zap.Error("Failed to reload annotation group items after insert", logger.Error(err))
+		return nil, err
+	}
+
+	persistedBySession := make(map[string]models.AnnotationGroupItem, len(persistedItems))
+	for _, item := range persistedItems {
+		persistedBySession[item.SessionID] = item
+	}
+
+	orderedItems := make([]models.AnnotationGroupItem, 0, len(sessionIDs))
+	for _, sessionID := range sessionIDs {
+		if item, ok := persistedBySession[sessionID]; ok {
+			orderedItems = append(orderedItems, item)
+		}
+	}
+
+	if len(orderedItems) != len(sessionIDs) {
+		logger.Zap.Warn(
+			"Mismatch when reloading annotation group items after insert",
+			logger.String("group_id", groupID),
+			logger.Int("requested", len(sessionIDs)),
+			logger.Int("reloaded", len(orderedItems)),
+		)
+	}
+
+	return orderedItems, nil
 }
 
 func (cas *ClickhouseAnnotationService) GetAnnotationGroupItems(groupID string, page, limit int) ([]models.AnnotationGroupItem, int, error) {

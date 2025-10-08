@@ -13,6 +13,8 @@ import (
 type DataService interface {
 	GetSessionIDSUnique(startTime, endTime time.Time) ([]models.SessionUniqueID, error)
 	GetSessionIDSUniqueWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) ([]models.SessionUniqueID, int, error)
+	GetSessionIDSWithPrompts(startTime, endTime time.Time) ([]models.SessionUniqueID, error)
+	GetSessionIDSWithPromptsWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) ([]models.SessionUniqueID, int, error)
 	GetTracesBySessionIDs(sessionIDs []string) (map[string][]models.OtelTraces, []string, error)
 	GetTracesBySessionID(sessionID string) ([]models.OtelTraces, error)
 	GetExecutionGraphBySessionID(sessionID string) (string, time.Time, error)

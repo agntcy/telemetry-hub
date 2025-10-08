@@ -53,6 +53,16 @@ func (m *MockDataService) GetTracesBySessionIDs(sessionIDs []string) (map[string
 	return args.Get(0).(map[string][]models.OtelTraces), args.Get(1).([]string), args.Error(2)
 }
 
+func (m *MockDataService) GetSessionIDSWithPrompts(startTime, endTime time.Time) ([]models.SessionUniqueID, error) {
+	args := m.Called(startTime, endTime)
+	return args.Get(0).([]models.SessionUniqueID), args.Error(1)
+}
+
+func (m *MockDataService) GetSessionIDSWithPromptsWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) ([]models.SessionUniqueID, int, error) {
+	args := m.Called(startTime, endTime, page, limit, nameFilter)
+	return args.Get(0).([]models.SessionUniqueID), args.Int(1), args.Error(2)
+}
+
 // Add missing GetCallGraph method to satisfy services.DataService interface
 func (m *MockDataService) GetCallGraph(sessionID string) ([]models.CallGraph, error) {
 	args := m.Called(sessionID)
@@ -406,6 +416,47 @@ func TestSessions(t *testing.T) {
 		assert.False(t, response.HasPrev)
 
 		mockDataService.AssertExpectations(t)
+
+		t.Run("GET /traces/sessions with include_prompts=true should return sessions with prompts", func(t *testing.T) {
+			mockDataService := new(MockDataService)
+			server := createTestServer(mockDataService)
+
+			startTime := time.Date(2023, 6, 25, 15, 0, 0, 0, time.UTC)
+			endTime := time.Date(2023, 6, 25, 18, 0, 0, 0, time.UTC)
+
+			expectedSessions := []models.SessionUniqueID{
+				{ID: "session_abc123", StartTimestamp: "2023-06-25T15:30:00Z", Prompt: "hello"},
+			}
+
+			mockDataService.On("GetSessionIDSWithPromptsWithPagination",
+				mock.AnythingOfType("time.Time"),
+				mock.AnythingOfType("time.Time"),
+				0, 50, (*string)(nil)).Return(expectedSessions, len(expectedSessions), nil)
+
+			url := fmt.Sprintf("/traces/sessions?start_time=%s&end_time=%s&include_prompts=true",
+				startTime.Format(time.RFC3339),
+				endTime.Format(time.RFC3339))
+			req := httptest.NewRequest(http.MethodGet, url, nil)
+			w := httptest.NewRecorder()
+
+			server.Sessions(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+			var response models.SessionsResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedSessions, response.Data)
+			assert.Equal(t, len(expectedSessions), response.Total)
+			assert.Equal(t, 0, response.Page)
+			assert.Equal(t, 50, response.Limit)
+			assert.False(t, response.HasNext)
+			assert.False(t, response.HasPrev)
+
+			mockDataService.AssertExpectations(t)
+		})
+		
 	})
 
 	t.Run("GET /traces/sessions with invalid start_time should return bad request", func(t *testing.T) {

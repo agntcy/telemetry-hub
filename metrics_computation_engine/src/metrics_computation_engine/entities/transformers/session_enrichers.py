@@ -11,6 +11,9 @@ from .base import DataPreservingTransformer
 from .execution_tree_transformer import ExecutionTreeTransformer
 from ..models.session import SessionEntity
 
+from metrics_computation_engine.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 class ConversationDataTransformer(DataPreservingTransformer):
     """
@@ -602,6 +605,27 @@ class SessionEnrichmentPipeline:
             EndToEndAttributesTransformer(),  # Add input_query and final_response extraction
             ExecutionTreeTransformer(),
         ]
+
+        # Append a lightweight transformer that attempts to populate ground_truth via Annotations API
+        class GroundTruthFromAnnotationsTransformer(DataPreservingTransformer):
+            def extract(self_inner, session: SessionEntity) -> Dict[str, Any]:
+                if not isinstance(session, SessionEntity):
+                    return {}
+                # If already present, do not overwrite
+                from ...dal.api_client import get_api_client
+                if session.ground_truth and session.ground_truth != "No ground truth available":
+                    return {}
+                try:
+                    client = get_api_client()
+                    gt = client.get_annotations_results_by_session(session.session_id)
+                    if gt:
+                        return {"ground_truth": gt}
+                except Exception as e:
+                    logger.error(f"Error getting ground truth from annotations: {e}")
+                    pass
+                return {}
+
+        self.transformers.append(GroundTruthFromAnnotationsTransformer())
 
     def enrich_session(self, session: SessionEntity) -> SessionEntity:
         """

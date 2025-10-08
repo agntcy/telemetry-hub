@@ -591,19 +591,36 @@ class ApiClient:
 
         return session_set
 
-    def get_annotations_results_by_session(session_id: str) -> str:
+    def get_annotations_results_by_session(self, session_id: str) -> str:
+        """
+        Retrieve the expected output (ground truth) for a given session from the annotations API.
 
-        _uri_get_annotations = (
-            f"{self._api_config.uri_annotations.rstrip('/')}/"
-        )
+        It queries the paginated annotations endpoint filtered by session_id and returns the
+        first non-empty ExpectedOutput found. If none is present, returns empty string.
+        """
+        if not self._api_config:
+            return ""
 
-        annotations = self._get_api_request(endpoint=_uri_get_an)
+        try:
+            # Use the list endpoint filtered by session_id; it returns a paginated response
+            endpoint = f"{self._api_config.uri_annotations}"
+            params = {"session_id": session_id, "page": 1, "limit": 1}
+            response = self._get_api_request(endpoint=endpoint, params=params)
 
-        self.logger.info(f"Receiving Annotations: {str(annotations)}")
-        for d in annotations:
-            if d["session_id"] == session_id:
-                return d["annotation_value"]
-
+            self.logger.info(f"Annotations response: {response}")
+            # Expected shape: { data: [ { expected_output: string|null, ... } ], ... }
+            items = response.get("data", []) if isinstance(response, dict) else []
+            if items:
+                item = items[0]
+                self.logger.info(f"Item: {item}")
+                expected_output = item.get("expected_output")
+                self.logger.info(f"Expected output: {expected_output}")
+                # Some backends may use camelCase
+                if expected_output is None:
+                    expected_output = item.get("ExpectedOutput")
+                return expected_output or ""
+        except Exception as e:
+            self.logger.warning(f"Failed to get annotations for session {session_id}: {e}")
         return ""
 
     def get_session_metrics(self, session_id: str) -> SessionSet:

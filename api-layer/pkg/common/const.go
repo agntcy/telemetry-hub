@@ -21,6 +21,7 @@ const (
 
 	START_TIME = "start_time"
 	END_TIME   = "end_time"
+	INCLUDE_PROMPTS = "include_prompts"
 
 	SESSION_ID = "session_id"
 	SPAN_ID    = "span_id"

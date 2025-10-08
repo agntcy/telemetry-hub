@@ -183,7 +183,19 @@ func (hs *HttpServer) Sessions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get paginated session data
-	sessionIDs, total, err := hs.DataService.GetSessionIDSUniqueWithPagination(startTimeParsed, endTimeParsed, page, limit, nameFilter)
+	// sessionIDs, total, err := hs.DataService.GetSessionIDSUniqueWithPagination(startTimeParsed, endTimeParsed, page, limit, nameFilter)
+
+	includePrompts := r.URL.Query().Get(common.INCLUDE_PROMPTS)
+	var (
+		sessionIDs []models.SessionUniqueID
+		total      int
+	)
+	if includePrompts == "true" {
+		sessionIDs, total, err = hs.DataService.GetSessionIDSWithPromptsWithPagination(startTimeParsed, endTimeParsed, page, limit, nameFilter)
+	} else {
+		sessionIDs, total, err = hs.DataService.GetSessionIDSUniqueWithPagination(startTimeParsed, endTimeParsed, page, limit, nameFilter)
+	}
+
 	if err != nil {
 		hs.handleServiceError(w, err, "fetching sessions")
 		return

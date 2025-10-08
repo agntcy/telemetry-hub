@@ -43,6 +43,16 @@ func (cs *ClickhouseService) Init() error {
 	return nil
 }
 
+// GetSessionIDSWithPrompts implements the DataService interface
+func (cs *ClickhouseService) GetSessionIDSWithPrompts(startTime, endTime time.Time) ([]models.SessionUniqueID, error) {
+    return cs.Handlers.GetSessionIDSWithPrompts(startTime, endTime)
+}
+
+// GetSessionIDSWithPromptsWithPagination implements the DataService interface
+func (cs *ClickhouseService) GetSessionIDSWithPromptsWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) ([]models.SessionUniqueID, int, error) {
+	return cs.Handlers.GetSessionIDSWithPromptsWithPagination(startTime, endTime, page, limit, nameFilter)
+}
+
 // GetSessionIDSUnique implements the DataService interface
 func (cs *ClickhouseService) GetSessionIDSUnique(startTime, endTime time.Time) ([]models.SessionUniqueID, error) {
 	return cs.Handlers.GetSessionIDSUnique(startTime, endTime)
