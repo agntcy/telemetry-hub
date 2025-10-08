@@ -197,6 +197,9 @@ class WorkflowCohesionIndex(BaseMetric):
 
                 if not agent_conversation:
                     # Skip agents with no conversation data
+                    logger.info(
+                        f"Skipping agent '{agent_name}' for WorkflowCohesionIndex metric: no conversation data available"
+                    )
                     continue
 
                 # Use the same prompt format as session-level

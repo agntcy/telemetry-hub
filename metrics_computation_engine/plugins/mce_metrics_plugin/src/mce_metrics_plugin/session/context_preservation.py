@@ -5,6 +5,12 @@ from typing import List, Optional, Union
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
+from metrics_computation_engine.entities.core.agent_role_detector import (
+    get_agent_role_and_skip_decision,
+)
+from metrics_computation_engine.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 # Context Preservation
 CONTEXT_PRESERVATION_PROMPT = """
@@ -133,6 +139,9 @@ class ContextPreservation(BaseMetric):
 
                 if not agent_conversation:
                     # Skip agents with no conversation data
+                    logger.info(
+                        f"Skipping agent '{agent_name}' for ContextPreservation metric: no conversation data available"
+                    )
                     continue
 
                 # Use the same prompt format as session-level
