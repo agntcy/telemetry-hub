@@ -247,14 +247,6 @@ class Groundedness(BaseMetric):
                 logger.error(f"Exception message: {str(e)}")
                 logger.error(f"Full traceback:\n{traceback.format_exc()}")
 
-                # Also print to stdout for immediate visibility in tests
-                print("\n=== GROUNDEDNESS ERROR DEBUG ===")
-                print(f"Agent: {agent_name}")
-                print(f"Error type: {type(e).__name__}")
-                print(f"Error message: {str(e)}")
-                print(f"Traceback:\n{traceback.format_exc()}")
-                print("================================\n")
-
                 result = self._create_error_result(
                     error_message=f"Error computing groundedness for agent {agent_name}: {str(e)}",
                     category="agent",
