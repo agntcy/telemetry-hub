@@ -40,6 +40,7 @@ type SessionID struct {
 type SessionUniqueID struct {
 	ID             string `json:"id"`
 	StartTimestamp string `json:"start_timestamp"`
+    Prompt         string `json:"prompt,omitempty"`
 }
 
 type TraceId struct {
