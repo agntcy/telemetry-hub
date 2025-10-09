@@ -424,9 +424,7 @@ async def test_goal_success_rate_agent_computation_empty_session():
     session = SessionEntity(session_id="test_session", spans=[])
     session = setup_session_for_agents(session)
 
-    results = await metric.compute_with_dispatch(
-        session, agent_computation=True
-    )
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     # Should return empty list for no agents
     assert isinstance(results, list)
@@ -463,9 +461,7 @@ async def test_goal_success_rate_agent_computation_single_agent():
     session = SessionEntity(session_id="test_session", spans=spans)
     session = setup_session_for_agents(session)
 
-    results = await metric.compute_with_dispatch(
-        session, agent_computation=True
-    )
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     # Should return list with one agent result (but no model, so error result)
     assert isinstance(results, list)
@@ -521,9 +517,7 @@ async def test_goal_success_rate_agent_computation_multiple_agents():
     session = SessionEntity(session_id="test_session", spans=spans)
     session = setup_session_for_agents(session)
 
-    results = await metric.compute_with_dispatch(
-        session, agent_computation=True
-    )
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     # Should return results for both agents
     assert isinstance(results, list)
