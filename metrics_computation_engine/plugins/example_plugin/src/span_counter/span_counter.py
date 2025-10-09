@@ -38,7 +38,7 @@ class SpanCounter(BaseMetric):
     def init_with_model(self, model) -> bool:
         return True
 
-    async def compute(self, session: SessionEntity):
+    async def compute(self, session: SessionEntity, **context):
         total_spans = len(session.spans)
         all_span_ids = [span.span_id for span in session.spans]
 

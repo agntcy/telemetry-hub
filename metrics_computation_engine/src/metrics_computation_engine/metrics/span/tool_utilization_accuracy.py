@@ -62,7 +62,7 @@ class ToolUtilizationAccuracy(BaseMetric):
     def create_model(self, llm_config):
         return self.create_native_model(llm_config)
 
-    async def compute(self, data):
+    async def compute(self, data, **context):
         if data.entity_type not in self.required["entity_type"] or not (
             data.input_payload and data.output_payload and data.entity_name
         ):

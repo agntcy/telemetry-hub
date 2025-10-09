@@ -4,7 +4,7 @@
 import logging
 import asyncio
 import inspect
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
@@ -48,17 +48,96 @@ class MetricsProcessor:
 
         return self._context_support_cache[metric_class_name]
 
+    def _metric_supports_agent_computation(self, metric: BaseMetric) -> bool:
+        """Check if metric supports agent-level computation"""
+        return (
+            hasattr(metric, "supports_agent_computation")
+            and metric.supports_agent_computation()
+        )
+
+    async def _handle_agent_cache_and_compute(
+        self, metric: BaseMetric, data: Any, context: Dict[str, Any]
+    ) -> List[MetricResult]:
+        """Handle caching and computation for agent-level metrics"""
+
+        # Discover agents first - ensure execution_tree is available
+        if not hasattr(data, "execution_tree") or data.execution_tree is None:
+            from metrics_computation_engine.entities.models.execution_tree import (
+                ExecutionTree,
+            )
+
+            data.execution_tree = ExecutionTree()
+
+        agent_ids = list(data.agent_stats.keys()) if data.agent_stats else []
+
+        if not agent_ids:
+            logger.debug(
+                f"No agents found for {metric.name} in session {data.session_id}"
+            )
+            return []  # No agents found
+
+        logger.debug(f"Found {len(agent_ids)} agents for {metric.name}: {agent_ids}")
+
+        # Try to get all agent results from cache at once
+        cached_results = await metric.check_cache_metric(
+            metric_name=metric.name,
+            session_id=data.session_id,
+            context=context,  # This will trigger _check_all_agents_cache
+        )
+
+        # Filter cached results to only include agents from current session
+        if cached_results is not None:
+            filtered_results = [
+                result
+                for result in cached_results
+                if result.metadata.get("agent_id") in agent_ids
+            ]
+
+            if len(filtered_results) == len(agent_ids):
+                # All agents cached
+                logger.debug(
+                    f"Cache hit for all {len(agent_ids)} agents of {metric.name}"
+                )
+                return filtered_results
+            else:
+                logger.debug(
+                    f"Partial cache hit: {len(filtered_results)}/{len(agent_ids)} agents cached"
+                )
+                # For now, recompute all if not all cached (simpler logic)
+                pass
+
+        # Some or all agents missing from cache - compute all
+        logger.debug(f"Cache miss for {metric.name} agents, computing...")
+
+        if self._metric_supports_context(metric):
+            new_results = await metric.compute_with_dispatch(data, **context)
+        else:
+            new_results = await metric.compute_with_dispatch(data)
+
+        # Ensure we return a list
+        if isinstance(new_results, list):
+            return new_results
+        else:
+            return [new_results] if new_results else []
+
     async def _safe_compute(
         self, metric: BaseMetric, data: Any, context: Optional[Dict[str, Any]] = None
-    ) -> MetricResult:
+    ) -> Union[MetricResult, List[MetricResult]]:
         """Safely compute metric with error handling and cache checking"""
         try:
-            # Check cache first
+            # Check if this is agent computation
+            is_agent_computation = context and context.get("agent_computation", False)
+
+            if is_agent_computation and hasattr(data, "agent_stats"):
+                # Agent computation - use agent-aware caching
+                return await self._handle_agent_cache_and_compute(metric, data, context)
+
+            # Regular session/span computation - existing logic
             cached_result = None
 
             if metric.aggregation_level in ["span", "session"]:
                 cached_result = await metric.check_cache_metric(
-                    metric_name=metric.name, session_id=data.session_id
+                    metric_name=metric.name, session_id=data.session_id, context=context
                 )
             if cached_result is not None:
                 if logger.isEnabledFor(logging.DEBUG):
@@ -73,7 +152,7 @@ class MetricsProcessor:
                 logger.debug(
                     f"Calling {metric.name} with context: {list(context.keys()) if context else 'None'}"
                 )
-                result = await metric.compute(data, context=context)
+                result = await metric.compute(data, **context)
             else:
                 logger.debug(
                     f"Calling {metric.name} without context (supports_context: {self._metric_supports_context(metric)}, context is None: {context is None})"
@@ -290,19 +369,71 @@ class MetricsProcessor:
         required_types = metric_instance.required["entity_type"]
         return span.entity_type in required_types
 
+    def _classify_metrics_by_aggregation_level(self) -> Dict[str, List[tuple]]:
+        """
+        Pre-classify metrics by aggregation level to avoid repeated filtering.
+
+        Returns:
+            Dict mapping aggregation levels to list of (metric_name, metric_class) tuples
+        """
+        classified_metrics = {
+            "span": [],
+            "session": [],
+            "agent": [],  # Session-level metrics that support agent computation
+            "population": [],
+        }
+
+        for metric_name in self.registry.list_metrics():
+            metric_class = self.registry.get_metric(metric_name)
+
+            # Determine aggregation level
+            if hasattr(metric_class, "aggregation_level"):
+                agg_level = metric_class.aggregation_level
+            else:
+                # Need to instantiate to get aggregation level
+                temp_instance = metric_class(metric_name)
+                agg_level = temp_instance.aggregation_level
+
+            # Add to appropriate category
+            if agg_level == "span":
+                classified_metrics["span"].append((metric_name, metric_class))
+            elif agg_level == "session":
+                classified_metrics["session"].append((metric_name, metric_class))
+
+                # Also check if it supports agent computation
+                temp_instance = metric_class(metric_name)
+                if self._metric_supports_agent_computation(temp_instance):
+                    classified_metrics["agent"].append((metric_name, metric_class))
+            elif agg_level == "population":
+                classified_metrics["population"].append((metric_name, metric_class))
+
+        return classified_metrics
+
     async def compute_metrics(
-        self, sessions_set: SessionSet
+        self, sessions_set: SessionSet, computation_levels: Optional[List[str]] = None
     ) -> Dict[str, List[MetricResult]]:
         """
         Compute multiple metrics concurrently using SessionEntity objects.
 
         Args:
-            sessions_data: Dictionary mapping session_id to SessionEntity
+            sessions_set: SessionSet containing SessionEntity objects
+            computation_levels: List of computation levels to process (defaults to ["session"])
         """
+        # Set default computation levels for backward compatibility
+        if computation_levels is None:
+            computation_levels = ["session"]
+
+        # Pre-classify metrics by aggregation level for efficiency
+        classified_metrics = self._classify_metrics_by_aggregation_level()
+        logger.info(
+            f"Classified metrics: {[(level, len(metrics)) for level, metrics in classified_metrics.items()]}"
+        )
+
         tasks = []
         metric_results = {
             "span_metrics": [],
             "session_metrics": [],
+            "agent_metrics": [],
             "population_metrics": [],
         }
 
@@ -311,30 +442,11 @@ class MetricsProcessor:
         ):  # browse by SessionEntity
             # Span-level metrics: iterate through spans in the session
             for span in session_entity.spans:
-                for metric_name in self.registry.list_metrics():
-                    metric_class = self.registry.get_metric(metric_name)
-
-                    # Check aggregation level without instantiation
-                    if hasattr(metric_class, "aggregation_level"):
-                        # Get aggregation_level
-                        if metric_class.aggregation_level != "span":
-                            continue
-
-                        # For entity filtering, we still need a temp instance to check requirements
-                        temp_instance = metric_class(metric_name)
-                        if not self._should_compute_metric_for_span(
-                            temp_instance, span
-                        ):
-                            continue
-                    else:
-                        # If it needs an instance to get aggregation_level
-                        temp_instance = metric_class(metric_name)
-                        if temp_instance.aggregation_level != "span":
-                            continue
-                        if not self._should_compute_metric_for_span(
-                            temp_instance, span
-                        ):
-                            continue
+                for metric_name, metric_class in classified_metrics["span"]:
+                    # For entity filtering, we need a temp instance to check requirements
+                    temp_instance = metric_class(metric_name)
+                    if not self._should_compute_metric_for_span(temp_instance, span):
+                        continue
 
                     # Only initialize if we're going to compute it
                     metric_instance = await self._initialize_metric(
@@ -345,61 +457,104 @@ class MetricsProcessor:
                         tasks.append(self._safe_compute(metric_instance, span))
 
             # Session-level metrics: pass the SessionEntity directly
-            for metric_name in self.registry.list_metrics():
-                metric_class = self.registry.get_metric(metric_name)
+            if "session" in computation_levels:
+                for metric_name, metric_class in classified_metrics["session"]:
+                    logger.info(f"METRIC NAME (session level): {metric_name}")
+                    required_params = self._get_metric_requirements(
+                        metric_class, metric_name
+                    )
+                    logger.info(f"REQUIRED PARAMS: {required_params}")
 
-                required_params = self._get_metric_requirements(
-                    metric_class, metric_name
-                )
-                logger.info(f"METRIC NAME: {metric_name}")
-                logger.info(f"REQUIRED PARAMS: {required_params}")
+                    if not self._check_session_requirements(
+                        metric_name, session_entity, required_params
+                    ):
+                        continue
 
-                if not self._check_session_requirements(
-                    metric_name, session_entity, required_params
-                ):
-                    continue
-
-                metric_instance = await self._initialize_metric(
-                    metric_name, metric_class
-                )
-
-                if (
-                    metric_instance is not None
-                    and metric_instance.aggregation_level == "session"
-                ):
-                    # Prepare context for metrics that need it
-                    context = None
-                    if sessions_set is not None:
-                        context = {
-                            "session_set_stats": sessions_set.stats,
-                            "session_index": session_index,
-                            "session_set": sessions_set,
-                        }
-                        logger.debug(
-                            f"Prepared context with keys: {list(context.keys())}"
-                        )
-                    # Pass the SessionEntity directly to session-level metrics
-                    tasks.append(
-                        self._safe_compute(
-                            metric_instance, session_entity, context=context
-                        )
+                    metric_instance = await self._initialize_metric(
+                        metric_name, metric_class
                     )
 
+                    if metric_instance is not None:
+                        # Prepare context for metrics that need it
+                        context = None
+                        if sessions_set is not None:
+                            context = {
+                                "session_set_stats": sessions_set.stats,
+                                "session_index": session_index,
+                                "session_set": sessions_set,
+                            }
+                            if logger.isEnabledFor(logging.DEBUG):
+                                logger.debug(
+                                    f"Prepared context with keys: {list(context.keys())}"
+                                )
+                        # Pass the SessionEntity directly to session-level metrics
+                        tasks.append(
+                            self._safe_compute(
+                                metric_instance, session_entity, context=context
+                            )
+                        )
+
+            # Agent-level metrics: process session-level metrics that support agent computation
+            if "agent" in computation_levels:
+                logger.info(
+                    f"Processing agent-level metrics for session {session_entity.session_id}"
+                )
+
+                for metric_name, metric_class in classified_metrics["agent"]:
+                    logger.info(f"METRIC NAME (agent level): {metric_name}")
+                    # Check requirements for the session
+                    required_params = self._get_metric_requirements(
+                        metric_class, metric_name
+                    )
+                    if not self._check_session_requirements(
+                        metric_name, session_entity, required_params
+                    ):
+                        logger.debug(
+                            f"Session doesn't meet requirements for {metric_name}"
+                        )
+                        continue
+                    logger.info(f"REQUIRED PARAMS: {required_params}")
+                    # Initialize the metric
+                    metric_instance = await self._initialize_metric(
+                        metric_name, metric_class
+                    )
+
+                    if metric_instance is not None:
+                        # Prepare context with agent computation flag
+                        context = None
+                        if sessions_set is not None:
+                            context = {
+                                "session_set_stats": sessions_set.stats,
+                                "session_index": session_index,
+                                "session_set": sessions_set,
+                                "agent_computation": True,
+                            }
+                            logger.debug(
+                                f"Prepared context with agent computation flag for {metric_name}"
+                            )
+
+                        # Compute the metric with agent option
+                        tasks.append(
+                            self._safe_compute(
+                                metric=metric_instance,
+                                data=session_entity,
+                                context=context,
+                            )
+                        )
+
         # Population-level metrics: pass all sessions data
-        for metric_name in self.registry.list_metrics():
-            metric_class = self.registry.get_metric(metric_name)
+        for metric_name, metric_class in classified_metrics["population"]:
             metric_instance = await self._initialize_metric(metric_name, metric_class)
 
-            if (
-                metric_instance is not None
-                and metric_instance.aggregation_level == "population"
-            ):
+            if metric_instance is not None:
                 # Pass the entire sessions_data dict for population metrics
                 tasks.append(self._safe_compute(metric_instance, sessions_set))
 
         # Execute all tasks concurrently
         if tasks:
-            results: List[MetricResult] = await asyncio.gather(*tasks)
+            raw_results: List[
+                Union[MetricResult, List[MetricResult]]
+            ] = await asyncio.gather(*tasks)
 
             # mapping of session ids / app name
             sessions_appname_dict = {
@@ -408,12 +563,30 @@ class MetricsProcessor:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(f"sessions_appname_dict: {sessions_appname_dict}")
 
+            # Flatten results - handle both single results and lists of results
+            flattened_results: List[MetricResult] = []
+            for raw_result in raw_results:
+                if raw_result is None:
+                    logger.error("Got None result from metric computation - skipping")
+                    continue
+
+                # Handle both single results and lists of results
+                if isinstance(raw_result, list):
+                    # Multiple results (e.g., from agent-level computation)
+                    flattened_results.extend(raw_result)
+                else:
+                    # Single result
+                    flattened_results.append(raw_result)
+
             # Organize results by aggregation level
-            for result in results:
+            for result in flattened_results:
+                if result is None:
+                    logger.error("Got None result from flattened results - skipping")
+                    continue
                 if (result.value == -1 or result.value == {}) and not result.success:
                     continue
                 aggregation_level = result.aggregation_level
-                if aggregation_level in ["span", "session"]:
+                if aggregation_level in ["span", "session", "agent"]:
                     result.app_name = sessions_appname_dict.get(
                         result.session_id[0], result.app_name
                     )

@@ -41,7 +41,7 @@ class WorkflowEfficiency(BaseMetric):
     def init_with_model(self, model) -> bool:
         return True
 
-    async def compute(self, session: SessionEntity):
+    async def compute(self, session: SessionEntity, **context):
         try:
             # Calculate efficiency metrics from pre-computed agent transitions
             total_transitions = (

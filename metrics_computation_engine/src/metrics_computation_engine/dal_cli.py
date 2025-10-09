@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import click
 from pydantic import BaseModel, Field
 
@@ -257,6 +258,15 @@ def run() -> None | Any:
         session_ids = [args.session_id]
         grouped_sessions, not_found_sessions = get_traces_by_session_ids(session_ids)
         # Then process the session set using traces_processor
+        if args.dump and not args.file and args.session_id:
+            # Dump the retrieved session data to a file for inspection
+            dump_filename = f"{args.session_id}.json"
+            if args.session_id in grouped_sessions:
+                with open(dump_filename, "w") as f:
+                    f.write(json.dumps(grouped_sessions[args.session_id], indent=1))
+                logger.info(f"Dumped session data to {dump_filename}")
+            else:
+                logger.warning(f"Session {args.session_id} not found, cannot dump data")
         if grouped_sessions:
             session_set = traces_processor(grouped_sessions)
         else:

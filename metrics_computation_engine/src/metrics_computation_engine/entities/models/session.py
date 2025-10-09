@@ -97,6 +97,11 @@ class SessionEntity(BaseModel):
     agent_transitions: Optional[List[str]] = None
     agent_transition_counts: Optional[Counter] = None
 
+    # Cache for agent-specific conversation data (shared across all metrics)
+    _agent_conversation_cache: Optional[Dict[str, Dict[str, Any]]] = PrivateAttr(
+        default=None
+    )
+
     conversation_elements: Optional[List[ConversationElement]] = None
 
     tool_calls: Optional[List[ToolCall]] = None
@@ -421,48 +426,221 @@ class SessionEntity(BaseModel):
 
         agent_stats = {}
 
-        # Find all agent nodes in the execution tree
-        for trace_roots in self.execution_tree.traces.values():
-            for root in trace_roots:
-                self._collect_agent_stats(root, agent_stats)
+        # Use single-pass direct span analysis for accurate attribution
+        # This approach processes each span exactly once, avoiding double-counting
+        agent_span_groups = {}
+
+        # Group spans by identified agent
+        for span in self.spans:
+            agent_name = self._identify_span_agent(span)
+            if agent_name:
+                if agent_name not in agent_span_groups:
+                    agent_span_groups[agent_name] = []
+                agent_span_groups[agent_name].append(span)
+
+        # Calculate stats for each agent
+        for agent_name, spans in agent_span_groups.items():
+            agent_stats[agent_name] = AgentStats()
+            self._calculate_agent_stats(agent_stats[agent_name], spans)
 
         return agent_stats
 
     def _collect_agent_stats(self, node, agent_stats: Dict[str, AgentStats]) -> None:
         """
-        Recursively traverse the execution tree to collect statistics for each agent.
+        Collect statistics for each agent using attribute-first identification.
 
-        This improved version handles both direct agent spans and agent task spans.
+        This enhanced version prioritizes agent_id attributes over hierarchy,
+        ensuring accurate attribution across different trace structures.
 
         Args:
             node: Current SpanNode being processed
             agent_stats: Dictionary to accumulate statistics per agent
         """
-        # Strategy 1: Direct agent span
-        if node.span.entity_type == "agent":
-            agent_name = node.span.entity_name
+        # Use unified agent identification for current span
+        agent_name = self._identify_span_agent(node.span)
+
+        if agent_name:
+            # Initialize agent stats if not exists
             if agent_name not in agent_stats:
                 agent_stats[agent_name] = AgentStats()
 
-            # Collect all descendant spans for this agent
-            descendant_spans = self._get_descendant_spans(node)
-            self._calculate_agent_stats(agent_stats[agent_name], descendant_spans)
-
-        # Strategy 2: Agent task span (e.g., "documentation_agent.task")
-        elif node.span.entity_type == "task":
-            # Check if this task belongs to an agent
-            agent_name = self._extract_agent_from_task(node.span)
-            if agent_name:
-                if agent_name not in agent_stats:
-                    agent_stats[agent_name] = AgentStats()
-
-                # Collect all descendant spans for this agent task
+            # For agent spans, collect descendant spans
+            if node.span.entity_type in ["agent", "task"]:
                 descendant_spans = self._get_descendant_spans(node)
                 self._calculate_agent_stats(agent_stats[agent_name], descendant_spans)
+            else:
+                # For individual spans (like tools), count them directly
+                self._calculate_agent_stats(agent_stats[agent_name], [node.span])
 
         # Continue traversing children
         for child in node.children:
             self._collect_agent_stats(child, agent_stats)
+
+    def _collect_direct_agent_spans(self, agent_stats: Dict[str, AgentStats]) -> None:
+        """
+        Scan all spans directly to catch any with agent_id that might be missed
+        by tree traversal (e.g., spans in separate traces).
+
+        Args:
+            agent_stats: Dictionary to accumulate additional statistics per agent
+        """
+        # Group spans by agent_id to avoid duplicate counting
+        agent_span_groups = {}
+
+        for span in self.spans:
+            agent_name = self._identify_span_agent(span)
+            if agent_name:
+                if agent_name not in agent_span_groups:
+                    agent_span_groups[agent_name] = []
+                agent_span_groups[agent_name].append(span)
+
+        # Process each agent's spans
+        for agent_name, spans in agent_span_groups.items():
+            if agent_name not in agent_stats:
+                agent_stats[agent_name] = AgentStats()
+
+            # Use set to avoid double-counting spans already processed in tree traversal
+            # We'll calculate stats additively and let the calculate method handle deduplication
+            self._calculate_agent_stats_additive(agent_stats[agent_name], spans)
+
+    def _calculate_agent_stats_additive(
+        self, stats: AgentStats, spans: List[SpanEntity]
+    ) -> None:
+        """
+        Calculate agent statistics additively, avoiding double-counting.
+        This is a helper for direct span collection that ensures we don't
+        double-count spans already processed in tree traversal.
+
+        Args:
+            stats: AgentStats object to update
+            spans: List of spans belonging to the agent
+        """
+        # Track which spans we've seen to avoid double counting
+        # For now, we'll use a simple approach - the _calculate_agent_stats method
+        # should handle the core logic, this is just to ensure we catch missed spans
+
+        # Create a temporary stats object to calculate new contributions
+        temp_stats = AgentStats()
+        self._calculate_agent_stats(temp_stats, spans)
+
+        # Merge with existing stats (taking the maximum to avoid double-counting)
+        # This is a simplified approach - in practice, you might want more sophisticated merging
+        stats.total_tool_calls = max(
+            stats.total_tool_calls, temp_stats.total_tool_calls
+        )
+        stats.total_llm_calls = max(stats.total_llm_calls, temp_stats.total_llm_calls)
+        stats.tool_calls_failed = max(
+            stats.tool_calls_failed, temp_stats.tool_calls_failed
+        )
+        stats.llm_calls_failed = max(
+            stats.llm_calls_failed, temp_stats.llm_calls_failed
+        )
+
+        # For durations and tokens, take the maximum as well to avoid double-counting
+        stats.total_tools_duration = max(
+            stats.total_tools_duration, temp_stats.total_tools_duration
+        )
+        stats.total_llm_duration = max(
+            stats.total_llm_duration, temp_stats.total_llm_duration
+        )
+        stats.llm_input_tokens = max(
+            stats.llm_input_tokens, temp_stats.llm_input_tokens
+        )
+        stats.llm_output_tokens = max(
+            stats.llm_output_tokens, temp_stats.llm_output_tokens
+        )
+        stats.llm_total_tokens = max(
+            stats.llm_total_tokens, temp_stats.llm_total_tokens
+        )
+        stats.tool_total_tokens = max(
+            stats.tool_total_tokens, temp_stats.tool_total_tokens
+        )
+
+        # For unique tool names, merge the lists
+        stats.unique_tool_names = list(
+            set(stats.unique_tool_names + temp_stats.unique_tool_names)
+        )
+
+    def _identify_span_agent(self, span) -> Optional[str]:
+        """
+        Unified agent identification method that prioritizes agent_id attribute.
+
+        This method replaces hierarchy-based logic with attribute-first identification
+        to ensure spans with explicit agent_id are correctly attributed regardless
+        of their position in the execution tree.
+
+        Strategy priority:
+        1. agent_id attribute from attrs/raw_span_data (most reliable)
+        2. Entity path analysis (for agent-like paths)
+        3. Entity name patterns (fallback)
+
+        Args:
+            span: SpanEntity to identify agent for
+
+        Returns:
+            Agent name if found, None otherwise
+        """
+        if not span:
+            return None
+
+        # Strategy 1: Direct agent_id attribute (highest priority)
+        # Check in attrs first
+        if hasattr(span, "attrs") and span.attrs:
+            agent_id = span.attrs.get("agent_id")
+            if agent_id and isinstance(agent_id, str) and agent_id.strip():
+                return agent_id.strip()
+
+        # Check in raw_span_data as fallback
+        if hasattr(span, "raw_span_data") and span.raw_span_data:
+            span_attrs = span.raw_span_data.get("SpanAttributes", {})
+            agent_id = span_attrs.get("agent_id")
+            if agent_id and isinstance(agent_id, str) and agent_id.strip():
+                return agent_id.strip()
+
+            # Strategy 2: Entity path analysis (medium priority)
+            entity_path = span_attrs.get("traceloop.entity.path")
+            if entity_path and isinstance(entity_path, str) and "." in entity_path:
+                potential_agent = entity_path.split(".")[0]
+                # Only use if it looks like an agent name
+                if (
+                    "agent" in potential_agent.lower()
+                    and potential_agent.lower() != "agent"
+                    and len(potential_agent) > 5
+                ):  # Avoid too generic names
+                    return potential_agent
+
+        # Strategy 3: Entity name patterns (lowest priority)
+        entity_name = getattr(span, "entity_name", None)
+        if entity_name and isinstance(entity_name, str):
+            # Remove common suffixes
+            base_name = entity_name.replace(".task", "").replace(".agent", "")
+
+            # Check for agent-like patterns - be more restrictive to avoid false positives
+            # Only match if "agent" appears as a separate word or at the end
+            lower_name = base_name.lower()
+            if (
+                lower_name != "agent"
+                and len(base_name) > 5
+                and
+                # More precise agent pattern matching
+                (
+                    lower_name.endswith("_agent")
+                    or lower_name.endswith("-agent")
+                    or lower_name.startswith("agent_")
+                    or lower_name.startswith("agent-")
+                    or "_agent_" in lower_name
+                    or "-agent-" in lower_name
+                )
+                and
+                # Exclude common false positives
+                not any(
+                    word in lower_name
+                    for word in ["graph", "workflow", "multi_agent_graph", "service"]
+                )
+            ):
+                return base_name
+
+        return None
 
     def _extract_agent_from_task(self, span) -> Optional[str]:
         """
@@ -615,3 +793,380 @@ class SessionEntity(BaseModel):
 
         # Update unique tool names as sorted list
         stats.unique_tool_names = sorted(list(unique_tools))
+
+    def get_agent_view(self, agent_name: str) -> "AgentView":
+        """
+        Get a cached view of spans for a specific agent.
+
+        This method creates and caches AgentView instances for efficient
+        agent-level metric computation. The view pre-computes span collections
+        to avoid repeated filtering operations.
+
+        Args:
+            agent_name: Name of the agent to get view for
+
+        Returns:
+            AgentView instance with pre-computed span collections
+        """
+        if not hasattr(self, "_agent_views"):
+            self._agent_views = {}
+
+        if agent_name not in self._agent_views:
+            self._agent_views[agent_name] = AgentView(agent_name, self)
+
+        return self._agent_views[agent_name]
+
+    def _get_spans_for_agent(self, agent_name: str) -> List[SpanEntity]:
+        """
+        Extract all spans belonging to a specific agent using attribute-first identification.
+
+        This method uses both tree traversal and direct span scanning to ensure
+        all spans with agent_id attributes are captured, regardless of trace structure.
+
+        Args:
+            agent_name: Name of the agent to get spans for
+
+        Returns:
+            List of spans belonging to the specified agent
+        """
+        agent_spans = []
+
+        # Approach 1: Tree traversal (for hierarchical relationships)
+        if self.execution_tree:
+            for trace_roots in self.execution_tree.traces.values():
+                for root in trace_roots:
+                    self._collect_spans_for_agent(root, agent_name, agent_spans)
+
+        # Approach 2: Direct span scan (to catch spans missed by tree traversal)
+        # This ensures spans with agent_id but in separate traces are included
+        for span in self.spans:
+            identified_agent = self._identify_span_agent(span)
+            if identified_agent == agent_name and span not in agent_spans:
+                agent_spans.append(span)
+
+        return agent_spans
+
+    def _collect_spans_for_agent(
+        self, node, target_agent_name: str, agent_spans: List[SpanEntity]
+    ) -> None:
+        """
+        Recursively traverse the execution tree to collect spans for a specific agent.
+
+        Args:
+            node: Current SpanNode being processed
+            target_agent_name: Name of the agent we're collecting spans for
+            agent_spans: List to accumulate spans for the target agent
+        """
+        # Use unified agent identification
+        identified_agent = self._identify_span_agent(node.span)
+
+        if identified_agent == target_agent_name:
+            # If this is an agent/task span, collect descendants
+            if node.span.entity_type in ["agent", "task"]:
+                descendant_spans = self._get_descendant_spans(node)
+                agent_spans.extend(descendant_spans)
+                return  # Don't traverse children as they're already collected
+            else:
+                # For individual spans (like tools), add them directly
+                if node.span not in agent_spans:
+                    agent_spans.append(node.span)
+
+        # Continue traversing children if this node doesn't match
+        for child in node.children:
+            self._collect_spans_for_agent(child, target_agent_name, agent_spans)
+
+    def get_agent_conversation_data(self, agent_name: str) -> Dict[str, Any]:
+        """
+        Get agent-specific conversation data with session-level caching.
+
+        This method caches conversation data at the SessionEntity level so that
+        multiple metrics can reuse the same agent conversation without recomputation.
+
+        Args:
+            agent_name: Name of the agent to get conversation data for
+
+        Returns:
+            Dictionary containing agent conversation elements and metadata
+        """
+        # Initialize cache if needed
+        if self._agent_conversation_cache is None:
+            self._agent_conversation_cache = {}
+
+        # Return cached data if available
+        if agent_name in self._agent_conversation_cache:
+            return self._agent_conversation_cache[agent_name]
+
+        # Build agent conversation data using existing patterns
+        conversation_elements = []
+        tool_calls = []
+
+        # Get all spans for this agent (uses existing hierarchical collection)
+        agent_spans = self._get_spans_for_agent(agent_name)
+
+        # Process LLM spans (reuse ConversationDataTransformer logic)
+        llm_spans = [s for s in agent_spans if s.entity_type == "llm"]
+        for span in llm_spans:
+            if span.input_payload:
+                for key, value in span.input_payload.items():
+                    if key.startswith("gen_ai.prompt") and ".content" in key:
+                        role_key = key.replace(".content", ".role")
+                        role = span.input_payload.get(role_key, "unknown")
+                        conversation_elements.append(
+                            {
+                                "role": role,
+                                "content": value,
+                                "span_id": span.span_id,
+                                "timestamp": span.timestamp,
+                                "agent_name": agent_name,
+                            }
+                        )
+
+            if span.output_payload:
+                for key, value in span.output_payload.items():
+                    if key.startswith("gen_ai.completion") and ".content" in key:
+                        role_key = key.replace(".content", ".role")
+                        role = span.output_payload.get(role_key, "assistant")
+                        conversation_elements.append(
+                            {
+                                "role": role,
+                                "content": value,
+                                "span_id": span.span_id,
+                                "timestamp": span.timestamp,
+                                "agent_name": agent_name,
+                            }
+                        )
+
+                    # Extract tool calls
+                    if key.startswith("gen_ai.completion") and ".tool_calls" in key:
+                        if isinstance(value, dict) or (
+                            isinstance(value, str) and value.startswith("{")
+                        ):
+                            try:
+                                import json
+
+                                tool_call_data = (
+                                    json.loads(value)
+                                    if isinstance(value, str)
+                                    else value
+                                )
+                                tool_calls.append(
+                                    {
+                                        "data": tool_call_data,
+                                        "span_id": span.span_id,
+                                        "timestamp": span.timestamp,
+                                        "agent_name": agent_name,
+                                    }
+                                )
+                            except (KeyError, AttributeError, TypeError):
+                                pass
+
+        # Process agent spans
+        agent_entity_spans = [s for s in agent_spans if s.entity_type == "agent"]
+        for span in agent_entity_spans:
+            if span.input_payload and "value" in span.input_payload:
+                conversation_elements.append(
+                    {
+                        "role": "user",
+                        "content": span.input_payload["value"],
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
+
+            if span.output_payload and "value" in span.output_payload:
+                conversation_elements.append(
+                    {
+                        "role": "assistant",
+                        "content": span.output_payload["value"],
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
+
+        # Include tool interactions for complete context
+        tool_spans = [s for s in agent_spans if s.entity_type == "tool"]
+        for span in tool_spans:
+            if span.input_payload:
+                conversation_elements.append(
+                    {
+                        "role": "tool_input",
+                        "content": f"Tool call to {span.entity_name}: {span.input_payload}",
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
+
+            if span.output_payload:
+                conversation_elements.append(
+                    {
+                        "role": "tool_output",
+                        "content": f"Tool {span.entity_name} result: {span.output_payload}",
+                        "span_id": span.span_id,
+                        "timestamp": span.timestamp,
+                        "agent_name": agent_name,
+                    }
+                )
+
+        # Sort by timestamp
+        conversation_elements.sort(key=lambda x: x.get("timestamp", ""))
+
+        # Cache the result
+        agent_conversation_data = {
+            "elements": conversation_elements,
+            "tool_calls": tool_calls,
+            "total_elements": len(conversation_elements),
+            "total_tool_calls": len(tool_calls),
+        }
+
+        self._agent_conversation_cache[agent_name] = agent_conversation_data
+        return agent_conversation_data
+
+    def get_agent_conversation_text(self, agent_name: str) -> str:
+        """
+        Get formatted agent conversation text for metric evaluation.
+
+        Args:
+            agent_name: Name of the agent
+
+        Returns:
+            Formatted conversation text suitable for LLM evaluation
+        """
+        conversation_data = self.get_agent_conversation_data(agent_name)
+        elements = conversation_data.get("elements", [])
+
+        if not elements:
+            return ""
+
+        conversation_lines = []
+        for element in elements:
+            role = element.get("role", "unknown")
+            content = element.get("content", "")
+
+            if role == "user":
+                conversation_lines.append(f"User: {content}")
+            elif role == "assistant":
+                conversation_lines.append(f"Assistant: {content}")
+            elif role == "system":
+                conversation_lines.append(f"System: {content}")
+            elif role == "tool_input":
+                conversation_lines.append(f"[{content}]")
+            elif role == "tool_output":
+                conversation_lines.append(f"[{content}]")
+
+        return "\n".join(conversation_lines)
+
+
+class AgentView:
+    """
+    Cached view of agent-specific spans and data for efficient metric computation.
+
+    This class pre-computes and caches span collections for a specific agent,
+    avoiding repeated filtering operations during metric computation.
+    """
+
+    def __init__(self, agent_name: str, session: "SessionEntity"):
+        """
+        Initialize AgentView with pre-computed span collections.
+
+        Args:
+            agent_name: Name of the agent this view represents
+            session: SessionEntity containing the agent data
+        """
+        self.agent_name = agent_name
+        self.session = session
+        self.stats = session.agent_stats.get(agent_name, AgentStats())
+
+        # Pre-compute and cache span collections
+        agent_spans = session._get_spans_for_agent(agent_name)
+        self.all_spans = agent_spans
+
+        # Filter spans by entity type for efficient access
+        self.tool_spans = [s for s in agent_spans if s.entity_type == "tool"]
+        self.llm_spans = [s for s in agent_spans if s.entity_type == "llm"]
+        self.workflow_spans = [s for s in agent_spans if s.entity_type == "workflow"]
+        self.task_spans = [s for s in agent_spans if s.entity_type == "task"]
+
+        # Pre-compute commonly needed filtered collections
+        self._error_tool_spans = None
+        self._successful_tool_spans = None
+
+    @property
+    def error_tool_spans(self) -> List[SpanEntity]:
+        """Get tool spans with errors for this agent."""
+        if self._error_tool_spans is None:
+            self._error_tool_spans = [
+                span for span in self.tool_spans if span.contains_error
+            ]
+        return self._error_tool_spans
+
+    @property
+    def successful_tool_spans(self) -> List[SpanEntity]:
+        """Get successful tool spans (no errors) for this agent."""
+        if self._successful_tool_spans is None:
+            self._successful_tool_spans = [
+                span for span in self.tool_spans if not span.contains_error
+            ]
+        return self._successful_tool_spans
+
+    @property
+    def total_tool_calls(self) -> int:
+        """Get total number of tool calls by this agent."""
+        return len(self.tool_spans)
+
+    @property
+    def total_tool_errors(self) -> int:
+        """Get total number of tool errors by this agent."""
+        return len(self.error_tool_spans)
+
+    @property
+    def tool_error_rate(self) -> float:
+        """Calculate tool error rate percentage for this agent."""
+        if self.total_tool_calls == 0:
+            return 0.0
+        return (self.total_tool_errors / self.total_tool_calls) * 100.0
+
+    @property
+    def unique_tool_names(self) -> List[str]:
+        """Get list of unique tool names used by this agent."""
+        tool_names = set()
+        for span in self.tool_spans:
+            if span.entity_name:
+                tool_names.add(span.entity_name)
+        return sorted(list(tool_names))
+
+    @property
+    def input_query(self) -> Optional[str]:
+        """
+        Extract the first user input query for this agent from LLM spans.
+
+        Returns:
+            The first user query content, or None if not found
+        """
+        from .conversation_utils import extract_conversation_endpoints
+
+        input_query, _ = extract_conversation_endpoints(
+            self.llm_spans,
+            min_content_length=3,  # AgentView's current threshold
+            support_prompt_format_in_output=True,  # AgentView supports both formats
+        )
+        return input_query
+
+    @property
+    def final_response(self) -> Optional[str]:
+        """
+        Extract the last meaningful response for this agent from LLM spans.
+
+        Returns:
+            The final response content, or None if not found
+        """
+        from .conversation_utils import extract_conversation_endpoints
+
+        _, final_response = extract_conversation_endpoints(
+            self.llm_spans,
+            min_content_length=3,  # AgentView's current threshold
+            support_prompt_format_in_output=True,  # AgentView supports both formats
+        )
+        return final_response

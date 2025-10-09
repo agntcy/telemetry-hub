@@ -173,7 +173,9 @@ class DeepEvalMetricAdapter(BaseMetric):
 
         return category, app_name, entities_involved, span_id, session_id
 
-    async def compute(self, data: SpanEntity | SessionEntity) -> MetricResult:
+    async def compute(
+        self, data: SpanEntity | SessionEntity, **context
+    ) -> MetricResult:
         """
         Compute the metric using DeepEval's interface and return in your framework's format
         """

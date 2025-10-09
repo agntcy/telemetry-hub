@@ -41,10 +41,19 @@ class LLMUncertaintyScoresBase(BaseMetric):
         self.aggregation_level: AggregationLevel = "session"
         self.session_id: Optional[str] = None
 
-    async def compute(self, data: Any):
-        data = self._check_data_type(data=data)
-        self.session_id = data.session_id
-        single_session_spans = data.spans
+    def supports_agent_computation(self) -> bool:
+        """Indicates that this metric supports agent-level computation."""
+        return True
+
+    async def compute(self, session: SessionEntity, **context):
+        # Session-level computation (existing logic)
+        return await self._compute_session_level(session)
+
+    async def _compute_session_level(self, session: SessionEntity):
+        """Compute uncertainty score for the entire session."""
+        session = self._check_data_type(data=session)
+        self.session_id = session.session_id
+        single_session_spans = session.spans
         log_probs = get_log_probs(single_session_spans=single_session_spans)
         if log_probs:
             try:
@@ -61,23 +70,141 @@ class LLMUncertaintyScoresBase(BaseMetric):
             error_message = "No logprobs found"
 
         return MetricResult(
-            self.name,
-            value,
-            self.aggregation_level,
-            "session",
-            data.app_name,
-            list(log_probs.keys()),
-            [self.session_id],
-            "MCE",
-            [],
-            [],
-            success,
-            {k: [x.model_dump() for x in v] for k, v in log_probs.items()},
-            error_message,
-            "",
-            "",
-            "",
+            metric_name=self.name,
+            value=value,
+            aggregation_level=self.aggregation_level,
+            category="session",
+            app_name=session.app_name,
+            description="",
+            reasoning="",
+            unit="MCE",
+            span_id=list(log_probs.keys()),
+            session_id=[self.session_id],
+            source="",
+            entities_involved=[],
+            edges_involved=[],
+            success=success,
+            metadata={k: [x.model_dump() for x in v] for k, v in log_probs.items()},
+            error_message=error_message,
         )
+
+    async def compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
+        """
+        Compute uncertainty score for each individual agent in the session.
+
+        Returns a list of MetricResult objects, one per agent found.
+        Each result contains the uncertainty score for that specific agent.
+        """
+        # Temporarily override aggregation level for agent computation
+        original_level = self.aggregation_level
+        self.aggregation_level = "agent"
+
+        try:
+            # Check if session has agent_stats property
+            if not hasattr(session, "agent_stats"):
+                # Session doesn't have agent_stats - return empty list
+                self.aggregation_level = original_level
+                return []
+
+            agent_stats = session.agent_stats
+            if not agent_stats:
+                # No agents found in session - return empty list
+                self.aggregation_level = original_level
+                return []
+
+            # Create individual results for each agent
+            results = []
+
+            for agent_name in agent_stats.keys():
+                agent_view = session.get_agent_view(agent_name)
+
+                # Get agent-specific spans from AgentView
+                agent_spans = agent_view.all_spans
+
+                if not agent_spans:
+                    # Create error result for agents without spans
+                    entities_involved = [agent_name] if agent_name else []
+
+                    result = MetricResult(
+                        metric_name=self.name,
+                        value=-1,
+                        aggregation_level=self.aggregation_level,
+                        category="agent",
+                        app_name=session.app_name,
+                        description="",
+                        reasoning="",
+                        unit="MCE",
+                        span_id=[],
+                        session_id=[session.session_id],
+                        source="",
+                        entities_involved=entities_involved,
+                        edges_involved=[],
+                        success=False,
+                        metadata={"agent_id": agent_name},
+                        error_message=f"Agent '{agent_name}' has no spans to process",
+                    )
+
+                    results.append(result)
+                    continue
+
+                # Get log probs for this agent's spans
+                log_probs = get_log_probs(single_session_spans=agent_spans)
+
+                if log_probs:
+                    try:
+                        value = self.compute_uncertainty_score(
+                            log_probs_mapping=log_probs
+                        )
+                        success = True
+                        error_message = None
+                    except Exception as e:
+                        value = -1
+                        success = False
+                        error_message = str(e)
+                else:
+                    value = -1
+                    success = False
+                    error_message = f"No logprobs found for agent '{agent_name}'"
+
+                entities_involved = [agent_name] if agent_name else []
+                agent_span_ids = [span.span_id for span in agent_spans]
+
+                result = MetricResult(
+                    metric_name=self.name,
+                    value=value,
+                    aggregation_level=self.aggregation_level,
+                    category="agent",
+                    app_name=session.app_name,
+                    description="",
+                    reasoning="",
+                    unit="MCE",
+                    span_id=agent_span_ids,
+                    session_id=[session.session_id],
+                    source="",
+                    entities_involved=entities_involved,
+                    edges_involved=[],
+                    success=success,
+                    metadata={
+                        "agent_id": agent_name,
+                        "logprobs": {
+                            k: [x.model_dump() for x in v] for k, v in log_probs.items()
+                        }
+                        if log_probs
+                        else {},
+                    },
+                    error_message=error_message,
+                )
+
+                results.append(result)
+
+            # Restore original aggregation level before returning
+            self.aggregation_level = original_level
+            return results
+
+        except Exception as e:
+            # Error handling for agent computation - restore level and re-raise
+            self.aggregation_level = original_level
+            raise e
 
     def init_with_model(self, model: Any) -> bool:
         return True
@@ -111,6 +238,7 @@ class LLMUncertaintyScoresBase(BaseMetric):
 class LLMMinimumConfidence(LLMUncertaintyScoresBase):
     def __init__(self, metric_name: str = "Minimum Confidence"):
         super().__init__(metric_name=metric_name)
+        self.description = "Calculates the minimum confidence score from LLM log probabilities across all tokens in the session or agent."
 
     def compute_uncertainty_score(
         self, log_probs_mapping: SpanToLogProbMapping
@@ -122,6 +250,7 @@ class LLMMinimumConfidence(LLMUncertaintyScoresBase):
 class LLMMaximumConfidence(LLMUncertaintyScoresBase):
     def __init__(self, metric_name: str = "Maximum Confidence"):
         super().__init__(metric_name=metric_name)
+        self.description = "Calculates the maximum confidence score from LLM log probabilities across all tokens in the session or agent."
 
     def compute_uncertainty_score(
         self, log_probs_mapping: SpanToLogProbMapping
@@ -133,6 +262,7 @@ class LLMMaximumConfidence(LLMUncertaintyScoresBase):
 class LLMAverageConfidence(LLMUncertaintyScoresBase):
     def __init__(self, metric_name: str = "Average Confidence"):
         super().__init__(metric_name=metric_name)
+        self.description = "Calculates the average confidence score from LLM log probabilities across all tokens in the session or agent."
 
     def compute_uncertainty_score(
         self, log_probs_mapping: SpanToLogProbMapping

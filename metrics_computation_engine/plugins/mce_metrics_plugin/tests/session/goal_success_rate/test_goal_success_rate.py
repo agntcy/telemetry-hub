@@ -374,3 +374,218 @@ async def test_goal_success_rate_mock_end_to_end():
     assert len(goal_success_metric.span_id) > 0
     assert len(goal_success_metric.session_id) > 0
     assert "Mock evaluation" in goal_success_metric.reasoning
+
+
+def make_agent_span(
+    entity_type, entity_name, span_id, agent_id, input_payload=None, output_payload=None
+):
+    """Create a span with agent attribution for testing agent-level computation."""
+    return SpanEntity(
+        entity_type=entity_type,
+        span_id=span_id,
+        entity_name=entity_name,
+        app_name="test_app",
+        timestamp="2024-01-01T00:00:00Z",
+        parent_span_id="parent",
+        trace_id="trace123",
+        session_id="session123",
+        start_time="1234567890.0",
+        end_time="1234567891.0",
+        raw_span_data={"SpanAttributes": {"agent_id": agent_id}} if agent_id else {},
+        input_payload=input_payload or {},
+        output_payload=output_payload or {},
+        contains_error=False,
+    )
+
+
+def setup_session_for_agents(session):
+    """Ensure session has execution tree for agent_stats to work."""
+    from metrics_computation_engine.entities.models.execution_tree import ExecutionTree
+
+    if not hasattr(session, "execution_tree") or session.execution_tree is None:
+        session.execution_tree = ExecutionTree()
+    return session
+
+
+@pytest.mark.asyncio
+async def test_goal_success_rate_supports_agent_computation():
+    """Test that the metric indicates it supports agent computation."""
+    metric = GoalSuccessRate()
+    assert metric.supports_agent_computation()
+
+
+@pytest.mark.asyncio
+async def test_goal_success_rate_agent_computation_empty_session():
+    """Test agent computation with empty session."""
+    metric = GoalSuccessRate()
+
+    from metrics_computation_engine.entities.models.session import SessionEntity
+
+    session = SessionEntity(session_id="test_session", spans=[])
+    session = setup_session_for_agents(session)
+
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
+
+    # Should return empty list for no agents
+    assert isinstance(results, list)
+    assert len(results) == 0
+
+
+@pytest.mark.asyncio
+async def test_goal_success_rate_agent_computation_single_agent():
+    """Test agent computation with single agent."""
+    metric = GoalSuccessRate()
+
+    # Create LLM spans for an agent with proper input/output
+    llm_input = {
+        "gen_ai.prompt.0.role": "system",
+        "gen_ai.prompt.0.content": "You are a helpful assistant.",
+        "gen_ai.prompt.1.role": "user",
+        "gen_ai.prompt.1.content": "What is the capital of France?",
+    }
+
+    llm_output = {
+        "gen_ai.completion.0.role": "assistant",
+        "gen_ai.completion.0.content": "The capital of France is Paris.",
+    }
+
+    spans = [
+        make_agent_span("agent", "knowledge_agent", "agent1", "knowledge_agent"),
+        make_agent_span(
+            "llm", "gpt-4", "llm1", "knowledge_agent", llm_input, llm_output
+        ),
+    ]
+
+    from metrics_computation_engine.entities.models.session import SessionEntity
+
+    session = SessionEntity(session_id="test_session", spans=spans)
+    session = setup_session_for_agents(session)
+
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
+
+    # Should return list with one agent result (but no model, so error result)
+    assert isinstance(results, list)
+    assert len(results) == 1
+
+    result = results[0]
+    assert result.aggregation_level == "agent"
+    assert result.metadata["agent_id"] == "knowledge_agent"
+    assert result.metadata["agent_input_query"] == "What is the capital of France?"
+    assert result.metadata["agent_final_response"] == "The capital of France is Paris."
+    assert not result.success  # No jury model available
+    assert "No model available" in result.error_message
+
+
+@pytest.mark.asyncio
+async def test_goal_success_rate_agent_computation_multiple_agents():
+    """Test agent computation with multiple agents."""
+    metric = GoalSuccessRate()
+
+    # Agent 1: Knowledge agent
+    llm_input1 = {
+        "gen_ai.prompt.0.role": "user",
+        "gen_ai.prompt.0.content": "What is the capital of Spain?",
+    }
+    llm_output1 = {
+        "gen_ai.completion.0.role": "assistant",
+        "gen_ai.completion.0.content": "The capital of Spain is Madrid.",
+    }
+
+    # Agent 2: Translation agent
+    llm_input2 = {
+        "gen_ai.prompt.0.role": "user",
+        "gen_ai.prompt.0.content": "Translate 'hello' to French",
+    }
+    llm_output2 = {
+        "gen_ai.completion.0.role": "assistant",
+        "gen_ai.completion.0.content": "Bonjour",
+    }
+
+    spans = [
+        make_agent_span("agent", "knowledge_agent", "agent1", "knowledge_agent"),
+        make_agent_span(
+            "llm", "gpt-4", "llm1", "knowledge_agent", llm_input1, llm_output1
+        ),
+        make_agent_span("agent", "translation_agent", "agent2", "translation_agent"),
+        make_agent_span(
+            "llm", "gpt-4", "llm2", "translation_agent", llm_input2, llm_output2
+        ),
+    ]
+
+    from metrics_computation_engine.entities.models.session import SessionEntity
+
+    session = SessionEntity(session_id="test_session", spans=spans)
+    session = setup_session_for_agents(session)
+
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
+
+    # Should return results for both agents
+    assert isinstance(results, list)
+    assert len(results) == 2
+
+    # Find results by agent_id
+    knowledge_result = next(
+        (r for r in results if r.metadata["agent_id"] == "knowledge_agent"), None
+    )
+    translation_result = next(
+        (r for r in results if r.metadata["agent_id"] == "translation_agent"), None
+    )
+
+    assert knowledge_result is not None
+    assert translation_result is not None
+
+    assert (
+        knowledge_result.metadata["agent_input_query"]
+        == "What is the capital of Spain?"
+    )
+    assert (
+        knowledge_result.metadata["agent_final_response"]
+        == "The capital of Spain is Madrid."
+    )
+
+    assert (
+        translation_result.metadata["agent_input_query"]
+        == "Translate 'hello' to French"
+    )
+    assert translation_result.metadata["agent_final_response"] == "Bonjour"
+
+
+@pytest.mark.asyncio
+async def test_goal_success_rate_session_level_computation():
+    """Test session-level computation without context parameter."""
+    metric = GoalSuccessRate()
+
+    spans = [
+        SpanEntity(
+            entity_type="llm",
+            span_id="llm1",
+            entity_name="gpt-4",
+            app_name="test_app",
+            timestamp="2024-01-01T00:00:00Z",
+            parent_span_id="parent",
+            trace_id="trace123",
+            session_id="session123",
+            start_time="1234567890.0",
+            end_time="1234567891.0",
+            raw_span_data={},
+            contains_error=False,
+            input_payload={"gen_ai.prompt.0.content": "test query"},
+            output_payload={"gen_ai.completion.0.content": "test response"},
+        )
+    ]
+
+    from metrics_computation_engine.entities.models.session import SessionEntity
+
+    session = SessionEntity(session_id="test_session", spans=spans)
+    session.input_query = "test query"
+    session.final_response = "test response"
+
+    # Test without context (should default to session-level)
+    result = await metric.compute(session)
+    assert result.aggregation_level == "session"
+    assert isinstance(result.success, bool)
+
+    # Test with explicit session-level context
+    result = await metric.compute(session, context={"agent_computation": False})
+    assert result.aggregation_level == "session"
+    assert isinstance(result.success, bool)

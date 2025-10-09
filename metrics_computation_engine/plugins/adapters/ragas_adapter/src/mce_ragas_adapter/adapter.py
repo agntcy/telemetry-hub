@@ -260,7 +260,9 @@ class RagasAdapter(BaseMetric):
             session_id,
         )
 
-    async def compute(self, data: SpanEntity | list[SpanEntity]) -> MetricResult:
+    async def compute(
+        self, data: SpanEntity | list[SpanEntity], **context
+    ) -> MetricResult:
         """
         Compute the metric using RAGAS's interface and return in the framework's format
         """
