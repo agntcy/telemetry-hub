@@ -59,9 +59,11 @@ class OpikMetricAdapter(BaseMetric):
         self.required = {
             "entity_type": self.metric_configuration.requirements.entity_type
         }
-        
+
         # Should be false
-        logger.info(f"OPIK TRACING: opik.is_tracing_active(): {opik.is_tracing_active()}")
+        logger.info(
+            f"OPIK TRACING: opik.is_tracing_active(): {opik.is_tracing_active()}"
+        )
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME

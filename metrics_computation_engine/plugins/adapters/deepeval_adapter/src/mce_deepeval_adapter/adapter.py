@@ -15,7 +15,8 @@ from .metric_configuration import MetricConfiguration, build_metric_configuratio
 from .model_loader import MODEL_PROVIDER_NAME, load_model
 
 import os
-os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"]="1"
+
+os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "1"
 
 logger = setup_logger(__name__)
 
