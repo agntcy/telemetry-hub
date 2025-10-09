@@ -42,7 +42,7 @@ class GraphDeterminismScore(BaseMetric):
     def init_with_model(self, model) -> bool:
         return True
 
-    async def compute(self, data):
+    async def compute(self, data, **context):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"DATA: {type(data)}, {len(data.sessions)}")
 

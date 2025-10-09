@@ -16,7 +16,7 @@ class TestCacheMetric(BaseMetric):
         self.aggregation_level = "session"
 
     # Required abstract method implementations
-    async def compute(self, session: SessionEntity, context=None):
+    async def compute(self, session: SessionEntity, **context):
         return MetricResult(
             metric_name=self.name,
             value=0.5,

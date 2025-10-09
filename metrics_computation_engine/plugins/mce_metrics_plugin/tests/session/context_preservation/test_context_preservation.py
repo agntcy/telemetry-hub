@@ -208,7 +208,9 @@ async def test_context_preservation_agent_computation():
             ]
 
             # Call with agent computation context
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
     assert isinstance(results, list)
     assert len(results) == 2
@@ -244,7 +246,7 @@ async def test_context_preservation_agent_no_conversation_data():
     ) as mock_get_conversation:
         mock_get_conversation.return_value = ""  # Empty conversation
 
-        results = await metric.compute(session, agent_computation=True)
+        results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 0  # No results for agents without conversation data
@@ -270,7 +272,9 @@ async def test_context_preservation_agent_no_model():
                 create_agent_span("span_1", agent_id="agent1", entity_name="agent1")
             ]
 
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
     assert isinstance(results, list)
     assert len(results) == 1
@@ -296,7 +300,7 @@ async def test_context_preservation_empty_session():
     with patch.object(
         type(session), "agent_stats", new_callable=lambda: property(lambda self: {})
     ):
-        results = await metric.compute(session, agent_computation=True)
+        results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 0
@@ -317,7 +321,7 @@ async def test_context_preservation_agent_exception_handling():
     ) as mock_get_conversation:
         mock_get_conversation.side_effect = Exception("Test error")
 
-        results = await metric.compute(session, agent_computation=True)
+        results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 1

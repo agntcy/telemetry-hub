@@ -36,7 +36,7 @@ class ToolError(BaseMetric):
     def init_with_model(self, model) -> bool:
         return True
 
-    async def compute(self, data):
+    async def compute(self, data, **context):
         # TODO: Should not be responsible for this here.
         def find(d, search="status"):
             """Recursively search for all <search> fields in a nested dict."""

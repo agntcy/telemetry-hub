@@ -46,16 +46,6 @@ class LLMUncertaintyScoresBase(BaseMetric):
         return True
 
     async def compute(self, session: SessionEntity, **context):
-        # Extract nested context if present
-        actual_context = context.get("context", context)
-        is_agent_computation = (
-            actual_context.get("agent_computation", False) if actual_context else False
-        )
-
-        # Check if this is agent-level computation
-        if is_agent_computation:
-            return await self._compute_agent_level(session)
-
         # Session-level computation (existing logic)
         return await self._compute_session_level(session)
 
@@ -98,7 +88,7 @@ class LLMUncertaintyScoresBase(BaseMetric):
             error_message=error_message,
         )
 
-    async def _compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
+    async def compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
         """
         Compute uncertainty score for each individual agent in the session.
 

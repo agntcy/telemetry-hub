@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
@@ -39,12 +39,10 @@ class PassiveEvalAgents(BaseMetric):
     def init_with_model(self, model) -> bool:
         return True
 
-    async def compute(
-        self, session: SessionEntity, context: Optional[Dict[str, Any]] = None
-    ):
+    async def compute(self, session: SessionEntity, **context):
         try:
             # Extract context information
-            if context is None:
+            if not context:
                 logger.warning(
                     f"PassiveEvalAgents: No context provided for session {session.session_id}"
                 )

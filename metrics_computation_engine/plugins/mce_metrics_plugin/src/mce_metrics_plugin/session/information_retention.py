@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import List, Optional, Union
+from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
@@ -66,14 +66,8 @@ class InformationRetention(BaseMetric):
     def create_model(self, llm_config):
         return self.create_native_model(llm_config)
 
-    async def compute(
-        self, session: SessionEntity, **context
-    ) -> Union[MetricResult, List[MetricResult]]:
-        # Check if this is agent computation
-        if context.get("agent_computation", False):
-            return self._compute_agent_level(session)
-
-        # Session-level computation (existing logic)
+    async def compute(self, session: SessionEntity, **context) -> MetricResult:
+        # Session-level computation
         responses = ""
 
         if session.conversation_data:
@@ -112,7 +106,7 @@ class InformationRetention(BaseMetric):
             session_ids=[session.session_id],
         )
 
-    def _compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
+    async def compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
         """
         Compute Information Retention for each agent in the session.
 

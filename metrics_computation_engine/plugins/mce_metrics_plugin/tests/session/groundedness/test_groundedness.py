@@ -232,7 +232,9 @@ class TestGroundedness:
                 side_effect=mock_get_spans_for_agent,
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify results
         assert len(results) == 2
@@ -276,7 +278,9 @@ class TestGroundedness:
                 return_value="",
             ),
         ):  # No conversation
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify no results for silent agent
         assert len(results) == 0
@@ -308,7 +312,9 @@ class TestGroundedness:
                 return_value=[Mock(span_id="span_1")],
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify error result
         assert len(results) == 1
@@ -332,7 +338,9 @@ class TestGroundedness:
         with patch.object(
             type(session), "agent_stats", new_callable=lambda: property(lambda self: {})
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify empty results
         assert len(results) == 0
@@ -359,7 +367,9 @@ class TestGroundedness:
                 side_effect=Exception("Conversation extraction failed"),
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify error handling
         assert len(results) == 1
@@ -444,7 +454,7 @@ class TestGroundedness:
         prompt = mock_jury.judge.call_args[0][0]
         assert "CONVERSATION: " in prompt
 
-    def test_groundedness_agent_level_coordinator_skipped(self):
+    async def test_groundedness_agent_level_coordinator_skipped(self):
         """Test that coordinator agents are skipped when filtering is enabled."""
         # Setup metric with filtering enabled
         metric = Groundedness(filter_coordinators=True)
@@ -472,7 +482,7 @@ class TestGroundedness:
             # Debug: Verify the mock is set up correctly
             print(f"Mock return value: {mock_role_func.return_value}")
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify coordinator was skipped - no results should be returned
             assert len(results) == 0, (
@@ -488,7 +498,9 @@ class TestGroundedness:
             )
 
     @patch("mce_metrics_plugin.session.groundedness.get_agent_role_and_skip_decision")
-    def test_groundedness_agent_level_processor_evaluated(self, mock_role_detection):
+    async def test_groundedness_agent_level_processor_evaluated(
+        self, mock_role_detection
+    ):
         """Test that processor agents are evaluated when filtering is enabled."""
         # Setup mock role detection to identify agent as processor
         mock_role_detection.return_value = (
@@ -532,7 +544,7 @@ class TestGroundedness:
                 return_value="User: Calculate 2+2\nAssistant: Based on mathematical rules, the result is 4.",
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify processor was evaluated
             assert len(results) == 1
@@ -551,7 +563,9 @@ class TestGroundedness:
             )
 
     @patch("mce_metrics_plugin.session.groundedness.get_agent_role_and_skip_decision")
-    def test_groundedness_agent_level_filtering_disabled(self, mock_role_detection):
+    async def test_groundedness_agent_level_filtering_disabled(
+        self, mock_role_detection
+    ):
         """Test that all agents are evaluated when filtering is disabled."""
         # Setup mock role detection to indicate filtering is disabled
         mock_role_detection.return_value = (
@@ -589,7 +603,7 @@ class TestGroundedness:
                 return_value='System: Route tasks\nAssistant: {"next": "finish"}',
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify agent was evaluated despite being coordinator
             assert len(results) == 1
@@ -606,7 +620,7 @@ class TestGroundedness:
             )
 
     @patch("mce_metrics_plugin.session.groundedness.get_agent_role_and_skip_decision")
-    def test_groundedness_agent_level_mixed_agents(self, mock_role_detection):
+    async def test_groundedness_agent_level_mixed_agents(self, mock_role_detection):
         """Test mixed scenario with both coordinator and processor agents."""
 
         # Setup mock role detection for different agent types
@@ -683,7 +697,7 @@ class TestGroundedness:
                 side_effect=mock_get_agent_conversation_text,
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify only processor agent was evaluated (supervisor skipped)
             assert len(results) == 1

@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import List, Optional, Union
+from typing import List, Optional
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
@@ -39,19 +39,7 @@ class ToolErrorRate(BaseMetric):
         """Indicates that this metric supports agent-level computation."""
         return True
 
-    async def compute(
-        self, session: SessionEntity, **context
-    ) -> Union[MetricResult, List[MetricResult]]:
-        # Extract nested context if present
-        actual_context = context.get("context", context)
-        is_agent_computation = (
-            actual_context.get("agent_computation", False) if actual_context else False
-        )
-
-        # Check if this is agent-level computation
-        if is_agent_computation:
-            return await self._compute_agent_level(session)
-
+    async def compute(self, session: SessionEntity, **context) -> MetricResult:
         # Session-level computation (existing logic)
         try:
             tool_spans = session.tool_spans if session.tool_spans else []
@@ -108,7 +96,7 @@ class ToolErrorRate(BaseMetric):
 
             return result
 
-    async def _compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
+    async def compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
         """
         Compute tool error rate for each individual agent in the session.
 

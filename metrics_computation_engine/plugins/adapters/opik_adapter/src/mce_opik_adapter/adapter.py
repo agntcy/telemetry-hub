@@ -133,7 +133,7 @@ class OpikMetricAdapter(BaseMetric):
 
         return data_is_appropriate, error_message, span_id, session_id
 
-    async def compute(self, data) -> MetricResult:
+    async def compute(self, data, **context) -> MetricResult:
         """
         Compute the metric using Opik's interface and return in your framework's format
         """

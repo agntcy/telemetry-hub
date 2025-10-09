@@ -173,7 +173,7 @@ async def test_cycles_count_agent_computation_empty_session():
     session_entity = SessionEntity(session_id="session123", spans=[])
     session_entity = setup_session(session_entity)
 
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return empty list for no agents
     assert isinstance(results, list)
@@ -196,7 +196,7 @@ async def test_cycles_count_agent_computation_single_agent():
 
     session_entity = SessionEntity(session_id="session123", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return list with one agent result
     assert isinstance(results, list)
@@ -229,7 +229,7 @@ async def test_cycles_count_agent_computation_multiple_agents():
 
     session_entity = SessionEntity(session_id="session123", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return results for both agents
     assert isinstance(results, list)

@@ -101,7 +101,7 @@ async def test_tool_error_rate_agent_computation_empty_session():
     # Empty session
     session_entity = SessionEntity(session_id="empty", spans=[])
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return empty list for no agents
     assert isinstance(results, list)
@@ -123,7 +123,7 @@ async def test_tool_error_rate_agent_computation_single_agent():
 
     session_entity = SessionEntity(session_id="session123", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return list with one agent result
     assert isinstance(results, list)
@@ -158,7 +158,7 @@ async def test_tool_error_rate_agent_computation_multiple_agents():
 
     session_entity = SessionEntity(session_id="session123", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return list with two agent results
     assert isinstance(results, list)
@@ -199,7 +199,7 @@ async def test_tool_error_rate_agent_computation_no_tools():
 
     session_entity = SessionEntity(session_id="session123", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return list with one agent result
     assert isinstance(results, list)
@@ -228,7 +228,7 @@ async def test_tool_error_rate_agent_computation_all_errors():
 
     session_entity = SessionEntity(session_id="session123", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return list with one agent result
     assert isinstance(results, list)
@@ -291,7 +291,7 @@ async def test_tool_error_rate_agent_metadata_completeness():
 
     session_entity = SessionEntity(session_id="session123", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     assert len(results) == 1
     result = results[0]
@@ -327,7 +327,7 @@ async def test_tool_error_rate_agent_computation_no_agents_but_tools():
 
     session_entity = SessionEntity(session_id="no_agents", spans=spans)
     session_entity = setup_session(session_entity)
-    results = await metric.compute(session_entity, context={"agent_computation": True})
+    results = await metric.compute_with_dispatch(session_entity, agent_computation=True)
 
     # Should return empty list when no agent spans exist
     assert isinstance(results, list)

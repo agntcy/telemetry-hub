@@ -36,7 +36,7 @@ class AgentToToolInteractions(BaseMetric):
     def init_with_model(self, model) -> bool:
         return True
 
-    async def compute(self, session: SessionEntity):
+    async def compute(self, session: SessionEntity, **context):
         try:
             tool_spans = session.tool_spans if session.tool_spans else []
 

@@ -216,7 +216,9 @@ class TestConsistency:
                 side_effect=mock_get_spans_for_agent,
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify results
         assert len(results) == 2
@@ -260,7 +262,9 @@ class TestConsistency:
                 return_value="",
             ),
         ):  # No conversation
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify no results for silent agent
         assert len(results) == 0
@@ -292,7 +296,9 @@ class TestConsistency:
                 return_value=[Mock(span_id="span_1")],
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify error result
         assert len(results) == 1
@@ -316,7 +322,9 @@ class TestConsistency:
         with patch.object(
             type(session), "agent_stats", new_callable=lambda: property(lambda self: {})
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify empty results
         assert len(results) == 0
@@ -343,7 +351,9 @@ class TestConsistency:
                 side_effect=Exception("Conversation extraction failed"),
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify error handling
         assert len(results) == 1
@@ -465,7 +475,7 @@ class TestConsistency:
         metric_disabled = Consistency(filter_coordinators=False)
         assert metric_disabled.filter_coordinators is False
 
-    def test_consistency_agent_level_coordinator_skipped(self):
+    async def test_consistency_agent_level_coordinator_skipped(self):
         """Test that coordinator agents are skipped when filtering is enabled."""
         # Setup metric with filtering enabled
         metric = Consistency(filter_coordinators=True)
@@ -493,7 +503,7 @@ class TestConsistency:
             # Debug: Verify the mock is set up correctly
             print(f"Mock return value: {mock_role_func.return_value}")
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify coordinator was skipped - no results should be returned
             assert len(results) == 0, (
@@ -509,7 +519,9 @@ class TestConsistency:
             )
 
     @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
-    def test_consistency_agent_level_processor_evaluated(self, mock_role_detection):
+    async def test_consistency_agent_level_processor_evaluated(
+        self, mock_role_detection
+    ):
         """Test that processor agents are evaluated when filtering is enabled."""
         # Setup mock role detection to identify agent as processor
         mock_role_detection.return_value = (
@@ -553,7 +565,7 @@ class TestConsistency:
                 return_value="User: Calculate 2+2\nAssistant: The result is 4.",
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify processor was evaluated
             assert len(results) == 1
@@ -572,7 +584,9 @@ class TestConsistency:
             )
 
     @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
-    def test_consistency_agent_level_filtering_disabled(self, mock_role_detection):
+    async def test_consistency_agent_level_filtering_disabled(
+        self, mock_role_detection
+    ):
         """Test that all agents are evaluated when filtering is disabled."""
         # Setup mock role detection to indicate filtering is disabled
         mock_role_detection.return_value = (
@@ -610,7 +624,7 @@ class TestConsistency:
                 return_value='System: Route tasks\nAssistant: {"next": "finish"}',
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify agent was evaluated despite being coordinator
             assert len(results) == 1
@@ -627,7 +641,7 @@ class TestConsistency:
             )
 
     @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
-    def test_consistency_agent_level_mixed_agents(self, mock_role_detection):
+    async def test_consistency_agent_level_mixed_agents(self, mock_role_detection):
         """Test mixed scenario with both coordinator and processor agents."""
 
         # Setup mock role detection for different agent types
@@ -713,7 +727,7 @@ class TestConsistency:
                 side_effect=mock_role_detection,
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Should have 1 result: supervisor skipped (no result), coder evaluated
             assert len(results) == 1
@@ -726,7 +740,9 @@ class TestConsistency:
             mock_jury.judge.assert_called_once()
 
     @patch("mce_metrics_plugin.session.consistency.get_agent_role_and_skip_decision")
-    def test_consistency_agent_level_role_detection_error(self, mock_role_detection):
+    async def test_consistency_agent_level_role_detection_error(
+        self, mock_role_detection
+    ):
         """Test handling when role detection fails."""
         # Setup mock role detection to return analysis failure
         mock_role_detection.return_value = (
@@ -767,7 +783,7 @@ class TestConsistency:
                 side_effect=Exception("Role detection error"),
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify error was handled - should get error result
             assert len(results) == 1

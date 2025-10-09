@@ -63,25 +63,8 @@ class IntentRecognitionAccuracy(BaseMetric):
     def create_model(self, llm_config):
         return self.create_native_model(llm_config)
 
-    async def compute(self, session: SessionEntity, context=None):
-        """
-        Compute intent recognition accuracy with support for both session-level and agent-level computation.
-
-        Args:
-            session: SessionEntity with pre-computed workflow data
-            context: Optional context containing agent computation flag
-        """
-        # Extract nested context if present
-        actual_context = context.get("context", context) if context else {}
-        is_agent_computation = (
-            actual_context.get("agent_computation", False) if actual_context else False
-        )
-
-        # Check if this is agent-level computation
-        if is_agent_computation:
-            return await self._compute_agent_level(session)
-
-        # Session-level computation (original behavior)
+    async def compute(self, session: SessionEntity, **context):
+        """Compute intent recognition accuracy at session level."""
         return await self._compute_session_level(session)
 
     async def _compute_session_level(self, session: SessionEntity):
@@ -128,7 +111,7 @@ class IntentRecognitionAccuracy(BaseMetric):
             session_ids=[session.session_id],
         )
 
-    async def _compute_agent_level(self, session: SessionEntity):
+    async def compute_agent_level(self, session: SessionEntity):
         """Compute intent recognition accuracy for each agent in the session."""
 
         # Temporarily override aggregation level for agent computation

@@ -268,7 +268,7 @@ async def test_agent_level_computation_single_agent():
 
     # Test agent computation
     context = {"agent_computation": True}
-    results = await metric.compute(session, context=context)
+    results = await metric.compute_with_dispatch(session, context=context)
 
     assert isinstance(results, list)
     assert len(results) == 1
@@ -289,7 +289,7 @@ async def test_agent_level_computation_multiple_agents():
 
     # Test agent computation
     context = {"agent_computation": True}
-    results = await metric.compute(session, context=context)
+    results = await metric.compute_with_dispatch(session, context=context)
 
     assert isinstance(results, list)
     assert len(results) == 3
@@ -319,7 +319,7 @@ async def test_agent_level_computation_no_agents():
     # Don't try to delete it since it's a property
 
     context = {"agent_computation": True}
-    results = await metric.compute(session, context=context)
+    results = await metric.compute_with_dispatch(session, context=context)
 
     assert isinstance(results, list)
     assert len(results) == 0
@@ -343,7 +343,7 @@ async def test_agent_level_computation_agent_without_spans():
         return_value=MockAgentView(),
     ):
         context = {"agent_computation": True}
-        results = await metric.compute(session, context=context)
+        results = await metric.compute_with_dispatch(session, context=context)
 
     assert isinstance(results, list)
     assert len(results) == 1
@@ -363,7 +363,7 @@ async def test_nested_context_extraction():
 
     # Test with nested context
     nested_context = {"context": {"agent_computation": True}}
-    results = await metric.compute(session, **nested_context)
+    results = await metric.compute_with_dispatch(session, **nested_context)
 
     assert isinstance(results, list)
     assert len(results) == 1
@@ -395,7 +395,7 @@ async def test_aggregation_level_restoration():
     session = setup_session_for_agents(["agent1"])
 
     context = {"agent_computation": True}
-    await metric.compute(session, context=context)
+    await metric.compute_with_dispatch(session, context=context)
 
     # Verify aggregation level is restored
     assert metric.aggregation_level == original_level
@@ -420,7 +420,7 @@ async def test_agent_computation_with_exception_handling():
     context = {"agent_computation": True}
 
     # This should handle the exception gracefully
-    results = await metric.compute(session, context=context)
+    results = await metric.compute_with_dispatch(session, context=context)
 
     # Verify aggregation level is still restored
     assert metric.aggregation_level == original_level

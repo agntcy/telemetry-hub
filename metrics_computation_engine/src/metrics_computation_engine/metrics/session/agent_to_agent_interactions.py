@@ -36,7 +36,7 @@ class AgentToAgentInteractions(BaseMetric):
     def init_with_model(self, model) -> bool:
         return True
 
-    async def compute(self, session: SessionEntity):
+    async def compute(self, session: SessionEntity, **context):
         try:
             # Use pre-computed agent transitions from SessionEntity
             transition_counts = (

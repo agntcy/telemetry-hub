@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import BinaryGrading, MetricResult
@@ -63,20 +63,14 @@ class Groundedness(BaseMetric):
     def create_model(self, llm_config):
         return self.create_native_model(llm_config)
 
-    async def compute(
-        self, session: SessionEntity, **context
-    ) -> Union[MetricResult, List[MetricResult]]:
+    async def compute(self, session: SessionEntity, **context) -> MetricResult:
         """
         Compute groundedness using pre-populated SessionEntity data.
 
         Args:
             session: SessionEntity with pre-computed conversation data
-            **context: Additional context, including agent_computation flag
+            **context: Additional context
         """
-        # Check if this is agent computation
-        if context.get("agent_computation", False):
-            return self._compute_agent_level(session)
-
         # Session-level computation (incorporating main branch improvements)
         try:
             if self.jury:
@@ -143,7 +137,7 @@ class Groundedness(BaseMetric):
                 session_ids=[session.session_id],
             )
 
-    def _compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
+    async def compute_agent_level(self, session: SessionEntity) -> List[MetricResult]:
         """
         Compute Groundedness for each agent in the session.
 

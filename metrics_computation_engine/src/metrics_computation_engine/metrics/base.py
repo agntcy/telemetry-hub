@@ -27,11 +27,6 @@ class BaseMetric(ABC):
         self.aggregation_level: AggregationLevel  # Set by concrete implementations
 
     @abstractmethod
-    async def compute(self, data: Any):
-        """Compute the metric for given data"""
-        pass
-
-    @abstractmethod
     def init_with_model(self, model: Any) -> bool:
         """Set the model that will be used by the metric"""
         pass
@@ -68,6 +63,71 @@ class BaseMetric(ABC):
             bool: True if the metric supports agent-level computation, False otherwise
         """
         return False
+
+    async def compute_with_dispatch(
+        self, *args, **context
+    ) -> Union[MetricResult, List[MetricResult]]:
+        """
+        Compute method with centralized dispatch logic.
+
+        This method automatically routes to session-level or agent-level computation
+        based on the agent_computation context flag.
+
+        Args:
+            *args: Arguments (typically session data)
+            **context: Additional context including agent_computation flag
+
+        Returns:
+            MetricResult for session-level or List[MetricResult] for agent-level
+        """
+        # Extract nested context if present
+        actual_context = context.get("context", context)
+        is_agent_computation = (
+            actual_context.get("agent_computation", False) if actual_context else False
+        )
+
+        # Check if this is agent-level computation
+        if self.supports_agent_computation() and is_agent_computation:
+            return await self.compute_agent_level(*args)
+
+        # Session-level computation (default)
+        return await self.compute(*args, **context)
+
+    @abstractmethod
+    async def compute(self, *args, **context) -> MetricResult:
+        """
+        Compute metric at session level (default behavior).
+
+        This method must be implemented by all metrics to handle session-level computation.
+
+        Args:
+            *args: Arguments (typically session data)
+            **context: Additional context
+
+        Returns:
+            MetricResult: Single result for the session
+        """
+        pass
+
+    async def compute_agent_level(self, *args) -> List[MetricResult]:
+        """
+        Compute metric at agent level.
+
+        This method should be overridden by metrics that support agent-level computation.
+
+        Args:
+            *args: Arguments (typically session data)
+
+        Returns:
+            List[MetricResult]: One result per agent
+
+        Raises:
+            NotImplementedError: If the metric doesn't support agent computation
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support agent-level computation. "
+            f"Override compute_agent_level() method or return False from supports_agent_computation()."
+        )
 
     def _create_success_result(
         self,

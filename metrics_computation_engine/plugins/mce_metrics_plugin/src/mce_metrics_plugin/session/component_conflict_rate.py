@@ -46,7 +46,7 @@ class ComponentConflictRate(BaseMetric):
     def create_model(self, llm_config):
         return self.create_native_model(llm_config)
 
-    async def compute(self, session: SessionEntity):
+    async def compute(self, session: SessionEntity, **context):
         conversation = (
             session.conversation_data.get("conversation", "")
             if session.conversation_data

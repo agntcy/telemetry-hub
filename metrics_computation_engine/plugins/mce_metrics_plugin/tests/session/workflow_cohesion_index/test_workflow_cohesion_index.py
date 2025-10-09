@@ -207,7 +207,9 @@ class TestWorkflowCohesionIndex:
                 return_value=[Mock(span_id="span_1")],
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify results
         assert len(results) == 2  # Two agents
@@ -237,7 +239,9 @@ class TestWorkflowCohesionIndex:
         with patch.object(
             type(session), "agent_stats", new_callable=lambda: property(lambda self: {})
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify empty results
         assert len(results) == 0
@@ -264,7 +268,9 @@ class TestWorkflowCohesionIndex:
                 side_effect=Exception("Span extraction failed"),
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify error handling
         assert len(results) == 1
@@ -278,7 +284,7 @@ class TestWorkflowCohesionIndex:
         assert result.value == -1  # Error value
         assert result.metadata["agent_id"] == "problematic_agent"
 
-    def test_workflow_cohesion_index_agent_level_coordinator_skipped(self):
+    async def test_workflow_cohesion_index_agent_level_coordinator_skipped(self):
         """Test that coordinator agents are skipped when filtering is enabled."""
         # Setup metric with filtering enabled
         metric = WorkflowCohesionIndex(filter_coordinators=True)
@@ -298,7 +304,7 @@ class TestWorkflowCohesionIndex:
                 },
             )
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify coordinator was skipped - no results should be returned
             assert len(results) == 0, (
@@ -313,7 +319,7 @@ class TestWorkflowCohesionIndex:
     @patch(
         "mce_metrics_plugin.session.workflow_cohesion_index.get_agent_role_and_skip_decision"
     )
-    def test_workflow_cohesion_index_agent_level_processor_evaluated(
+    async def test_workflow_cohesion_index_agent_level_processor_evaluated(
         self, mock_role_detection
     ):
         """Test that processor agents are evaluated when filtering is enabled."""
@@ -361,7 +367,7 @@ class TestWorkflowCohesionIndex:
                 return_value=[create_agent_span()],
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify processor was evaluated
             assert len(results) == 1
@@ -379,7 +385,7 @@ class TestWorkflowCohesionIndex:
     @patch(
         "mce_metrics_plugin.session.workflow_cohesion_index.get_agent_role_and_skip_decision"
     )
-    def test_workflow_cohesion_index_agent_level_filtering_disabled(
+    async def test_workflow_cohesion_index_agent_level_filtering_disabled(
         self, mock_role_detection
     ):
         """Test that all agents are evaluated when filtering is disabled."""
@@ -421,7 +427,7 @@ class TestWorkflowCohesionIndex:
                 return_value=[create_agent_span()],
             ),
         ):
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify agent was evaluated despite being coordinator
             assert len(results) == 1

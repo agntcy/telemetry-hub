@@ -110,9 +110,9 @@ class MetricsProcessor:
         logger.debug(f"Cache miss for {metric.name} agents, computing...")
 
         if self._metric_supports_context(metric):
-            new_results = await metric.compute(data, **context)
+            new_results = await metric.compute_with_dispatch(data, **context)
         else:
-            new_results = await metric.compute(data)
+            new_results = await metric.compute_with_dispatch(data)
 
         # Ensure we return a list
         if isinstance(new_results, list):

@@ -219,7 +219,9 @@ class TestInformationRetention:
                 side_effect=mock_get_spans_for_agent,
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify results
         assert len(results) == 2
@@ -263,7 +265,9 @@ class TestInformationRetention:
                 return_value="",
             ),
         ):  # No conversation
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify no results for silent agent
         assert len(results) == 0
@@ -295,7 +299,9 @@ class TestInformationRetention:
                 return_value=[Mock(span_id="span_1")],
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify error result
         assert len(results) == 1
@@ -319,7 +325,9 @@ class TestInformationRetention:
         with patch.object(
             type(session), "agent_stats", new_callable=lambda: property(lambda self: {})
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify empty results
         assert len(results) == 0
@@ -346,7 +354,9 @@ class TestInformationRetention:
                 side_effect=Exception("Conversation extraction failed"),
             ),
         ):
-            results = await metric.compute(session, agent_computation=True)
+            results = await metric.compute_with_dispatch(
+                session, agent_computation=True
+            )
 
         # Verify error handling
         assert len(results) == 1
@@ -473,7 +483,7 @@ class TestInformationRetention:
     @patch(
         "mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision"
     )
-    def test_information_retention_agent_level_coordinator_skipped(
+    async def test_information_retention_agent_level_coordinator_skipped(
         self, mock_role_detection
     ):
         """Test that coordinator agents are skipped when filtering is enabled."""
@@ -521,7 +531,7 @@ class TestInformationRetention:
                 },
             )
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify coordinator was skipped - no results should be returned
             assert len(results) == 0, (
@@ -539,7 +549,7 @@ class TestInformationRetention:
     @patch(
         "mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision"
     )
-    def test_information_retention_agent_level_processor_evaluated(
+    async def test_information_retention_agent_level_processor_evaluated(
         self, mock_role_detection
     ):
         """Test that processor agents are evaluated when filtering is enabled."""
@@ -592,7 +602,7 @@ class TestInformationRetention:
             )
             mock_conv.return_value = "User: Remember that 2+2=4\nAssistant: Got it, 2+2 equals 4.\nUser: What did I just tell you?\nAssistant: You told me that 2+2=4."
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify processor was evaluated
             assert len(results) == 1
@@ -613,7 +623,7 @@ class TestInformationRetention:
     @patch(
         "mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision"
     )
-    def test_information_retention_agent_level_filtering_disabled(
+    async def test_information_retention_agent_level_filtering_disabled(
         self, mock_role_detection
     ):
         """Test that all agents are evaluated when filtering is disabled."""
@@ -660,7 +670,7 @@ class TestInformationRetention:
             )
             mock_conv.return_value = "System: Remember task context\nAssistant: Context noted for task routing"
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify agent was evaluated despite being coordinator
             assert len(results) == 1
@@ -679,7 +689,9 @@ class TestInformationRetention:
     @patch(
         "mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision"
     )
-    def test_information_retention_agent_level_mixed_agents(self, mock_role_detection):
+    async def test_information_retention_agent_level_mixed_agents(
+        self, mock_role_detection
+    ):
         """Test mixed scenario with both coordinator and processor agents."""
 
         # Setup mock role detection for different agent types
@@ -745,7 +757,7 @@ class TestInformationRetention:
             mock_role_func.side_effect = mock_role_side_effect
             mock_conv.return_value = "Agent conversation with information"
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Should have 1 result: supervisor skipped, researcher evaluated
             assert len(results) == 1
@@ -763,7 +775,7 @@ class TestInformationRetention:
     @patch(
         "mce_metrics_plugin.session.information_retention.get_agent_role_and_skip_decision"
     )
-    def test_information_retention_agent_level_role_detection_error(
+    async def test_information_retention_agent_level_role_detection_error(
         self, mock_role_detection
     ):
         """Test handling when role detection fails."""
@@ -806,7 +818,7 @@ class TestInformationRetention:
             )
             mock_conv.return_value = "Some conversation about information"
 
-            results = metric._compute_agent_level(session)
+            results = await metric.compute_agent_level(session)
 
             # Verify agent was evaluated conservatively
             assert len(results) == 1
