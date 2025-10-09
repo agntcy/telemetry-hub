@@ -18,6 +18,12 @@ from .model_loader import (
 )
 from .metric_configuration import MetricConfiguration, build_metric_configuration_map
 
+from metrics_computation_engine.logger import setup_logger
+import opik
+
+opik.set_tracing_active(False)
+logger = setup_logger(__name__)
+
 
 class OpikMetricAdapter(BaseMetric):
     """
@@ -53,6 +59,9 @@ class OpikMetricAdapter(BaseMetric):
         self.required = {
             "entity_type": self.metric_configuration.requirements.entity_type
         }
+        
+        # Should be false
+        logger.info(f"OPIK TRACING: opik.is_tracing_active(): {opik.is_tracing_active()}")
 
     def get_model_provider(self):
         return MODEL_PROVIDER_NAME
