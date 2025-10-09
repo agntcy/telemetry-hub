@@ -425,7 +425,7 @@ async def test_goal_success_rate_agent_computation_empty_session():
     session = setup_session_for_agents(session)
 
     results = await metric.compute_with_dispatch(
-        session, context={"agent_computation": True}
+        session, agent_computation=True
     )
 
     # Should return empty list for no agents
@@ -464,7 +464,7 @@ async def test_goal_success_rate_agent_computation_single_agent():
     session = setup_session_for_agents(session)
 
     results = await metric.compute_with_dispatch(
-        session, context={"agent_computation": True}
+        session, agent_computation=True
     )
 
     # Should return list with one agent result (but no model, so error result)
@@ -522,7 +522,7 @@ async def test_goal_success_rate_agent_computation_multiple_agents():
     session = setup_session_for_agents(session)
 
     results = await metric.compute_with_dispatch(
-        session, context={"agent_computation": True}
+        session, agent_computation=True
     )
 
     # Should return results for both agents

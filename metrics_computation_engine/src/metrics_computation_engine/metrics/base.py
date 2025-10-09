@@ -80,11 +80,8 @@ class BaseMetric(ABC):
         Returns:
             MetricResult for session-level or List[MetricResult] for agent-level
         """
-        # Extract nested context if present
-        actual_context = context.get("context", context)
-        is_agent_computation = (
-            actual_context.get("agent_computation", False) if actual_context else False
-        )
+        # Check for agent computation flag in context
+        is_agent_computation = context.get("agent_computation", False)
 
         # Check if this is agent-level computation
         if self.supports_agent_computation() and is_agent_computation:

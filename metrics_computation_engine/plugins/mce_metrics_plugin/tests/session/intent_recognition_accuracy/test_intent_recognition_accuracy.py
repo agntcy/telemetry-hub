@@ -175,8 +175,7 @@ async def test_intent_recognition_accuracy_agent_computation_empty_session():
 
     session = SessionEntity(session_id="test_session", spans=[])
 
-    context = {"agent_computation": True}
-    result = await metric.compute_with_dispatch(session, context=context)
+    result = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert result == []
 
@@ -225,8 +224,7 @@ async def test_intent_recognition_accuracy_agent_computation_single_agent():
     metric.jury = mock_jury
 
     # Test agent computation
-    context = {"agent_computation": True}
-    results = await metric.compute_with_dispatch(session, context=context)
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     # Verify results
     assert len(results) == 1
@@ -310,8 +308,7 @@ async def test_intent_recognition_accuracy_agent_computation_multiple_agents():
     metric.jury = mock_jury
 
     # Test agent computation
-    context = {"agent_computation": True}
-    results = await metric.compute_with_dispatch(session, context=context)
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     # Verify results
     assert len(results) == 2

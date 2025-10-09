@@ -267,8 +267,7 @@ async def test_agent_level_computation_single_agent():
     session = setup_session_for_agents(["agent1"])
 
     # Test agent computation
-    context = {"agent_computation": True}
-    results = await metric.compute_with_dispatch(session, context=context)
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 1
@@ -288,8 +287,7 @@ async def test_agent_level_computation_multiple_agents():
     session = setup_session_for_agents(["agent1", "agent2", "agent3"])
 
     # Test agent computation
-    context = {"agent_computation": True}
-    results = await metric.compute_with_dispatch(session, context=context)
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 3
@@ -318,8 +316,7 @@ async def test_agent_level_computation_no_agents():
     # Mock the session to have empty agent_stats (no agents)
     # Don't try to delete it since it's a property
 
-    context = {"agent_computation": True}
-    results = await metric.compute_with_dispatch(session, context=context)
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 0
@@ -342,8 +339,7 @@ async def test_agent_level_computation_agent_without_spans():
         "metrics_computation_engine.entities.models.session.SessionEntity.get_agent_view",
         return_value=MockAgentView(),
     ):
-        context = {"agent_computation": True}
-        results = await metric.compute_with_dispatch(session, context=context)
+        results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 1
@@ -361,9 +357,8 @@ async def test_nested_context_extraction():
 
     session = setup_session_for_agents(["agent1"])
 
-    # Test with nested context
-    nested_context = {"context": {"agent_computation": True}}
-    results = await metric.compute_with_dispatch(session, **nested_context)
+    # Test with agent computation context
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     assert isinstance(results, list)
     assert len(results) == 1
@@ -394,8 +389,7 @@ async def test_aggregation_level_restoration():
 
     session = setup_session_for_agents(["agent1"])
 
-    context = {"agent_computation": True}
-    await metric.compute_with_dispatch(session, context=context)
+    await metric.compute_with_dispatch(session, agent_computation=True)
 
     # Verify aggregation level is restored
     assert metric.aggregation_level == original_level
@@ -417,10 +411,8 @@ async def test_agent_computation_with_exception_handling():
 
     metric.compute_uncertainty_score = mock_compute_with_error
 
-    context = {"agent_computation": True}
-
     # This should handle the exception gracefully
-    results = await metric.compute_with_dispatch(session, context=context)
+    results = await metric.compute_with_dispatch(session, agent_computation=True)
 
     # Verify aggregation level is still restored
     assert metric.aggregation_level == original_level
