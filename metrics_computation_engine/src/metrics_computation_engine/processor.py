@@ -461,11 +461,12 @@ class MetricsProcessor:
             # Span-level metrics: iterate through spans in the session
             for span in session_entity.spans:
                 for metric_name, metric_class in classified_metrics["span"]:
-
                     try:
                         # For entity filtering, we need a temp instance to check requirements
                         temp_instance = metric_class(metric_name)
-                        if not self._should_compute_metric_for_span(temp_instance, span):
+                        if not self._should_compute_metric_for_span(
+                            temp_instance, span
+                        ):
                             continue
 
                         # Only initialize if we're going to compute it
@@ -489,8 +490,6 @@ class MetricsProcessor:
                             }
                         )
                         continue
-
-                
 
             # Session-level metrics: pass the SessionEntity directly
             if "session" in computation_levels:
@@ -603,15 +602,25 @@ class MetricsProcessor:
                     {
                         "metric_name": metric_name,
                         "aggregation_level": "unknown",
-                        "session_id": [session_entity.session_id for session_entity in sessions_set.sessions],
+                        "session_id": [
+                            session_entity.session_id
+                            for session_entity in sessions_set.sessions
+                        ],
                         "span_id": None,
-                        "app_name": list(set([session_entity.app_name for session_entity in sessions_set.sessions])),
+                        "app_name": list(
+                            set(
+                                [
+                                    session_entity.app_name
+                                    for session_entity in sessions_set.sessions
+                                ]
+                            )
+                        ),
                         "error_message": str(e),
                         "metadata": {},
                     }
                 )
                 continue
-                
+
             if metric_instance is not None:
                 # Pass the entire sessions_data dict for population metrics
                 tasks.append(self._safe_compute(metric_instance, sessions_set))
