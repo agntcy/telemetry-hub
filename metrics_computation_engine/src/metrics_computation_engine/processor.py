@@ -645,11 +645,11 @@ class MetricsProcessor:
                     logger.error("Got None result from metric computation - skipping")
                     metric_results["failed_metrics"].append(
                         {
-                            "metric_name": raw_resultresult.metric_name,
+                            "metric_name": raw_result.metric_name,
                             "aggregation_level": raw_result.aggregation_level,
                             "error_message": raw_result.error_message
                             or "Metric returned none value.",
-                            "metadata": result.metadata,
+                            "metadata": raw_result.metadata,
                             "session_id": raw_result.session_id,
                             "span_id": raw_result.span_id,
                             "app_name": raw_result.app_name,
