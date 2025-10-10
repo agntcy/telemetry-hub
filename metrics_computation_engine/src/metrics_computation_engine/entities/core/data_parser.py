@@ -114,13 +114,23 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
 
     # Enhanced detection for different frameworks (Autogen, etc.)
     # Detect Autogen agents - patterns like "autogen process MultimodalWebSurfer_..."
-    autogen_agent_mask = span_names.str.contains("autogen process", na=False)
-    df.loc[autogen_agent_mask, "entity_type"] = "agent"
+    # Disabling for now, because it creates duplication
+    #    autogen_agent_mask = span_names.str.contains("autogen process", na=False)
+    #    df.loc[autogen_agent_mask, "entity_type"] = "agent"
 
     # Detect Autogen workflows - patterns like "autogen create group_topic_..."
     autogen_workflow_mask = span_names.str.contains("autogen create", na=False)
     df.loc[autogen_workflow_mask, "entity_type"] = "workflow"
 
+    # Detect Autogen tools - patterns is tool_name, tool_args and tool_description in attributes
+    autogen_tool_mask = attrs_df.apply(
+        lambda row: all(
+            key in row and pd.notna(row[key])
+            for key in ["tool_name", "tool_args", "tool_description"]
+        ),
+        axis=1,
+    )
+    df.loc[autogen_tool_mask, "entity_type"] = "tool"
     # Additional logic: detect agent-related TASK spans
     # Look for task spans that contain agent information
     task_mask = df["entity_type"] == "task"
@@ -227,6 +237,9 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
         entity_name = _extract_entity_name(attrs, entity_type, config)
         # Extract agent_id (main branch addition)
         agent_id = attrs.get("agent_id", None)
+
+        if entity_type == "agent":
+            entity_name = agent_id if agent_id else entity_name
 
         # Special handling for Autogen agent names
         if entity_type == "agent" and entity_name == "unknown":

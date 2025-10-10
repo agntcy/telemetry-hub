@@ -40,6 +40,13 @@ class AgentStats(BaseModel):
     tool_total_tokens: int = Field(
         default=0, description="Total tokens used by tools under this agent"
     )
+    duration: float = Field(
+        default=0.0,
+        description="Total duration of the agent's activity in milliseconds",
+    )
+    completion: bool = Field(
+        default=True, description="Whether the agent completed its task"
+    )
 
 
 class ConversationElement(BaseModel):
@@ -188,7 +195,13 @@ class SessionEntity(BaseModel):
         """
         # Check for common app name attributes in spans
         for span in self.spans:
-            # First, check raw span data for ServiceName
+            # First, check raw span data for application_id in SpanAttributes
+            if span.raw_span_data and span.raw_span_data.get("SpanAttributes"):
+                attrs = span.raw_span_data["SpanAttributes"]
+                app_id = attrs.get("application_id")
+                if app_id:
+                    return str(app_id).lower()
+            # Second, check raw span data for ServiceName
             if span.raw_span_data and span.raw_span_data.get("ServiceName"):
                 service_name = str(span.raw_span_data["ServiceName"])
                 if service_name and service_name != "unknown":
@@ -347,6 +360,16 @@ class SessionEntity(BaseModel):
 
         return total
 
+    @property
+    def completion(self) -> bool:
+        """Determine if the session completed successfully based on LLM and tool calls."""
+        # A session is considered complete if the agents composing the session completed
+        # TODO: should use the span status of the global session if available
+        for agent, stats in self.agent_stats.items():
+            if not stats.completion:
+                return False
+        return True
+
     def _collect_tool_llm_tokens(self, node, tool_tokens: Dict[str, int]) -> None:
         """
         Recursively traverse the execution tree to collect LLM tokens used by tools.
@@ -445,6 +468,7 @@ class SessionEntity(BaseModel):
 
         return agent_stats
 
+    # TODO this is not used anymore, can be removed later
     def _collect_agent_stats(self, node, agent_stats: Dict[str, AgentStats]) -> None:
         """
         Collect statistics for each agent using attribute-first identification.
@@ -468,9 +492,15 @@ class SessionEntity(BaseModel):
             if node.span.entity_type in ["agent", "task"]:
                 descendant_spans = self._get_descendant_spans(node)
                 self._calculate_agent_stats(agent_stats[agent_name], descendant_spans)
+                agent_stats[agent_name].duration += (
+                    node.span.duration if node.span.duration else 0.0
+                )
             else:
                 # For individual spans (like tools), count them directly
                 self._calculate_agent_stats(agent_stats[agent_name], [node.span])
+                agent_stats[agent_name].duration += (
+                    node.span.duration if node.span.duration else 0.0
+                )
 
         # Continue traversing children
         for child in node.children:
@@ -744,6 +774,8 @@ class SessionEntity(BaseModel):
         unique_tools = set(stats.unique_tool_names)
 
         for span in spans:
+            if span.entity_type == "agent":
+                stats.duration += span.duration if span.duration else 0.0
             # Tool statistics
             if span.entity_type == "tool":
                 stats.total_tool_calls += 1
@@ -793,6 +825,19 @@ class SessionEntity(BaseModel):
 
         # Update unique tool names as sorted list
         stats.unique_tool_names = sorted(list(unique_tools))
+
+        # Update completion status
+        # For now it is based solely on whether there were any failed LLM or Tool calls
+        # TODO: we should check with the agent span status directly, if present
+        # And also make sure that the last LLM call was successful
+        stats.completion = True
+        stats.completion = stats.completion and (
+            stats.total_llm_calls == 0 or stats.llm_calls_failed < stats.total_llm_calls
+        )
+        stats.completion = stats.completion and (
+            stats.total_tool_calls == 0
+            or stats.tool_calls_failed < stats.total_tool_calls
+        )
 
     def get_agent_view(self, agent_name: str) -> "AgentView":
         """

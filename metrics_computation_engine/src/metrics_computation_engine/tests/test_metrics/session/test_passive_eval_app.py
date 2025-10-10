@@ -27,6 +27,7 @@ class MockHistogram:
         self.latency = [8.2] * session_count
         self.graph_determinism = [0.85] * session_count
         self.graph_dynamism = [0.15] * session_count
+        self.completion = [True] * session_count
 
 
 class MockMeta:
@@ -153,6 +154,7 @@ class TestPassiveEvalApp:
             "eval.app.duration",
             "eval.app.graph_determinism",
             "eval.app.graph_dynamism",
+            "eval.app.completion",
         ]
 
         for field in expected_fields:
