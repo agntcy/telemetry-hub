@@ -4,6 +4,7 @@
 import logging
 import asyncio
 import inspect
+import json
 from typing import Any, Dict, List, Optional, Union
 
 from metrics_computation_engine.metrics.base import BaseMetric
@@ -350,6 +351,22 @@ class MetricsProcessor:
 
         return []
 
+    def _deduplicate_failures(self, failures):
+        seen = set()
+        deduplicated = []
+
+        for failure in failures:
+            try:
+                key = json.dumps(failure, sort_keys=True, default=str)
+            except TypeError:
+                key = str(failure)
+
+            if key not in seen:
+                seen.add(key)
+                deduplicated.append(failure)
+
+        return deduplicated
+
     def _should_compute_metric_for_span(
         self, metric_instance: BaseMetric, span: Any
     ) -> bool:
@@ -435,6 +452,7 @@ class MetricsProcessor:
             "session_metrics": [],
             "agent_metrics": [],
             "population_metrics": [],
+            "failed_metrics": [],
         }
 
         for session_index, session_entity in enumerate(
@@ -443,18 +461,36 @@ class MetricsProcessor:
             # Span-level metrics: iterate through spans in the session
             for span in session_entity.spans:
                 for metric_name, metric_class in classified_metrics["span"]:
-                    # For entity filtering, we need a temp instance to check requirements
-                    temp_instance = metric_class(metric_name)
-                    if not self._should_compute_metric_for_span(temp_instance, span):
+
+                    try:
+                        # For entity filtering, we need a temp instance to check requirements
+                        temp_instance = metric_class(metric_name)
+                        if not self._should_compute_metric_for_span(temp_instance, span):
+                            continue
+
+                        # Only initialize if we're going to compute it
+                        metric_instance = await self._initialize_metric(
+                            metric_name, metric_class
+                        )
+
+                        if metric_instance is not None:
+                            tasks.append(self._safe_compute(metric_instance, span))
+
+                    except Exception as e:
+                        metric_results["failed_metrics"].append(
+                            {
+                                "metric_name": metric_name,
+                                "aggregation_level": "span",
+                                "session_id": [session_entity.session_id],
+                                "span_id": span.span_id,
+                                "app_name": [span.app_name],
+                                "error_message": str(e),
+                                "metadata": {},
+                            }
+                        )
                         continue
 
-                    # Only initialize if we're going to compute it
-                    metric_instance = await self._initialize_metric(
-                        metric_name, metric_class
-                    )
-
-                    if metric_instance is not None:
-                        tasks.append(self._safe_compute(metric_instance, span))
+                
 
             # Session-level metrics: pass the SessionEntity directly
             if "session" in computation_levels:
@@ -470,9 +506,23 @@ class MetricsProcessor:
                     ):
                         continue
 
-                    metric_instance = await self._initialize_metric(
-                        metric_name, metric_class
-                    )
+                    try:
+                        metric_instance = await self._initialize_metric(
+                            metric_name, metric_class
+                        )
+                    except Exception as e:
+                        metric_results["failed_metrics"].append(
+                            {
+                                "metric_name": metric_name,
+                                "aggregation_level": "session",
+                                "session_id": [session_entity.session_id],
+                                "span_id": None,
+                                "app_name": [session_entity.app_name],
+                                "error_message": str(e),
+                                "metadata": {},
+                            }
+                        )
+                        continue
 
                     if metric_instance is not None:
                         # Prepare context for metrics that need it
@@ -544,8 +594,24 @@ class MetricsProcessor:
 
         # Population-level metrics: pass all sessions data
         for metric_name, metric_class in classified_metrics["population"]:
-            metric_instance = await self._initialize_metric(metric_name, metric_class)
-
+            try:
+                metric_instance = await self._initialize_metric(
+                    metric_name, metric_class
+                )
+            except Exception as e:
+                metric_results["failed_metrics"].append(
+                    {
+                        "metric_name": metric_name,
+                        "aggregation_level": "unknown",
+                        "session_id": [session_entity.session_id for session_entity in sessions_set.sessions],
+                        "span_id": None,
+                        "app_name": list(set([session_entity.app_name for session_entity in sessions_set.sessions])),
+                        "error_message": str(e),
+                        "metadata": {},
+                    }
+                )
+                continue
+                
             if metric_instance is not None:
                 # Pass the entire sessions_data dict for population metrics
                 tasks.append(self._safe_compute(metric_instance, sessions_set))
@@ -568,6 +634,15 @@ class MetricsProcessor:
             for raw_result in raw_results:
                 if raw_result is None:
                     logger.error("Got None result from metric computation - skipping")
+                    metric_results["failed_metrics"].append(
+                        {
+                            "metric_name": result.metric_name,
+                            "aggregation_level": result.aggregation_level,
+                            "error_message": result.error_message
+                            or "Metric returned none value.",
+                            "metadata": result.metadata,
+                        }
+                    )
                     continue
 
                 # Handle both single results and lists of results
@@ -582,8 +657,32 @@ class MetricsProcessor:
             for result in flattened_results:
                 if result is None:
                     logger.error("Got None result from flattened results - skipping")
+                    metric_results["failed_metrics"].append(
+                        {
+                            "metric_name": result.metric_name,
+                            "aggregation_level": result.aggregation_level,
+                            "error_message": result.error_message
+                            or "Metric returned none value.",
+                            "session_id": result.session_id,
+                            "span_id": result.span_id,
+                            "app_name": result.app_name,
+                            "metadata": result.metadata,
+                        }
+                    )
                     continue
                 if (result.value == -1 or result.value == {}) and not result.success:
+                    metric_results["failed_metrics"].append(
+                        {
+                            "metric_name": result.metric_name,
+                            "aggregation_level": result.aggregation_level,
+                            "error_message": result.error_message
+                            or "Metric returned unsuccessful result",
+                            "session_id": result.session_id,
+                            "span_id": result.span_id,
+                            "app_name": result.app_name,
+                            "metadata": result.metadata,
+                        }
+                    )
                     continue
                 aggregation_level = result.aggregation_level
                 if aggregation_level in ["span", "session", "agent"]:
@@ -592,5 +691,9 @@ class MetricsProcessor:
                     )
 
                 metric_results[f"{aggregation_level}_metrics"].append(result)
+
+        metric_results["failed_metrics"] = self._deduplicate_failures(
+            metric_results["failed_metrics"]
+        )
 
         return metric_results

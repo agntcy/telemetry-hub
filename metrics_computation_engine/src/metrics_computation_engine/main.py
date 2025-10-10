@@ -193,6 +193,7 @@ async def compute_metrics(config: MetricsConfigRequest):
 
         # Register metrics
         registry = MetricRegistry()
+        failed_registry_metrics = []
         for metric in config.metrics:
             try:
                 metric_cls, metric_name = get_metric_class(metric)
@@ -202,6 +203,17 @@ async def compute_metrics(config: MetricsConfigRequest):
                 )
             except Exception as e:
                 logger.error(f"Error: {e}")
+                failed_registry_metrics.append(
+                    {
+                        "metric_name": metric,
+                        "aggregation_level": "unknown",
+                        "session_id": [],
+                        "span_id": [],
+                        "app_name": [],
+                        "error_message": str(e),
+                        "metadata": {},
+                    }
+                )
 
         logger.info(f"Registered Metrics: {registry.list_metrics()}")
 
@@ -215,12 +227,15 @@ async def compute_metrics(config: MetricsConfigRequest):
         logger.info(f"Computation levels: {computation_levels}")
 
         results = await processor.compute_metrics(sessions_set, computation_levels)
+        results.setdefault("failed_metrics", [])
+        results["failed_metrics"].extend(failed_registry_metrics)
 
         # Implement caching of results here
         if os.getenv("METRICS_CACHE_ENABLED", "false").lower() == "true":
             logger.info("Caching required")
             get_api_client().cache_metrics(results)
 
+        logger.info(f"Failed metrics: {results['failed_metrics']}")
         return {
             "metrics": registry.list_metrics(),
             "results": format_return(results),
