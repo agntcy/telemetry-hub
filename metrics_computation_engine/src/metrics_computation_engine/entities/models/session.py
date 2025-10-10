@@ -468,6 +468,7 @@ class SessionEntity(BaseModel):
 
         return agent_stats
 
+    # TODO this is not used anymore, can be removed later
     def _collect_agent_stats(self, node, agent_stats: Dict[str, AgentStats]) -> None:
         """
         Collect statistics for each agent using attribute-first identification.
@@ -773,6 +774,8 @@ class SessionEntity(BaseModel):
         unique_tools = set(stats.unique_tool_names)
 
         for span in spans:
+            if span.entity_type == "agent":
+                stats.duration += span.duration if span.duration else 0.0
             # Tool statistics
             if span.entity_type == "tool":
                 stats.total_tool_calls += 1

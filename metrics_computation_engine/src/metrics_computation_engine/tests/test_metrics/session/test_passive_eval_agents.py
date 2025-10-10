@@ -27,6 +27,8 @@ class MockAgentValue:
         self.llm_input_tokens = [500] * session_count
         self.llm_output_tokens = [300] * session_count
         self.llm_duration = [1.8] * session_count
+        self.duration = [4321.2] * session_count
+        self.completion = [True] * session_count
 
 
 class MockHistogram:
@@ -172,6 +174,8 @@ class TestPassiveEvalAgents:
             "eval.agent.llm_cost_input",
             "eval.agent.llm_cost_output",
             "eval.agent.llm_duration",
+            "eval.agent.duration",
+            "eval.agent.completion",
         ]
 
         for field in expected_fields:
