@@ -3,6 +3,7 @@
 
 import json
 import pandas as pd
+from datetime import datetime
 from typing import Any, Dict, List
 
 from ..models.span import SpanEntity
@@ -32,6 +33,96 @@ def contains_error_like_pattern(output_dict: dict) -> bool:
         if any(e in value for e in ["traceback", "exception", "httperror"]):
             return True
     return False
+
+
+def detect_span_format(span: Dict) -> str:
+    """
+    Detect if span is in Jaeger or standard format.
+    
+    Returns:
+        "jaeger" if Jaeger format detected
+        "standard" if standard format detected
+        "unknown" otherwise
+    """
+    if "operationName" in span and "tags" in span:
+        return "jaeger"
+    elif "SpanName" in span and "SpanAttributes" in span:
+        return "standard"
+    return "unknown"
+
+
+def convert_jaeger_to_standard(span: Dict) -> Dict:
+    """
+    Convert Jaeger format span to standard format.
+    
+    Jaeger format uses:
+    - operationName -> SpanName
+    - tags -> SpanAttributes
+    - serviceName -> ServiceName
+    - spanId -> SpanId
+    - parentId -> ParentSpanId
+    - traceId -> TraceId
+    - startTime -> Timestamp and ioa_start_time attribute
+    - durationMicros -> Duration (converted to nanoseconds)
+    """
+    converted = span.copy()
+    
+    # Map Jaeger field names to standard field names
+    if "operationName" in span:
+        converted["SpanName"] = span["operationName"]
+        
+    if "tags" in span:
+        attrs = span["tags"].copy()
+        
+        # Add traceId as session.id if not already present
+        # This ensures trace grouping works correctly
+        if "session.id" not in attrs and "execution.id" not in attrs:
+            if "traceId" in span:
+                attrs["session.id"] = span["traceId"]
+        
+        converted["SpanAttributes"] = attrs
+        
+    if "serviceName" in span:
+        converted["ServiceName"] = span["serviceName"]
+        
+    if "spanId" in span:
+        converted["SpanId"] = span["spanId"]
+        
+    if "parentId" in span:
+        converted["ParentSpanId"] = span["parentId"]
+        
+    if "traceId" in span:
+        converted["TraceId"] = span["traceId"]
+    
+    # Handle Jaeger timestamp format
+    if "startTime" in span:
+        start_time_str = span["startTime"]
+        converted["Timestamp"] = start_time_str
+        
+        # Convert ISO 8601 timestamps to float for ioa_start_time
+        try:
+            if 'T' in start_time_str and 'Z' in start_time_str:
+                dt = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                start_time_float = dt.timestamp()
+            else:
+                start_time_float = float(start_time_str)
+            
+            # Add ioa_start_time to attributes
+            if "SpanAttributes" not in converted:
+                converted["SpanAttributes"] = {}
+            converted["SpanAttributes"]["ioa_start_time"] = str(start_time_float)
+        except Exception:
+            # If conversion fails, store as-is
+            if "SpanAttributes" not in converted:
+                converted["SpanAttributes"] = {}
+            converted["SpanAttributes"]["ioa_start_time"] = start_time_str
+    
+    # Convert duration from microseconds to nanoseconds
+    if "durationMicros" in span:
+        duration_micros = span["durationMicros"]
+        converted["Duration"] = duration_micros * 1000  # Convert to nanoseconds
+    
+    return converted
 
 
 def app_name(span: Dict) -> str:
@@ -84,12 +175,24 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
 
     This implementation uses pandas for efficient vectorized operations,
     particularly beneficial for larger datasets.
+    
+    Supports both standard and Jaeger span formats with automatic detection
+    and conversion.
     """
     if not raw_spans:
         return []
 
+    # Detect format and convert Jaeger spans to standard format if needed
+    converted_spans = []
+    for span in raw_spans:
+        span_format = detect_span_format(span)
+        if span_format == "jaeger":
+            converted_spans.append(convert_jaeger_to_standard(span))
+        else:
+            converted_spans.append(span)
+
     # Convert to DataFrame for vectorized operations
-    df = pd.DataFrame(raw_spans)
+    df = pd.DataFrame(converted_spans)
 
     # Extract and normalize span attributes, maintaining index alignment
     attrs_list = df["SpanAttributes"].fillna({}).tolist()
@@ -274,6 +377,24 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
         input_payload = _ensure_dict_payload(input_payload)
         output_payload = _ensure_dict_payload(output_payload)
 
+        # Enhance raw_span_data with backward compatibility fields
+        raw_span_dict = row.to_dict()
+        
+        # Add backward compatibility for adapters expecting old field names
+        # This ensures both Jaeger and standard field names are available
+        if "SpanAttributes" in raw_span_dict and "tags" not in raw_span_dict:
+            raw_span_dict["tags"] = raw_span_dict["SpanAttributes"]
+        if "SpanName" in raw_span_dict and "operationName" not in raw_span_dict:
+            raw_span_dict["operationName"] = raw_span_dict["SpanName"]
+        if "ServiceName" in raw_span_dict and "serviceName" not in raw_span_dict:
+            raw_span_dict["serviceName"] = raw_span_dict["ServiceName"]
+        if "SpanId" in raw_span_dict and "spanId" not in raw_span_dict:
+            raw_span_dict["spanId"] = raw_span_dict["SpanId"]
+        if "ParentSpanId" in raw_span_dict and "parentId" not in raw_span_dict:
+            raw_span_dict["parentId"] = raw_span_dict["ParentSpanId"]
+        if "TraceId" in raw_span_dict and "traceId" not in raw_span_dict:
+            raw_span_dict["traceId"] = raw_span_dict["TraceId"]
+        
         span_entity = SpanEntity(
             entity_type=entity_type,
             span_id=row.get("SpanId", ""),
@@ -295,7 +416,7 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
             end_time=end_time_str,
             duration=duration_ms,
             attrs=extra_attrs,
-            raw_span_data=row.to_dict(),
+            raw_span_data=raw_span_dict,
         )
 
         span_entities.append(span_entity)
