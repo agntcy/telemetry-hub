@@ -114,9 +114,8 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
 
     # Enhanced detection for different frameworks (Autogen, etc.)
     # Detect Autogen agents - patterns like "autogen process MultimodalWebSurfer_..."
-    # Disabling for now, because it creates duplication
-    #    autogen_agent_mask = span_names.str.contains("autogen process", na=False)
-    #    df.loc[autogen_agent_mask, "entity_type"] = "agent"
+    autogen_agent_mask = span_names.str.contains("autogen process", na=False)
+    df.loc[autogen_agent_mask, "entity_type"] = "agent"
 
     # Detect Autogen workflows - patterns like "autogen create group_topic_..."
     autogen_workflow_mask = span_names.str.contains("autogen create", na=False)
