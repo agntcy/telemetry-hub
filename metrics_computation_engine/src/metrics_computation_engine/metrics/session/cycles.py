@@ -171,6 +171,7 @@ class CyclesCount(BaseMetric):
                     score=cycle_count,
                     category="application",
                     app_name=session.app_name,
+                    agent_id=agent_name,
                     reasoning=f"Cycles count for agent '{agent_name}': {cycle_count} cycles found in {len(events)} events",
                     span_ids=span_ids,
                     session_ids=[session.session_id],
