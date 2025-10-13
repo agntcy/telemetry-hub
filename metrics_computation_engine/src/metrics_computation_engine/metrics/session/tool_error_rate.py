@@ -136,6 +136,7 @@ class ToolErrorRate(BaseMetric):
                     score=agent_error_rate,
                     category="application",
                     app_name=session.app_name,
+                    agent_id=agent_name,
                     reasoning=f"Tool error rate for agent '{agent_name}': {agent_tool_errors} errors out of {agent_tool_calls} tool calls",
                     span_ids=agent_error_span_ids,
                     session_ids=[session.session_id],
