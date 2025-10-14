@@ -4,7 +4,7 @@
 import json
 from functools import lru_cache
 from importlib.metadata import entry_points
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from typing import Any, Dict, List, Tuple, Optional
 from fastapi import HTTPException
 
@@ -280,10 +280,14 @@ def stringify_keys(obj):
 
 
 def format_return(results):
-    for metric_category, metric_results in results.items():
-        results[metric_category] = [asdict(r) for r in metric_results]
+    formatted_results = {}
 
-    return stringify_keys(results)
+    for metric_category, metric_results in results.items():
+        formatted_results[metric_category] = [
+            asdict(r) if is_dataclass(r) else r for r in metric_results
+        ]
+
+    return stringify_keys(formatted_results)
 
 
 def clear_metrics_cache():
