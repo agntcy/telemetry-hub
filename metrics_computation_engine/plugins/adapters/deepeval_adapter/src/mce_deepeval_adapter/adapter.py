@@ -14,6 +14,10 @@ from metrics_computation_engine.types import AggregationLevel
 from .metric_configuration import MetricConfiguration, build_metric_configuration_map
 from .model_loader import MODEL_PROVIDER_NAME, load_model
 
+import os
+
+os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "1"
+
 logger = setup_logger(__name__)
 
 
