@@ -5,7 +5,10 @@ from __future__ import annotations
 import uvicorn
 import click
 
-from metrics_computation_engine.mock_llm_proxy.config import MockLLMSettings, load_settings
+from metrics_computation_engine.mock_llm_proxy.config import (
+    MockLLMSettings,
+    load_settings,
+)
 from metrics_computation_engine.mock_llm_proxy.server import create_app
 
 
@@ -48,5 +51,3 @@ def main(
 
 if __name__ == "__main__":
     main()
-
-

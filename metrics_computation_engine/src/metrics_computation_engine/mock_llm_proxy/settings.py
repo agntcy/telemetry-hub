@@ -25,5 +25,3 @@ def load_settings_from_env() -> MockLLMSettings:
         overrides["mock_reasoning"] = reasoning
 
     return MockLLMSettings(**overrides)
-
-

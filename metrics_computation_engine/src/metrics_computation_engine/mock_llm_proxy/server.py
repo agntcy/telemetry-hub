@@ -105,10 +105,14 @@ def create_app(settings: MockLLMSettings | None = None) -> FastAPI:
 
     @app.post("/chat/completions")
     async def chat_completions(
-        request: MockChatCompletionRequest, settings: MockLLMSettings = Depends(_get_settings)
+        request: MockChatCompletionRequest,
+        settings: MockLLMSettings = Depends(_get_settings),
     ) -> JSONResponse:
         if request.stream:
-            raise HTTPException(status_code=400, detail="Streaming responses are not supported by the mock proxy.")
+            raise HTTPException(
+                status_code=400,
+                detail="Streaming responses are not supported by the mock proxy.",
+            )
 
         response = _build_chat_completion(request, settings)
         return JSONResponse(content=response.model_dump())
@@ -117,5 +121,3 @@ def create_app(settings: MockLLMSettings | None = None) -> FastAPI:
 
 
 __all__ = ["create_app"]
-
-

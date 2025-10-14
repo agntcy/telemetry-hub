@@ -23,5 +23,3 @@ def load_settings(overrides: dict | None = None) -> MockLLMSettings:
 
     overrides = overrides or {}
     return MockLLMSettings(**overrides)
-
-

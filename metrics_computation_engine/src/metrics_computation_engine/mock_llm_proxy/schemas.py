@@ -53,5 +53,3 @@ class MockChatCompletionRequest(BaseModel):
     stream: Optional[bool] = None
     extra_body: Dict[str, Any] = Field(default_factory=dict)
     custom_llm_provider: Optional[str] = None
-
-
