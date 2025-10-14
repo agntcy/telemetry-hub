@@ -7,6 +7,7 @@ The Metric Computation Engine (MCE) is a tool for computing metrics from observa
 - **Python 3.11 or higher**
 - **[uv](https://docs.astral.sh/uv/) package manager** for dependency management
 - **LLM API Key** (OpenAI, or custom endpoint) for LLM-based metrics
+- **Mock LLM Proxy** (optional) use `mock-llm-proxy` CLI for local testing without real API keys
 - **Agentic App**: Get started with [coffeeAgntcy](https://github.com/agntcy/coffeeAgntcy) reference Agentic App implementation using the AGNTCY ecosystem.
 - **Instrumentation**: Agentic apps must be instrumented with [AGNTCY's observe SDK](https://github.com/agntcy/observe) as the MCE relies on its observability data schema
 
@@ -112,6 +113,26 @@ LLM_API_KEY=sk-...                             # LLM API key
 ```
 
 **Note**: LLM configuration can be provided via environment variables (global defaults) or per-request in the `llm_judge_config` parameter. Request-level configuration takes precedence.
+
+### Mock LiteLLM Proxy
+
+For local development you can avoid using real API keys by starting the bundled mock proxy. It implements the `POST /chat/completions` endpoint expected by LiteLLM and returns deterministic scores.
+
+```bash
+uv run mock-llm-proxy --port 8010
+```
+
+Update your `.env` or per-request config to point at the proxy:
+
+```json
+"llm_judge_config": {
+  "LLM_BASE_MODEL_URL": "http://localhost:8010",
+  "LLM_MODEL_NAME": "mock-model",
+  "LLM_API_KEY": "test"
+}
+```
+
+CLI options let you tune the score and reasoning. Run `uv run mock-llm-proxy --help` for the full list.
 
 ### Examples Directory
 
