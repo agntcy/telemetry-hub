@@ -59,6 +59,7 @@ def create_session_from_spans(spans):
     return session
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_conversation_completeness_metric():
     """Test ConversationCompletenessMetric end-to-end using env-provided LLM creds."""
