@@ -35,7 +35,10 @@ jobs:
           source .venv/bin/activate
           uv pip install -e ".[test]"
           uv pip install -e plugins/mce_metrics_plugin/
+          uv pip install -e plugins/adapters/deepeval_adapter/
+          uv pip install -e plugins/adapters/ragas_adapter/
+          uv pip install -e plugins/adapters/opik_adapter/
       - name: Run tests
         run: |
           pushd metrics_computation_engine
-          uv run pytest
+          uv run pytest -m "not e2e"

@@ -123,13 +123,19 @@ line_length = 88
 [tool.pytest.ini_options]
 testpaths = [
     "src/metrics_computation_engine/tests",
-    "plugins/mce_metrics_plugin/tests"
+    "plugins/mce_metrics_plugin/tests",
+    "plugins/adapters/deepeval_adapter/tests",
+    "plugins/adapters/ragas_adapter/tests",
+    "plugins/adapters/opik_adapter/tests"
 ]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+markers = [
+    "e2e: End-to-end tests requiring real LLM API keys (skip in CI)"
+]
 
 [dependency-groups]
 dev = [
