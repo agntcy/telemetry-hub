@@ -281,7 +281,20 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
         duration_ms = _calculate_duration_ms(start_time_str, end_time_str, duration_ns)
 
         # Determine error status
-        contains_error = _check_error_status(attrs, output_payload)
+
+        contains_error = _check_error_status(
+            row.get("StatusCode", "Unset"), attrs, output_payload
+        )
+
+        error_data = None
+        if contains_error:
+            error_messages = _get_error_message(row, attrs)
+            # For now, assumes there is only one error message at most
+            if len(error_messages) > 0:
+                error_data = {
+                    "error_name": error_messages[0][0],
+                    "error_trace": error_messages[0][1],
+                }
 
         # Ensure payloads are dictionaries
         input_payload = _ensure_dict_payload(input_payload)
@@ -298,6 +311,7 @@ def parse_raw_spans(raw_spans: List[Dict[str, Any]]) -> List[SpanEntity]:
             message=attrs.get("traceloop.entity.message"),
             tool_definition=tool_definition,
             contains_error=contains_error,
+            error_data=error_data,
             timestamp=row.get("Timestamp", ""),
             parent_span_id=row.get("ParentSpanId")
             if pd.notna(row.get("ParentSpanId"))
@@ -469,9 +483,13 @@ def _calculate_duration_ms(
 
 
 def _check_error_status(
-    attrs: Dict[str, Any], output_payload: Dict[str, Any] | None
+    status_code: str, attrs: Dict[str, Any], output_payload: Dict[str, Any] | None
 ) -> bool:
     """Check if span contains error indicators."""
+
+    if status_code.lower() == "error":
+        return True
+
     # Check explicit error attribute
     if attrs.get("traceloop.entity.error"):
         return True
@@ -481,6 +499,29 @@ def _check_error_status(
         return True
 
     return False
+
+
+def _get_error_message(row: pd.Series, attrs: Dict[str, Any]) -> list[tuple[str, str]]:
+    """Extract error message from span data."""
+
+    event_names = row.get("EventsName", [])
+    index = 0
+    index_list = []
+    for i in event_names:
+        if i == "exception":
+            index_list.append(index)
+        index += 1
+    event_attributes = row.get("EventsAttributes", [])
+    responses = []
+    if index_list:
+        for i in index_list:
+            if i < len(event_attributes):
+                event_attr = event_attributes[i]
+                if isinstance(event_attr, dict):
+                    message = event_attr.get("exception.message", "")
+                    trace = event_attr.get("exception.stacktrace", "")
+                    responses.append((message, trace))
+    return responses
 
 
 def _ensure_dict_payload(payload: Any) -> Dict[str, Any] | None:
