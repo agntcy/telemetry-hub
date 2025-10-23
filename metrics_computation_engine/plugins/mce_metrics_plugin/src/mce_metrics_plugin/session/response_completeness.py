@@ -77,11 +77,9 @@ class ResponseCompleteness(BaseMetric):
             **context: Additional context
         """
         # Session-level computation
-        conversation = (
-            session.conversation_data.get("conversation", "")
-            if session.conversation_data
-            else ""
-        )
+        conversation = ""
+        if session.conversation_data:
+            conversation = session.get_conversation_data_without_images()
         agent_span_ids = (
             [span.span_id for span in session.agent_spans]
             if session.agent_spans
@@ -179,6 +177,7 @@ class ResponseCompleteness(BaseMetric):
                         score=score,
                         category="agent",
                         app_name=session.app_name,
+                        agent_id=agent_name,
                         reasoning=reasoning,
                         entities_involved=[agent_name],
                         span_ids=agent_span_ids,

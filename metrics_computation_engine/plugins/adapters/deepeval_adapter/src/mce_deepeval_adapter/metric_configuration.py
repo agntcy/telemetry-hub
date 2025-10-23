@@ -11,6 +11,7 @@ from deepeval.metrics import BaseMetric as DeepEvalBaseMetric
 from deepeval.metrics import (
     BiasMetric,
     ConversationCompletenessMetric,
+    TurnRelevancyMetric,
     GEval,
     RoleAdherenceMetric,
     TaskCompletionMetric,
@@ -101,6 +102,16 @@ def build_metric_configurations() -> List[MetricConfiguration]:
                 required_input_parameters=["conversation_elements"],
             ),
             metric_class=ConversationCompletenessMetric,
+        ),
+        MetricConfiguration(
+            metric_name=TurnRelevancyMetric.__name__,
+            test_case_calculator=DeepEvalTestCaseConversational(),
+            requirements=MetricRequirements(
+                entity_type=["llm"],
+                aggregation_level="session",
+                required_input_parameters=["conversation_elements"],
+            ),
+            metric_class=TurnRelevancyMetric,
         ),
         MetricConfiguration(
             metric_name=BiasMetric.__name__,

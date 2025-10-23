@@ -78,10 +78,11 @@ class Groundedness(BaseMetric):
                 conversation = ""
                 if session.conversation_data:
                     # Try both "elements" (main branch) and "conversation" (agent branch) formats
-                    if "elements" in session.conversation_data:
-                        conversation = session.conversation_data["elements"]
-                    elif "conversation" in session.conversation_data:
-                        conversation = session.conversation_data["conversation"]
+                    #                    if "elements" in session.conversation_data:
+                    #                        conversation = session.conversation_data["elements"]
+                    #                    elif "conversation" in session.conversation_data:
+                    #                        conversation = session.conversation_data["conversation"]
+                    conversation = session.get_conversation_data_without_images()
 
                 # Format conversation properly (main branch improvement)
                 conversation_str = (
@@ -194,6 +195,7 @@ class Groundedness(BaseMetric):
                     result = self._create_success_result(
                         score=score,
                         category="agent",
+                        agent_id=agent_name,
                         app_name=session.app_name,
                         reasoning=reasoning,
                         entities_involved=[agent_name],
