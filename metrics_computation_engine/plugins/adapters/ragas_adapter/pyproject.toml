@@ -7,14 +7,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mce-ragas-adapter"
-version = "0.1.1"
+version = "0.2.0"
 license = "Apache-2.0"
 description = "RAGAS integration adapter for Metrics Computation Engine"
 authors = [
     {name = "AGNTCY Telemetry Hub team"},
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
