@@ -134,6 +134,12 @@ class TestMetricProcessorCompatibility:
             if not hasattr(metric_class, "compute"):
                 continue
 
+            # Skip adapter classes - they are metric factories that require a metric name
+            # to instantiate (e.g., RagasAdapter("TopicAdherenceScore"))
+            # Adapters are tested in their own adapter-specific test suites
+            if name.startswith("Adapter_"):
+                continue
+
             try:
                 # Create metric instance
                 metric = metric_class()
@@ -218,6 +224,11 @@ class TestMetricProcessorCompatibility:
             print("  uv pip install -e plugins/adapters/opik_adapter")
             print("  uv pip install -e plugins/adapters/ragas_adapter")
             print("  uv pip install -e plugins/adapters/deepeval_adapter")
+        else:
+            print(
+                f"Note: {adapter_count} adapter(s) discovered. Adapters are metric factories "
+                "and are tested in their adapter-specific test suites."
+            )
 
         # List all tested metrics for visibility
         print("\nTested metrics:")
@@ -246,6 +257,10 @@ class TestMetricProcessorCompatibility:
 
         for name, metric_class in available_metrics.items():
             if not hasattr(metric_class, "compute"):
+                continue
+
+            # Skip adapter classes - they are metric factories that require a metric name
+            if name.startswith("Adapter_"):
                 continue
 
             try:
