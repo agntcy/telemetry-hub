@@ -97,6 +97,7 @@ all = [
 mce-server = "metrics_computation_engine.server:main"
 mce-cli = "metrics_computation_engine.cli:main"
 dal-cli = "metrics_computation_engine.dal_cli:main"
+mock-llm-proxy = "metrics_computation_engine.mock_llm_proxy.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/agntcy/telemetry-hub"
