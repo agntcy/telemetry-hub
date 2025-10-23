@@ -231,7 +231,10 @@ async def compute_metrics(config: MetricsConfigRequest):
         results["failed_metrics"].extend(failed_registry_metrics)
 
         # Implement caching of results here
-        if os.getenv("METRICS_CACHE_ENABLED", "false").lower() == "true":
+        if (
+            os.getenv("METRICS_CACHE_ENABLED", "false").lower() == "true"
+            or config.should_write_to_db()
+        ):
             logger.info("Caching required")
             get_api_client().cache_metrics(results)
 

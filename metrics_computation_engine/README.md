@@ -244,7 +244,7 @@ There are two ways to run the MCE service:
 
 The server provides automatic OpenAPI documentation at `http://<HOST>:<PORT>/docs` when running.
 
-You can run the MCE by making a curl call to the endpoint `<HOST>:<PORT>` as defined in the `.env`. Perform an evaluation by sending a request to `/compute_metrics`:
+You can run the MCE by making a curl call to the endpoint `<HOST>:<PORT>` as defined in the `.env`. Perform an evaluation by sending a POST request to `/compute_metrics`:
 
 Example:
 ```bash
@@ -262,9 +262,23 @@ curl -sS -X POST "http://<HOST>:<PORT>/compute_metrics" \
     "data_fetching_infos": {
       "batch_config": {"time_range": {"start": "2000-06-20T15:04:05Z", "end": "2040-06-29T08:52:55Z"}},
       "session_ids": []
+    },
+    "metric_options": {
+      "computation_level": ["session"],
+      "write_to_db": false
     }
   }'
 ```
+
+The payload for this POST request must be in JSON format, and contains at least the two following fields:
+
+- `metrics`: a list containing the name of the metrics that should be computed.
+- `data_fetching_infos`: a dictionary containing the information to select a set of sessions. This is achieved by either providing a `batch_config`, which consist of a `time_range` with a `start` and `end` time; or a list of session ids, through the `session_ids` field (see the example above).
+
+In addition to this, there are two optional fields:
+
+- `llm_judge_config`: a dictionary that holds the information related to the configuration of the LLM as a Judge. if not provided, the information provided by the environment variables will be used.
+- `metric_options`: a dictionary for the different options for the metrics. Currently, there are two options, `computation_level` and `write_to_db`. The `computation_level` is a list of levels at which the metric computation should happen. The MCE currently supports `session` and `agent` levels. By default, the `session` level is enforced. The `write_to_db` is a boolean to indicate if the results of this query should be stored into the DB. By default, this is set to `false`, but if the environment variable `METRICS_CACHE_ENABLED` is set to true, the results will always be stored into the DB.
 
 ## Troubleshooting
 
