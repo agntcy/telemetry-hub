@@ -396,12 +396,7 @@ class SessionEntity(BaseModel):
     def get_conversation_data_without_images(self) -> Optional[Dict[str, Any]]:
         if not self.conversation_data:
             return None
-        print("Redacting images from conversation data...")
         if "elements" in self.conversation_data:
-            print(
-                "Found elements in conversation data",
-                type(self.conversation_data["elements"]),
-            )
             if type(self.conversation_data["elements"]) is list:
                 for element in self.conversation_data["elements"]:
                     if type(element) is dict:
