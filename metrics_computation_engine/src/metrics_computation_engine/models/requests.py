@@ -95,12 +95,17 @@ class MetricOptions(BaseModel):
     """Configuration options for metric computation."""
 
     computation_level: Optional[List[str]] = None
+    write_to_db: Optional[bool] = None
 
     def get_computation_levels(self) -> List[str]:
         """Get computation levels, defaulting to session if none specified."""
         if self.computation_level is None:
             return ["session"]
         return self.computation_level
+
+    def should_write_to_db(self) -> bool:
+        """Check if results should be written to the database."""
+        return self.write_to_db if self.write_to_db is not None else False
 
     def supports_session(self) -> bool:
         """Check if session-level computation is requested."""
@@ -140,3 +145,7 @@ class MetricsConfigRequest(BaseModel):
     def get_computation_levels(self) -> List[str]:
         """Get computation levels from metric options."""
         return self.get_metric_options().get_computation_levels()
+
+    def should_write_to_db(self) -> bool:
+        """Check if results should be written to the database."""
+        return self.get_metric_options().should_write_to_db()

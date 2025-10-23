@@ -114,7 +114,7 @@ class ApiClient:
             # Load base URL from environment
             base_url = os.environ.get("API_BASE_URL")
             if not base_url:
-                self.logger.debug(
+                self.logger.warning(
                     "No API base URL configured, API operations will be unavailable"
                 )
                 return None
