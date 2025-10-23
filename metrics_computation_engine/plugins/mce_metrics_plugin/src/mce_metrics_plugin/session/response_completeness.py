@@ -80,6 +80,10 @@ class ResponseCompleteness(BaseMetric):
         conversation = ""
         if session.conversation_data:
             conversation = session.get_conversation_data_without_images()
+            if "elements" in conversation:
+                conversation = conversation["elements"]
+            elif "conversation" in conversation:
+                conversation = conversation["conversation"]
         agent_span_ids = (
             [span.span_id for span in session.agent_spans]
             if session.agent_spans

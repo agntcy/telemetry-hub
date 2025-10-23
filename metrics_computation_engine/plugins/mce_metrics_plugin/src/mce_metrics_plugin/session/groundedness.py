@@ -83,6 +83,10 @@ class Groundedness(BaseMetric):
                     #                    elif "conversation" in session.conversation_data:
                     #                        conversation = session.conversation_data["conversation"]
                     conversation = session.get_conversation_data_without_images()
+                    if "elements" in conversation:
+                        conversation = conversation["elements"]
+                    elif "conversation" in conversation:
+                        conversation = conversation["conversation"]
 
                 # Format conversation properly (main branch improvement)
                 conversation_str = (
