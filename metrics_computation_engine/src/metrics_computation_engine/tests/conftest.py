@@ -569,6 +569,8 @@ def sample_task_span_raw():
         "SpanKind": "Internal",
         "ServiceName": "noa-moderator",
         "ResourceAttributes": {"service.name": "noa-moderator"},
+        "ScopeName": "",
+        "ScopeVersion": "",
         "SpanAttributes": {
             "agent_id": "moderator-agent.invoke",
             "deployment.environment": "o11y-for-ai-outshift",
@@ -582,6 +584,8 @@ def sample_task_span_raw():
             "traceloop.workflow.name": "RunnableSequence",
         },
         "Duration": 520038,
+        "StatusCode": "Unset",
+        "StatusMessage": "",
     }
 
 
@@ -598,6 +602,8 @@ def sample_workflow_span_raw():
         "SpanKind": "Internal",
         "ServiceName": "noa-moderator",
         "ResourceAttributes": {"service.name": "noa-moderator"},
+        "ScopeName": "",
+        "ScopeVersion": "",
         "SpanAttributes": {
             "agent_id": "moderator-agent.invoke",
             "ioa_observe.workflow.name": "moderator-agent.invoke",
@@ -608,6 +614,8 @@ def sample_workflow_span_raw():
             "traceloop.workflow.name": "RunnableSequence",
         },
         "Duration": 2306869659,
+        "StatusCode": "Unset",
+        "StatusMessage": "",
     }
 
 
@@ -623,6 +631,8 @@ def sample_agent_span_raw():
         "SpanKind": "Internal",
         "ServiceName": "test-app",
         "ResourceAttributes": {"service.name": "test-app"},
+        "ScopeName": "",
+        "ScopeVersion": "",
         "SpanAttributes": {
             "agent_id": "test-agent-id",
             "ioa_observe.entity.name": "test_agent",
@@ -632,6 +642,8 @@ def sample_agent_span_raw():
             "ioa_start_time": "1754408410.123",
         },
         "Duration": 1000000000,  # 1 second
+        "StatusCode": "Unset",
+        "StatusMessage": "",
     }
 
 
@@ -647,6 +659,8 @@ def sample_graph_span_raw():
         "SpanKind": "Internal",
         "ServiceName": "test-app",
         "ResourceAttributes": {"service.name": "test-app"},
+        "ScopeName": "",
+        "ScopeVersion": "",
         "SpanAttributes": {
             "ioa_observe.workflow.name": "test-graph",
             "session.id": "test-session-123",
@@ -655,6 +669,8 @@ def sample_graph_span_raw():
             "traceloop.entity.output": '{"edges": ["A->B"]}',
         },
         "Duration": 500000000,
+        "StatusCode": "Unset",
+        "StatusMessage": "",
     }
 
 

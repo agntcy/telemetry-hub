@@ -224,40 +224,52 @@ class TestTimingCalculations:
 class TestErrorDetection:
     """Test error status detection logic."""
 
+    def test_check_error_status_code_error(self):
+        """Test detection of error status code."""
+        status_code = "error"
+        attrs = {}
+        output_payload = None
+
+        result = _check_error_status(status_code, attrs, output_payload)
+        assert result is True
+
     def test_check_error_status_explicit_error(self):
         """Test detection of explicit error attribute."""
+        status_code = "ok"
         attrs = {"traceloop.entity.error": True}
-        output = None
+        output_payload = None
 
-        result = _check_error_status(attrs, output)
+        result = _check_error_status(status_code, attrs, output_payload)
         assert result is True
 
     def test_check_error_status_pattern_in_output(self):
         """Test detection of error patterns in output."""
+        status_code = "ok"
         attrs = {}
 
         # Traceback in output
-        output = {"result": "Error: Traceback occurred"}
-        assert _check_error_status(attrs, output) is True
+        output_payload = {"result": "Error: Traceback occurred"}
+        assert _check_error_status(status_code, attrs, output_payload) is True
 
         # Exception in output
-        output = {"error": "Exception: something failed"}
-        assert _check_error_status(attrs, output) is True
+        output_payload = {"error": "Exception: something failed"}
+        assert _check_error_status(status_code, attrs, output_payload) is True
 
         # HTTPError in output
-        output = {"response": "HTTPError 404"}
-        assert _check_error_status(attrs, output) is True
+        output_payload = {"response": "HTTPError 404"}
+        assert _check_error_status(status_code, attrs, output_payload) is True
 
     def test_check_error_status_no_error(self):
         """Test clean outputs return False."""
+        status_code = "ok"
         attrs = {}
-        output = {"status": "success", "result": "all good"}
+        output_payload = {"status": "success", "result": "all good"}
 
-        result = _check_error_status(attrs, output)
+        result = _check_error_status(status_code, attrs, output_payload)
         assert result is False
 
         # None output
-        result = _check_error_status(attrs, None)
+        result = _check_error_status(status_code, attrs, None)
         assert result is False
 
 
