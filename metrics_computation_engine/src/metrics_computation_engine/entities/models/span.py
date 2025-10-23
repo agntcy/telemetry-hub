@@ -18,6 +18,7 @@ class SpanEntity(BaseModel):
     tool_definition: Optional[Dict[str, Any]] = None
     contains_error: bool
     timestamp: str
+    error_data: Optional[Dict[str, Any]] = None
     parent_span_id: Optional[str] = None
     trace_id: Optional[str] = None
     session_id: Optional[str] = None
