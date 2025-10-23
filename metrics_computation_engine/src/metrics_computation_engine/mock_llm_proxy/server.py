@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import random
 import time
 import uuid
 
@@ -45,7 +47,9 @@ def _build_response_content(
 
 
 def _build_chat_completion(
-    request: MockChatCompletionRequest, settings: MockLLMSettings
+    request: MockChatCompletionRequest,
+    settings: MockLLMSettings,
+    latency_ms: float,
 ) -> ChatCompletionResponse:
     """Create a ChatCompletionResponse mirroring LiteLLM/OpenAI shape."""
 
@@ -79,10 +83,21 @@ def _build_chat_completion(
             "api_base": request.api_base,
             "api_version": request.api_version,
             "custom_llm_provider": request.custom_llm_provider,
+            "simulated_latency_ms": latency_ms,
         },
     )
 
     return response
+
+
+def _sample_latency(settings: MockLLMSettings) -> float:
+    minimum = settings.response_latency_min_ms
+    maximum = settings.response_latency_max_ms
+
+    if maximum <= minimum:
+        return float(minimum)
+
+    return float(random.uniform(minimum, maximum))
 
 
 def get_settings(app: FastAPI) -> MockLLMSettings:
@@ -113,7 +128,10 @@ def create_app(settings: MockLLMSettings | None = None) -> FastAPI:
                 detail="Streaming responses are not supported by the mock proxy.",
             )
 
-        response = _build_chat_completion(request, settings)
+        latency_ms = _sample_latency(settings)
+        await asyncio.sleep(latency_ms / 1000.0)
+
+        response = _build_chat_completion(request, settings, latency_ms)
         return JSONResponse(content=response.model_dump())
 
     return app

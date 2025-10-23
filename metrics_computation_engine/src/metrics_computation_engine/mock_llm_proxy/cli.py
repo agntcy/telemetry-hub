@@ -28,11 +28,27 @@ from metrics_computation_engine.mock_llm_proxy.server import create_app
     show_default=True,
     help="Reasoning string to include in responses.",
 )
+@click.option(
+    "--latency-min-ms",
+    default=100.0,
+    show_default=True,
+    type=float,
+    help="Lower bound (inclusive) for simulated latency sampling in milliseconds.",
+)
+@click.option(
+    "--latency-max-ms",
+    default=500.0,
+    show_default=True,
+    type=float,
+    help="Upper bound (inclusive) for simulated latency sampling in milliseconds.",
+)
 def main(
     host: str,
     port: int,
     mock_metric_score: float,
     mock_reasoning: str,
+    latency_min_ms: float,
+    latency_max_ms: float,
 ) -> None:
     """Start the mock LiteLLM proxy server."""
 
@@ -41,6 +57,8 @@ def main(
         "port": port,
         "mock_metric_score": mock_metric_score,
         "mock_reasoning": mock_reasoning,
+        "response_latency_min_ms": latency_min_ms,
+        "response_latency_max_ms": latency_max_ms,
     }
 
     settings: MockLLMSettings = load_settings(overrides)
