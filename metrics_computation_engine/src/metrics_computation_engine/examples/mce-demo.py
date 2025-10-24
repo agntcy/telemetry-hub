@@ -141,13 +141,13 @@ def _format_results(
         new_v = []
         for metric_result in v:
             # Handle different types of metric results
-            if hasattr(metric_result, 'model_dump'):
+            if hasattr(metric_result, "model_dump"):
                 # Pydantic v2 model
                 new_v.append(metric_result.model_dump())
-            elif hasattr(metric_result, 'dict'):
+            elif hasattr(metric_result, "dict"):
                 # Pydantic v1 model
                 new_v.append(metric_result.dict())
-            elif hasattr(metric_result, '__dataclass_fields__'):
+            elif hasattr(metric_result, "__dataclass_fields__"):
                 # Dataclass
                 new_v.append(asdict(metric_result))
             elif isinstance(metric_result, dict):
