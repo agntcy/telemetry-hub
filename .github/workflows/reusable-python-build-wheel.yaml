@@ -45,6 +45,11 @@ jobs:
           py-install: false
           poetry-install: false
           uv-install: true
+      - name: Clean dist directory
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          rm -rf dist/
+          mkdir -p dist/
       - name: Build wheel
         working-directory: ${{ inputs.working-dir }}
         run: |
