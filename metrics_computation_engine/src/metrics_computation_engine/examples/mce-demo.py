@@ -96,12 +96,13 @@ async def compute():
     # For third party metrics you will need to use the adapters as the metric class, and then use the metric names as defined by that respective library
     registry.register_metric(DeepEvalMetricAdapter, "AnswerRelevancyMetric")
     registry.register_metric(OpikMetricAdapter, "Hallucination")
+    registry.register_metric(OpikMetricAdapter, "Sentiment")
     # Again you can use the get_metric_class() helper while structuring your metric as '<third_party_libary>.<third_party_metric>'
     for metric in ["deepeval.RoleAdherenceMetric"]:
         metric, metric_name = get_metric_class(metric)
         registry.register_metric(metric, metric_name)
     logger.info(
-        "Registered DeepEval's AnswerRelevancy, Hallucination, RoleAdherence Metrics from 3rd parties."
+        "Registered DeepEval's AnswerRelevancy, RoleAdherence and Opik's Hallucination, Sentiment Metrics from 3rd parties."
     )
 
     registered_metrics = registry.list_metrics()
@@ -137,7 +138,25 @@ def _format_results(
 ) -> Dict[str, List[Dict[str, Any]]]:
     results_dicts = dict()
     for k, v in results.items():
-        new_v = [asdict(metric_result) for metric_result in v]
+        new_v = []
+        for metric_result in v:
+            # Handle different types of metric results
+            if hasattr(metric_result, 'model_dump'):
+                # Pydantic v2 model
+                new_v.append(metric_result.model_dump())
+            elif hasattr(metric_result, 'dict'):
+                # Pydantic v1 model
+                new_v.append(metric_result.dict())
+            elif hasattr(metric_result, '__dataclass_fields__'):
+                # Dataclass
+                new_v.append(asdict(metric_result))
+            elif isinstance(metric_result, dict):
+                # Already a dict
+                new_v.append(metric_result)
+            else:
+                # Fallback - try to convert to dict
+                logger.warning(f"Unknown metric result type: {type(metric_result)}")
+                new_v.append(str(metric_result))
         results_dicts[k] = new_v
     return results_dicts
 
