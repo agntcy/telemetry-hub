@@ -69,7 +69,6 @@ class DeepEvalTestCaseLLMWithTools(AbstractTestCaseCalculator):
                     output=tool_call.output,
                 )
             )
-
         return LLMTestCase(
             input=user_input, actual_output=final_response, tools_called=tools_called
         )
@@ -96,7 +95,42 @@ class DeepEvalTestCaseConversational(AbstractTestCaseCalculator):
                 role = "assistant"
             turns.append(Turn(role=role, content=element.content))
 
+        print("LLM Conversation Turns:", turns)  # Debugging line
         return ConversationalTestCase(chatbot_role=chatbot_role, turns=turns)
+
+    def calculate_test_case_with_agent(
+        self, data: Union[SpanEntity, SessionEntity], agent_name: str
+    ) -> Union[ConversationalTestCase, LLMTestCase]:
+        """
+        Create conversational test case from SessionEntity data for a given agent.
+        """
+        data: SessionEntity = _make_sure_input_is_session_entity(data=data)
+        agent_role = "assistant"
+        # _, agent_role_metadata = get_agent_role_and_skip_decision(data, agent_name)
+        # if agent_role_metadata:
+        #    agent_role = agent_role_metadata.detected_role or "assistant"
+        # if agent_name == "unknown":
+        #    agent_role = "assistant"
+
+        # print(f"Agent Role for {agent_name}: {agent_role}")
+        agent_conversation = data.get_agent_conversation_data(agent_name)
+        if not agent_conversation:
+            raise ValueError(f"No conversation elements found for agent {agent_name}")
+        turns = []
+        print("AGENT Conversation Elements for agent:", agent_name)
+
+        for element in agent_conversation.get("elements", []):
+            role = element.get("role", "assistant")
+            if type(role) is not str:
+                continue
+            if role not in ["user", "assistant"]:
+                role = "assistant"
+            #                    if role == "system":
+            #                        role = "assistant"
+            #                    else:
+            #                        continue
+            turns.append(Turn(role=role, content=str(element.get("content", ""))))
+        return ConversationalTestCase(chatbot_role=agent_role, turns=turns)
 
 
 class LLMAnswerRelevancyTestCase(AbstractTestCaseCalculator):
