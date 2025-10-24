@@ -18,13 +18,14 @@ class ModelContainer:
     def __init__(self, model, is_default: bool = False):
         self.model: Any = model
         self.last_accessed: datetime = datetime.now(timezone.utc)
-        self.is_default: bool = is_default
+        self._is_default: bool = is_default
 
     def get_model(self) -> Any:
         return self.model
 
+    @property
     def is_default(self) -> bool:
-        return self.is_default
+        return self._is_default
 
     def set_last_accessed(self):
         self.last_accessed = datetime.now(timezone.utc)
