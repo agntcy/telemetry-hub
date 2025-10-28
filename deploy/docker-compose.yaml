@@ -59,6 +59,7 @@ services:
       - CLICKHOUSE_DB=default
       - SERVER_PORT=8080
       - PORT=8080
+      - ANNOTATION_ENABLED=true
     depends_on:
       clickhouse-server:
         condition: service_healthy

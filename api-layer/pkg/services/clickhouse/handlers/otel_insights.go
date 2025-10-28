@@ -4,6 +4,8 @@
 package handlers
 
 import (
+	"time"
+	"github.com/agntcy/telemetry-hub/api-layer/pkg/common"
 	"github.com/agntcy/telemetry-hub/api-layer/pkg/logger"
 	"github.com/agntcy/telemetry-hub/api-layer/pkg/services/clickhouse/models"
 )
@@ -67,6 +69,25 @@ func (h Handler) GetResponseLatencyStatsPerAgent() ([]models.ResponseLatencyPerA
 		return nil, res.Error
 	}
 	return results, nil
+}
+
+
+func (h Handler) GetExecutionGraphBySessionID(sessionID string) (graph string, timestamp time.Time, err error) {
+	var trace models.OtelTraces
+	// Fix: change LIKE clause to EQUAL
+	if result := h.DB.Where("SpanName LIKE '%.graph' AND splitByChar('_', SpanAttributes['session.id'])[2] = ? OR SpanAttributes['session.id'] = ?", sessionID, sessionID).Order("Timestamp DESC").First(&trace); result.Error != nil {
+		logger.Zap.Error("Error", logger.Error(result.Error))
+		return graph, timestamp, result.Error
+	}
+
+	graph = trace.SpanAttributes[common.GRAPH_PARAM]
+	if graph == "" {
+		return graph, timestamp, models.NewNotFoundError("no graph found for session ID: " + sessionID)
+	}
+
+	timestamp = trace.Timestamp
+	return graph, timestamp, nil
+
 }
 
 func (h Handler) GetCallGraph(executionId string) ([]models.CallGraph, error) {
