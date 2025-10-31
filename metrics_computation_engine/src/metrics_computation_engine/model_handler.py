@@ -8,10 +8,14 @@ import hashlib
 import json
 from importlib.metadata import entry_points
 
+from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.models.requests import LLMJudgeConfig
 
 
 MODEL_TIMEOUT = 3600  # one hour
+
+
+logger = setup_logger(__name__)
 
 
 class ModelContainer:
@@ -84,9 +88,13 @@ class ModelHandler:
                 loader_func = entry_point.load()
                 provider_name = entry_point.name
                 self.register_provider(provider_name, loader_func)
-                print(f"Registered model loader for provider: {provider_name}")
-            except Exception as e:
-                print(f"Warning: Failed to load model loader '{entry_point.name}': {e}")
+                logger.info(
+                    "Registered model loader for provider: %s", provider_name
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to load model loader '%s'", entry_point.name
+                )
 
     def register_provider(
         self, provider_name: str, loader_func: Callable[[LLMJudgeConfig], Any]
@@ -125,14 +133,18 @@ class ModelHandler:
         """Create a model using the registered loader for the provider"""
         loader_func = self._model_loaders.get(provider)
         if loader_func is None:
-            print(f"Warning: No model loader registered for provider '{provider}'")
+            logger.warning(
+                "No model loader registered for provider '%s'", provider
+            )
             return None
 
         try:
             model = loader_func(llm_config)
             return model
-        except Exception as e:
-            print(f"Error creating model for provider '{provider}': {e}")
+        except Exception:
+            logger.exception(
+                "Error creating model for provider '%s'", provider
+            )
             return None
 
     async def _store_model(self, provider: str, llm_config: LLMJudgeConfig, model: Any):
@@ -184,8 +196,10 @@ class ModelHandler:
 
                     for config_key in erase_list:
                         del provider_map[config_key]
-                        print(
-                            f"Garbage collected model for provider '{provider_name}' with config key {config_key}"
+                        logger.info(
+                            "Garbage collected model for provider '%s' with config key %s",
+                            provider_name,
+                            config_key,
                         )
 
         # If we're in an async context, await this

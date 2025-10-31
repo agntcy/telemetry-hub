@@ -43,12 +43,11 @@ from metrics_computation_engine.entities.core.trace_processor import TraceProces
 RAW_TRACES_PATH: Path = Path(__file__).parent / "data" / "sample_data.json"
 ENV_FILE_PATH: Path = Path(__file__).parent.parent.parent.parent / ".env"
 
-print("ENV", ENV_FILE_PATH)
+logger = setup_logger(name=__name__)
+logger.info("ENV %s", ENV_FILE_PATH)
 
 # Load environment variables from .env file
 load_dotenv(ENV_FILE_PATH)
-
-logger = setup_logger(name=__name__)
 
 
 async def compute():

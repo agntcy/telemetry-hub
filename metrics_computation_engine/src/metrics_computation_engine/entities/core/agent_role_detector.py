@@ -242,13 +242,12 @@ class AgentRoleDetector:
             logger.error(f"Error analyzing behavior for agent {agent_name}: {str(e)}")
             logger.error(f"Full traceback in role detector:\n{traceback.format_exc()}")
 
-            # Also print to stdout for immediate visibility in tests
-            print("\n=== ROLE DETECTOR ERROR DEBUG ===")
-            print(f"Agent: {agent_name}")
-            print(f"Error type: {type(e).__name__}")
-            print(f"Error message: {str(e)}")
-            print(f"Traceback:\n{traceback.format_exc()}")
-            print("=================================\n")
+            logger.error("=== ROLE DETECTOR ERROR DEBUG ===")
+            logger.error(f"Agent: {agent_name}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error message: {str(e)}")
+            logger.error(f"Traceback:\n{traceback.format_exc()}")
+            logger.error("=================================")
 
             return None
 

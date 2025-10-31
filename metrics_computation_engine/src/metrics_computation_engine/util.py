@@ -82,12 +82,11 @@ def get_metric_adapters():
             try:
                 adapter_class = entry_point.load()
                 _METRIC_ADAPTERS_CACHE[entry_point.name] = adapter_class
-                print(f"Loaded metric adapter: {entry_point.name}")
-            except Exception as e:
-                import traceback
-
-                print(traceback.format_exc())
-                print(f"Warning: Failed to load adapter '{entry_point.name}': {e}")
+                logger.info("Loaded metric adapter: %s", entry_point.name)
+            except Exception:
+                logger.exception(
+                    "Failed to load adapter '%s'", entry_point.name
+                )
 
     return _METRIC_ADAPTERS_CACHE
 
@@ -115,12 +114,11 @@ def get_all_metric_classes():
             try:
                 plugin_metric_class = entry_point.load()
                 _ALL_METRICS_CACHE[entry_point.name] = plugin_metric_class
-            except Exception as e:
+            except Exception:
                 # Skip failed plugins but log the error
-                import traceback
-
-                print(traceback.format_exc())
-                print(f"Warning: Failed to load '{entry_point.name}': {e}")
+                logger.exception(
+                    "Failed to load '%s'", entry_point.name
+                )
 
     return _ALL_METRICS_CACHE
 
@@ -381,7 +379,7 @@ def get_all_available_metrics():
                 "source": "plugin",
             }
         except Exception as e:
-            print(f"Warning: Failed to load plugin '{entry_point}': {e}")
+            logger.warning("Failed to load plugin '%s': %s", entry_point, e)
             metrics[entry_point.name] = {
                 "name": entry_point.name,
                 "source": "plugin",
