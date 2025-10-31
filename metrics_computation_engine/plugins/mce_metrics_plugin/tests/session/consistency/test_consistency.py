@@ -506,9 +506,9 @@ class TestConsistency:
             results = await metric.compute_agent_level(session)
 
             # Verify coordinator was skipped - no results should be returned
-            assert (
-                len(results) == 0
-            ), f"Expected no results for skipped agents, but got: {results}"
+            assert len(results) == 0, (
+                f"Expected no results for skipped agents, but got: {results}"
+            )
 
             # Verify jury was not called (agent was skipped)
             mock_jury.judge.assert_not_called()

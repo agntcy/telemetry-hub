@@ -145,9 +145,9 @@ async def test_conversation_completeness_metric():
     # Validate result shape and value
     session_metrics = results.get("session_metrics", [])
 
-    assert (
-        len(session_metrics) == 1
-    ), f"Expected exactly 1 session metric, got {len(session_metrics)}"
+    assert len(session_metrics) == 1, (
+        f"Expected exactly 1 session metric, got {len(session_metrics)}"
+    )
     cc = session_metrics[0]  # Only metric we registered
     assert (
         cc.metric_name == "ConversationCompletenessMetric"
