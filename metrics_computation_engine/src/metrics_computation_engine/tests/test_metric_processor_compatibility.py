@@ -153,12 +153,12 @@ class TestMetricProcessorCompatibility:
 
             async def mock_compute(*args, **kwargs):
                 # Verify we received the expected arguments
-                assert len(args) >= 1, (
-                    f"Metric {name} compute should receive data argument"
-                )
-                assert isinstance(kwargs, dict), (
-                    f"Metric {name} should accept keyword arguments"
-                )
+                assert (
+                    len(args) >= 1
+                ), f"Metric {name} compute should receive data argument"
+                assert isinstance(
+                    kwargs, dict
+                ), f"Metric {name} should accept keyword arguments"
 
                 # Return a valid MetricResult mock
                 return MagicMock(spec=MetricResult)

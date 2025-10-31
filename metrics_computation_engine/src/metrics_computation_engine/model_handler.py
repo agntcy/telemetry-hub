@@ -88,13 +88,9 @@ class ModelHandler:
                 loader_func = entry_point.load()
                 provider_name = entry_point.name
                 self.register_provider(provider_name, loader_func)
-                logger.info(
-                    "Registered model loader for provider: %s", provider_name
-                )
+                logger.info("Registered model loader for provider: %s", provider_name)
             except Exception:
-                logger.exception(
-                    "Failed to load model loader '%s'", entry_point.name
-                )
+                logger.exception("Failed to load model loader '%s'", entry_point.name)
 
     def register_provider(
         self, provider_name: str, loader_func: Callable[[LLMJudgeConfig], Any]
@@ -133,18 +129,14 @@ class ModelHandler:
         """Create a model using the registered loader for the provider"""
         loader_func = self._model_loaders.get(provider)
         if loader_func is None:
-            logger.warning(
-                "No model loader registered for provider '%s'", provider
-            )
+            logger.warning("No model loader registered for provider '%s'", provider)
             return None
 
         try:
             model = loader_func(llm_config)
             return model
         except Exception:
-            logger.exception(
-                "Error creating model for provider '%s'", provider
-            )
+            logger.exception("Error creating model for provider '%s'", provider)
             return None
 
     async def _store_model(self, provider: str, llm_config: LLMJudgeConfig, model: Any):

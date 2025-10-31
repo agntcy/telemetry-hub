@@ -84,9 +84,7 @@ def get_metric_adapters():
                 _METRIC_ADAPTERS_CACHE[entry_point.name] = adapter_class
                 logger.info("Loaded metric adapter: %s", entry_point.name)
             except Exception:
-                logger.exception(
-                    "Failed to load adapter '%s'", entry_point.name
-                )
+                logger.exception("Failed to load adapter '%s'", entry_point.name)
 
     return _METRIC_ADAPTERS_CACHE
 
@@ -116,9 +114,7 @@ def get_all_metric_classes():
                 _ALL_METRICS_CACHE[entry_point.name] = plugin_metric_class
             except Exception:
                 # Skip failed plugins but log the error
-                logger.exception(
-                    "Failed to load '%s'", entry_point.name
-                )
+                logger.exception("Failed to load '%s'", entry_point.name)
 
     return _ALL_METRICS_CACHE
 
