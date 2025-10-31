@@ -342,12 +342,8 @@ def main() -> None:
     """Main entry point for the CLI command."""
     try:
         run()
-    except Exception as e:
-        print(e)
-        import traceback
-        import sys
-
-        traceback.print_exception(e, file=sys.stdout)
+    except Exception:
+        logger.exception("Unhandled exception in dal_cli main")
 
 
 if __name__ == "__main__":

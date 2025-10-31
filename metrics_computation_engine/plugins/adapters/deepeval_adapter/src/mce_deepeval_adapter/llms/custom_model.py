@@ -6,6 +6,11 @@ from deepeval.models.base_model import DeepEvalBaseLLM
 from pydantic import BaseModel
 import instructor
 
+from metrics_computation_engine.logger import setup_logger
+
+
+logger = setup_logger(__name__)
+
 
 class LiteLLMModel(DeepEvalBaseLLM):
     def __init__(
@@ -43,8 +48,8 @@ class LiteLLMModel(DeepEvalBaseLLM):
 
         try:
             response = self.client.chat.completions.create(**kwargs)
-        except Exception as e:
-            print(e)
+        except Exception:
+            logger.exception("LiteLLMModel synchronous generate failed")
             response = schema.model_construct()
 
         return response
@@ -69,8 +74,8 @@ class LiteLLMModel(DeepEvalBaseLLM):
 
         try:
             response = await client.chat.completions.create(**kwargs)
-        except Exception as e:
-            print(e)
+        except Exception:
+            logger.exception("LiteLLMModel async generate failed")
             response = schema.model_construct()
 
         return response

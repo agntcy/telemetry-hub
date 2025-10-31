@@ -7,7 +7,11 @@ import os
 
 from dotenv import load_dotenv
 
+from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.main import start_server
+
+
+logger = setup_logger(__name__)
 
 
 def main():
@@ -26,15 +30,15 @@ def main():
     sessions_traces_max = int(os.getenv("SESSIONS_TRACES_MAX", "20"))
     workers = int(os.getenv("WORKERS", "2"))
 
-    print("Starting Metrics Computation Engine server...")
-    print(f"Host: {host}")
-    print(f"Port: {port}")
-    print(f"Reload: {reload}")
-    print(f"Log Level: {log_level}")
-    print(f"Pagination Limit: {pagination_limit}")
-    print(f"Pagination Default Max Sessions: {pagination_max_sessions}")
-    print(f"Sessions Traces Max {sessions_traces_max}")
-    print(f"Workers: {workers}")
+    logger.info("Starting Metrics Computation Engine server...")
+    logger.info("Host: %s", host)
+    logger.info("Port: %s", port)
+    logger.info("Reload: %s", reload)
+    logger.info("Log Level: %s", log_level)
+    logger.info("Pagination Limit: %s", pagination_limit)
+    logger.info("Pagination Default Max Sessions: %s", pagination_max_sessions)
+    logger.info("Sessions Traces Max: %s", sessions_traces_max)
+    logger.info("Workers: %s", workers)
 
     # Start the server
     start_server(

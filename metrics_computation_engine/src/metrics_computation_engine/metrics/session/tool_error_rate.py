@@ -2,9 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from typing import List, Optional
+
+from metrics_computation_engine.logger import setup_logger
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
+
+
+logger = setup_logger(__name__)
 
 
 class ToolErrorRate(BaseMetric):
@@ -74,11 +79,7 @@ class ToolErrorRate(BaseMetric):
             return result
 
         except Exception as e:
-            print(f"DEBUG: Exception in session-level computation: {e}")
-            import traceback
-
-            traceback.print_exc()
-
+            logger.exception("Exception in session-level computation")
             result = self._create_error_result(
                 category="application",
                 app_name=session.app_name

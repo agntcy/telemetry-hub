@@ -73,10 +73,6 @@ class IntentRecognitionAccuracy(BaseMetric):
         query = session.input_query
         response = session.final_response
 
-        print("SESSION:", session.session_id)
-        print("INPUT:", session.input_query)
-        print("RESPONSE:", session.final_response)
-
         entities_involved = (
             [span.entity_name for span in session.agent_spans]
             if session.agent_spans
