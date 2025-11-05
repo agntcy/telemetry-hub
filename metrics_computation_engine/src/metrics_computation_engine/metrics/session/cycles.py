@@ -102,11 +102,7 @@ class CyclesCount(BaseMetric):
             return result
 
         except Exception as e:
-            print(f"DEBUG: Exception in session-level computation: {e}")
-            import traceback
-
-            traceback.print_exc()
-
+            logger.exception("Exception in session-level computation")
             result = self._create_error_result(
                 category="application",
                 app_name=session.app_name
