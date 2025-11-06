@@ -27,6 +27,7 @@ class MetricResult:
     edges_involved: List[str] = field(default_factory=list)
     success: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
+    label: Optional[str] = None
     # timestamp: datetime
     error_message: Optional[str] = None
     from_cache: bool = False
