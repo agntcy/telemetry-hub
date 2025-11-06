@@ -64,7 +64,4 @@ DEEPEVAL_METRICS = [
     "GeneralStructureAndStyleMetric",
 ]
 
-__all__ = [
-    "BINARY_GRADING_LABELS",
-    "DEEPEVAL_METRICS"
-]
+__all__ = ["BINARY_GRADING_LABELS", "DEEPEVAL_METRICS"]
