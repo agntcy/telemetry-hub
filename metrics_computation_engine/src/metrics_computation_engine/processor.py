@@ -7,6 +7,7 @@ import inspect
 import json
 from typing import Any, Dict, List, Optional, Union
 
+from metrics_computation_engine.constants import BINARY_GRADING_LABELS, DEEPEVAL_METRICS
 from metrics_computation_engine.metrics.base import BaseMetric
 from metrics_computation_engine.models.eval import MetricResult
 from metrics_computation_engine.entities.models.session import SessionEntity
@@ -55,6 +56,55 @@ class MetricsProcessor:
             hasattr(metric, "supports_agent_computation")
             and metric.supports_agent_computation()
         )
+
+    def _assign_metric_label(self, result: MetricResult) -> None:
+        """Assign a human-readable label to BinaryGrading metric results."""
+
+        if not result:
+            return
+
+        metric_name = (result.metric_name or "").strip()
+
+        print(f"Metric name: {metric_name}")
+        metadata = result.metadata or {}
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        if metric_name == "Sentiment":
+            sentiment_keys = {k: metadata.get(k) for k in ("neg", "neu", "pos")}
+            numeric_scores = {
+                key: float(value)
+                for key, value in sentiment_keys.items()
+                if isinstance(value, (int, float))
+            }
+
+            if not numeric_scores:
+                return
+
+            max_score = max(numeric_scores.values())
+            top_keys = [
+                key for key, score in numeric_scores.items() if score == max_score
+            ]
+            label_key = top_keys[0]
+            result.label = label_key
+            return
+
+        label_map = BINARY_GRADING_LABELS.get(metric_name)
+        if label_map is None:
+            logger.warning(f"No label map found for metric {metric_name}")
+            return
+
+        eval_value = result.value
+        if metric_name in DEEPEVAL_METRICS:
+            threshold_value = metadata.get("threshold")
+            if threshold_value is not None:
+                value_key = 1 if float(eval_value) >= float(threshold_value) else 0
+        else:
+            value_key = 1 if float(eval_value) >= 0.5 else 0
+
+        label = label_map.get(value_key)
+        if label:
+            result.label = label
 
     async def _handle_agent_cache_and_compute(
         self, metric: BaseMetric, data: Any, context: Dict[str, Any]
@@ -696,6 +746,7 @@ class MetricsProcessor:
                         }
                     )
                     continue
+                self._assign_metric_label(result)
                 aggregation_level = result.aggregation_level
                 if aggregation_level in ["span", "session", "agent"]:
                     result.app_name = sessions_appname_dict.get(
