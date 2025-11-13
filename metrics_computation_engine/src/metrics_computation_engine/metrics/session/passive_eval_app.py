@@ -129,7 +129,9 @@ class PassiveEvalApp(BaseMetric):
                 "eval.app.graph_dynamism": session_set_stats.histogram.graph_dynamism[
                     idx
                 ],
-                "eval.app.completion": session_set_stats.histogram.completion[idx],
+                "eval.app.completion": 1
+                if session_set_stats.histogram.completion[idx]
+                else 0,
             }
 
             logger.debug(
