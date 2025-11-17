@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -34,13 +35,17 @@ import (
 )
 
 type HttpServer struct {
-	Port            int
-	DataService     services.DataService
-	SignalsChannel  chan os.Signal
-	BaseUrl         string
-	AllowOrigins    string
-	httpServer      *http.Server
-	keepAliveMetric prometheus.Counter
+	Port              int
+	DataService       services.DataService
+	MetricsService    services.MetricsService
+	AnnotationService services.AnnotationService
+	MCEServer         *MCEServer
+	SignalsChannel    chan os.Signal
+	BaseUrl           string
+	AllowOrigins      string
+	httpServer        *http.Server
+	keepAliveMetric   prometheus.Counter
+	AnnotationEnabled bool
 }
 
 type SimpleMessage struct {
@@ -54,6 +59,51 @@ type Metric models.MetricResponse
 
 // EchoResponse represents a response for the echo endpoint.
 type EchoResponse map[string]interface{}
+
+// handleServiceError handles service errors and returns appropriate HTTP status codes with JSON responses
+func (hs *HttpServer) handleServiceError(w http.ResponseWriter, err error, context string) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var errorResponse ErrorResponse
+	var statusCode int
+
+	if serviceErr, ok := models.IsServiceError(err); ok {
+		errorResponse.Error = true
+		errorResponse.Reason = serviceErr.Error()
+
+		switch {
+		case serviceErr.IsNotFound():
+			statusCode = http.StatusNotFound
+		case serviceErr.IsValidation():
+			statusCode = http.StatusBadRequest
+		case serviceErr.IsConflict():
+			statusCode = http.StatusConflict
+		default:
+			statusCode = http.StatusInternalServerError
+		}
+	} else {
+		// Handle non-service errors as internal server errors
+		errorResponse.Error = true
+		errorResponse.Reason = err.Error()
+		statusCode = http.StatusInternalServerError
+	}
+
+	errorResponse.Status = statusCode
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(errorResponse)
+}
+
+// handleJSONError returns a JSON error response with the specified status code and message
+func (hs *HttpServer) handleJSONError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	errorResponse := ErrorResponse{
+		Error:  true,
+		Status: statusCode,
+		Reason: message,
+	}
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(errorResponse)
+}
 
 // @title API-Layer API
 // @version 1.0
@@ -93,11 +143,11 @@ func (hs *HttpServer) Sessions(w http.ResponseWriter, r *http.Request) {
 
 	includePrompts := r.URL.Query().Get(common.INCLUDE_PROMPTS)
 	var sessionIDs []models.SessionUniqueID
-    if includePrompts == "true" {
-        sessionIDs, err = hs.DataService.GetSessionIDSWithPrompts(startTimeParsed, endTimeParsed)
-    } else {
-        sessionIDs, err = hs.DataService.GetSessionIDSUnique(startTimeParsed, endTimeParsed)
-    }
+	if includePrompts == "true" {
+		sessionIDs, err = hs.DataService.GetSessionIDSWithPrompts(startTimeParsed, endTimeParsed)
+	} else {
+		sessionIDs, err = hs.DataService.GetSessionIDSUnique(startTimeParsed, endTimeParsed)
+	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching sessions: %v", err), http.StatusInternalServerError)
 		return
@@ -147,6 +197,280 @@ func (hs *HttpServer) Traces(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(traces)
 
+}
+
+// @Summary get execution graph by SessionID
+// @Description get execution graph by SessionID
+// @Tags         Traces
+// @Accept       json
+// @Produce      json
+// @Param        session_id path string true "Session ID" example("session_abc123")
+// @Success 	200 {object} ExecutionGraph "Execution graph for the session" example({"session_id": "session_abc123", "nodes": [{"id": "agent_1", "name": "agent_1", "type": "service", "status": "done"}, {"id": "agent_2", "name": "agent_2", "type": "service", "status": "running"}], "edges": [{"from": "agent_1", "to": "agent_2", "execution_number": 0}], "timestamp": "2023-06-25T15:30:00Z"})
+// @Failure      400 {object} ErrorResponse "Bad request"
+// @Failure      500 {object} ErrorResponse "Internal server error"
+// @Router       /traces/graph/{session_id} [get]
+func (hs *HttpServer) GetExecutionGraphBySessionID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		hs.handleJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	vars := mux.Vars(r)
+	sessionID := vars[common.SESSION_ID]
+	if sessionID == "" {
+		hs.handleJSONError(w, http.StatusBadRequest, "Session ID is required")
+		return
+	}
+
+	graph, timestamp, err := hs.DataService.GetExecutionGraphBySessionID(sessionID)
+	if err != nil {
+		hs.handleServiceError(w, err, fmt.Sprintf("fetching execution graph for session ID %s", sessionID))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+
+	var graphJson map[string]interface{}
+	if err := json.Unmarshal([]byte(graph), &graphJson); err != nil {
+		hs.handleServiceError(w, err, "decoding graph JSON")
+		return
+	}
+
+	executionGraph := models.ExecutionGraph{
+		SessionID: sessionID,
+		Edges:     []models.Edge{},
+		Timestamp: timestamp.Format(time.RFC3339),
+	}
+
+	nodesRaw, ok := graphJson[common.NODES].(map[string]interface{})
+	if !ok {
+		hs.handleServiceError(w, fmt.Errorf("nodes field is not a map"), "decoding graph JSON")
+		return
+	}
+	for _, node := range nodesRaw {
+		nodeMap, ok := node.(map[string]interface{})
+		if !ok {
+			continue // or handle error
+		}
+		var typeNode = ""
+		metadata := nodeMap[common.METADATA]
+		if metadata != nil {
+			metadataMap := metadata.(map[string]interface{})
+			if metadataMap[common.TYPE] != nil {
+				typeNode = metadataMap[common.TYPE].(string)
+			}
+		}
+
+		statusNode := common.StateOff
+
+		agentName := nodeMap[common.ID].(string)
+		if typeNode != common.WORKFLOW {
+			if agentName == common.AGENT_START_NODE || agentName == common.AGENT_END_NODE || typeNode == common.WORKFLOW {
+				statusNode = common.StateNA
+			} else {
+				if err == nil {
+					if err == nil {
+
+						statusNode = common.StateDone
+					} else {
+						statusNode = common.StateRunning
+					}
+
+				}
+			}
+			node := models.Node{
+				ID:     agentName,
+				Name:   agentName,
+				Type:   typeNode,
+				Status: statusNode.String(),
+			}
+			executionGraph.Nodes = append(executionGraph.Nodes, node)
+			nodeMap[agentName] = &node
+		}
+	}
+
+	executionPath, err := hs.DataService.GetCallGraph(sessionID)
+	if err != nil {
+		logger.Zap.Error("Error", logger.Error(err))
+		hs.handleServiceError(w, err, fmt.Sprintf("fetching call graph for session ID %s", sessionID))
+		return
+	}
+	previousStep := common.AGENT_START_EVENT
+	previousAgent := common.AGENT_START_NODE
+	previousServiceName := common.AGENT_START_NODE
+	previousPublish := ""
+
+	i := 0
+	for _, executionStep := range executionPath {
+
+		currentSpanSplitted := strings.Split(executionStep.CurrentSpan, common.DOT)
+		currentStep := currentSpanSplitted[0]
+		publish := ""
+		if len(currentSpanSplitted) > 1 {
+			publish = currentSpanSplitted[1]
+		}
+
+		currentAgent := strings.Split(executionStep.AgentID, common.DOT)[0]
+		currentServiceName := executionStep.ServiceName
+		if strings.HasPrefix(previousStep, common.AUTOGEN) {
+			previousAgent = executionStep.ServiceName
+			previousStep = executionStep.ServiceName
+		}
+		if strings.HasPrefix(currentStep, common.AUTOGEN) {
+			currentAgent = executionStep.ServiceName
+			currentStep = executionStep.ServiceName
+		}
+		if currentStep != previousStep {
+
+			fromAgent := ""
+
+			if previousAgent == "" {
+				if previousPublish == "" {
+					fromAgent = previousServiceName
+				} else {
+					fromAgent = previousStep
+
+				}
+			} else {
+				fromAgent = previousServiceName
+			}
+
+			toAgent := ""
+
+			if currentAgent == "" {
+
+				if publish == "" {
+
+					toAgent = currentServiceName
+				} else {
+
+					toAgent = currentStep
+
+				}
+			} else {
+
+				toAgent = currentServiceName
+			}
+
+			if fromAgent != "" && toAgent != "" {
+				if nodesRaw[toAgent] == nil {
+					node := models.Node{
+						ID:     toAgent,
+						Name:   toAgent,
+						Status: common.StateDone.String(),
+						Type:   common.TRANSPORT,
+					}
+					executionGraph.Nodes = append(executionGraph.Nodes, node)
+					nodesRaw[toAgent] = &node
+				}
+
+				executionGraph.Edges = append(executionGraph.Edges, models.Edge{
+					From:            fromAgent,
+					To:              toAgent,
+					ExecutionNumber: i,
+				})
+
+				i++
+
+			}
+		}
+
+		previousPublish = publish
+		previousStep = currentStep
+		previousAgent = currentAgent
+		previousServiceName = currentServiceName
+
+	}
+
+	fromAgent := ""
+
+	if previousAgent == "" {
+		if previousPublish == "" {
+			fromAgent = previousServiceName
+		} else {
+			fromAgent = previousStep
+
+		}
+	} else {
+		fromAgent = previousServiceName
+	}
+
+	executionGraph.Edges = append(executionGraph.Edges, models.Edge{
+		From:            fromAgent,
+		To:              common.AGENT_END_NODE,
+		ExecutionNumber: i,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(executionGraph)
+
+}
+
+// @Summary      Get span traces by multiple session IDs
+// @Description  Get span traces for multiple session IDs (comma-separated)
+// @Tags         Traces
+// @Accept       json
+// @Produce      json
+// @Param        session_ids query string true "Comma-separated list of session IDs (max 50)" example("session_abc123,session_def456,session_ghi789")
+// @Success      200 {object} models.SessionSpansResponse "Map of session IDs to their traces with not found session information"
+// @Failure      400 {object} ErrorResponse "Bad request"
+// @Failure      500 {object} ErrorResponse "Internal server error"
+// @Router       /traces/sessions/spans [get]
+func (hs *HttpServer) SessionSpans(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		hs.handleJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Get session_ids parameter
+	sessionIDsParam := r.URL.Query().Get("session_ids")
+	if sessionIDsParam == "" {
+		hs.handleJSONError(w, http.StatusBadRequest, "session_ids parameter is required")
+		return
+	}
+
+	// Parse and validate session_ids
+	sessionIDs := strings.Split(sessionIDsParam, ",")
+
+	// Trim whitespace from each session ID
+	for i, id := range sessionIDs {
+		sessionIDs[i] = strings.TrimSpace(id)
+	}
+
+	// Filter out empty session IDs
+	var validSessionIDs []string
+	for _, id := range sessionIDs {
+		if id != "" {
+			validSessionIDs = append(validSessionIDs, id)
+		}
+	}
+
+	if len(validSessionIDs) == 0 {
+		hs.handleJSONError(w, http.StatusBadRequest, "No valid session IDs provided")
+		return
+	}
+
+	if len(validSessionIDs) > 50 {
+		hs.handleJSONError(w, http.StatusBadRequest, "Too many session IDs provided (maximum 50)")
+		return
+	}
+
+	// Get traces for all session IDs
+	sessionTraces, notFoundSessionIds, err := hs.DataService.GetTracesBySessionIDs(validSessionIDs)
+	if err != nil {
+		hs.handleServiceError(w, err, "fetching traces for session IDs")
+		return
+	}
+
+	response := models.SessionSpansResponse{
+		Data:               sessionTraces,
+		NotFoundSessionIds: notFoundSessionIds,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		hs.handleServiceError(w, err, "encoding response")
+		return
+	}
 }
 
 // @Summary      Write session metrics
@@ -210,7 +534,7 @@ func (hs *HttpServer) GetMetricsSession(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	metrics, err := hs.DataService.GetMetricsBySessionIdAndScope(sessionID, common.METRIC_SCOPE_SESSION)
+	metrics, err := hs.MetricsService.GetMetricsBySessionIdAndScope(sessionID, common.METRIC_SCOPE_SESSION)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching metrics for session ID %s: %v", sessionID, err), http.StatusInternalServerError)
 		return
@@ -243,7 +567,7 @@ func (hs *HttpServer) GetMetricsSpan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metrics, err := hs.DataService.GetMetricsBySpanIdAndScope(spanID, common.METRIC_SCOPE_SPAN)
+	metrics, err := hs.MetricsService.GetMetricsBySpanIdAndScope(spanID, common.METRIC_SCOPE_SPAN)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching metrics for span ID %s: %v", spanID, err), http.StatusInternalServerError)
 		return
@@ -283,7 +607,7 @@ func (hs *HttpServer) saveMetrics(w http.ResponseWriter, r *http.Request, metric
 	metric := metricRequest.ToMetric()
 	metric.Scope = &metricScope
 
-	createdMetric, err := hs.DataService.AddMetric(*metric)
+	createdMetric, err := hs.MetricsService.AddMetric(*metric)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error writing metric: %v", err), http.StatusInternalServerError)
 		return
@@ -399,6 +723,44 @@ func (hs *HttpServer) startServer() {
 		mux.HandleFunc("/metrics/span/{span_id}", hs.GetMetricsSpan).Methods(http.MethodGet)
 
 		mux.HandleFunc("/traces/session/{session_id}", hs.Traces)
+
+		if hs.MCEServer != nil {
+			mux.HandleFunc("/mce/metrics", hs.MCEServer.GetMetrics).Methods(http.MethodGet)
+			mux.HandleFunc("/mce/status", hs.MCEServer.GetStatus).Methods(http.MethodGet)
+			mux.HandleFunc("/mce/metrics/compute", hs.MCEServer.ComputeMetrics).Methods(http.MethodPost)
+		}
+
+		if hs.AnnotationService != nil && hs.AnnotationEnabled {
+			annotationServer := &AnnotationServer{AnnotationService: hs.AnnotationService, Enabled: hs.AnnotationEnabled}
+
+			mux.HandleFunc("/annotation-types", annotationServer.CreateAnnotationType).Methods(http.MethodPost)
+			mux.HandleFunc("/annotation-types", annotationServer.GetAnnotationTypes).Methods(http.MethodGet)
+			mux.HandleFunc("/annotation-types/{id}", annotationServer.GetAnnotationType).Methods(http.MethodGet)
+			mux.HandleFunc("/annotation-types/{id}", annotationServer.UpdateAnnotationType).Methods(http.MethodPut)
+			mux.HandleFunc("/annotation-types/{id}", annotationServer.DeleteAnnotationType).Methods(http.MethodDelete)
+
+			mux.HandleFunc("/annotations", annotationServer.CreateAnnotation).Methods(http.MethodPost)
+			mux.HandleFunc("/annotations", annotationServer.GetAnnotations).Methods(http.MethodGet)
+			mux.HandleFunc("/annotations/session/{session_id}", annotationServer.GetAnnotationsBySessionID).Methods(http.MethodGet)
+			mux.HandleFunc("/annotations/{id}", annotationServer.GetAnnotation).Methods(http.MethodGet)
+			mux.HandleFunc("/annotations/{id}", annotationServer.UpdateAnnotation).Methods(http.MethodPut)
+			mux.HandleFunc("/annotations/{id}", annotationServer.DeleteAnnotation).Methods(http.MethodDelete)
+
+			mux.HandleFunc("/annotation-groups", annotationServer.CreateAnnotationGroup).Methods(http.MethodPost)
+			mux.HandleFunc("/annotation-groups", annotationServer.GetAnnotationGroups).Methods(http.MethodGet)
+			mux.HandleFunc("/annotation-groups/{id}", annotationServer.GetAnnotationGroup).Methods(http.MethodGet)
+			mux.HandleFunc("/annotation-groups/{id}", annotationServer.UpdateAnnotationGroup).Methods(http.MethodPut)
+			mux.HandleFunc("/annotation-groups/{id}", annotationServer.DeleteAnnotationGroup).Methods(http.MethodDelete)
+
+			mux.HandleFunc("/annotation-groups/{id}/items", annotationServer.CreateAnnotationGroupItems).Methods(http.MethodPost)
+			mux.HandleFunc("/annotation-groups/{id}/items", annotationServer.GetAnnotationGroupItems).Methods(http.MethodGet)
+			mux.HandleFunc("/annotation-groups/{id1}/items/{id2}", annotationServer.DeleteAnnotationGroupItem).Methods(http.MethodDelete)
+
+			mux.HandleFunc("/annotation-groups/{id}/consensus/compute", annotationServer.ComputeConsensus).Methods(http.MethodPost)
+			mux.HandleFunc("/annotation-groups/{id}/consensus", annotationServer.GetConsensusReports).Methods(http.MethodGet)
+			mux.HandleFunc("/annotation-groups/{id1}/consensus/{id2}", annotationServer.GetConsensusReport).Methods(http.MethodGet)
+			mux.HandleFunc("/annotation-groups/{id1}/consensus/{id2}", annotationServer.DeleteConsensusReport).Methods(http.MethodDelete)
+		}
 		mux.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 		logger.Zap.Info("Server is running on port", logger.Int("port", hs.Port))
 		c := cors.New(cors.Options{

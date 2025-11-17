@@ -53,6 +53,16 @@ func (cs *ClickhouseService) GetSessionIDSWithPrompts(startTime, endTime time.Ti
     return cs.Handlers.GetSessionIDSWithPrompts(startTime, endTime)
 }
 
+// GetSessionIDSWithPromptsWithPagination implements the DataService interface
+func (cs *ClickhouseService) GetSessionIDSWithPromptsWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) ([]models.SessionUniqueID, int, error) {
+	return cs.Handlers.GetSessionIDSWithPromptsWithPagination(startTime, endTime, page, limit, nameFilter)
+}
+
+// GetSessionIDSUniqueWithPagination implements the DataService interface
+func (cs *ClickhouseService) GetSessionIDSUniqueWithPagination(startTime, endTime time.Time, page, limit int, nameFilter *string) ([]models.SessionUniqueID, int, error) {
+	return cs.Handlers.GetSessionIDSUniqueWithPagination(startTime, endTime, page, limit, nameFilter)
+}
+
 // AddMetric implements the DataService interface
 func (cs *ClickhouseService) AddMetric(metric models.Metric) (models.Metric, error) {
 	return cs.Handlers.AddMetric(metric)
@@ -71,4 +81,24 @@ func (cs *ClickhouseService) GetMetricsBySpanIdAndScope(spanID string, scope str
 // GetTracesBySessionID implements the DataService interface
 func (cs *ClickhouseService) GetTracesBySessionID(sessionID string) ([]models.OtelTraces, error) {
 	return cs.Handlers.GetTracesBySessionID(sessionID)
+}
+
+// GetExecutionGraphBySessionID implements the DataService interface
+func (cs *ClickhouseService) GetExecutionGraphBySessionID(sessionID string) (string, time.Time, error) {
+	return cs.Handlers.GetExecutionGraphBySessionID(sessionID)
+}
+
+func (cs *ClickhouseService) GetCallGraph(sessionID string) ([]models.CallGraph, error) {
+	return cs.Handlers.GetCallGraph(sessionID)
+}
+
+// GetTraceBySpanNameSessionIDAndAgent implements the DataService interface
+func (cs *ClickhouseService) GetTraceBySpanNameSessionIDAndAgent(spanName string, sessionID string, agentName string) (models.OtelTraces, error) {
+	return cs.Handlers.GetTraceBySpanNameSessionIDAndAgent(spanName, sessionID, agentName)
+}
+
+
+// GetTracesBySessionIDs implements the DataService interface
+func (cs *ClickhouseService) GetTracesBySessionIDs(sessionIDs []string) (map[string][]models.OtelTraces, []string, error) {
+	return cs.Handlers.GetTracesBySessionIDs(sessionIDs)
 }
