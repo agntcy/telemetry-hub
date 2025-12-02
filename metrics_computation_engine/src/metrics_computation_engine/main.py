@@ -188,6 +188,8 @@ async def compute_metrics(config: MetricsConfigRequest):
             llm_config.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4-turbo")
             llm_config.LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-...")
 
+        llm_config.NUM_LLM_RETRIES = int(os.getenv("NUM_LLM_RETRIES", str(llm_config.NUM_LLM_RETRIES)))
+
         logger.info(f"LLM Judge using - URL: {llm_config.LLM_BASE_MODEL_URL}")
         logger.info(f"LLM Judge using - Model: {llm_config.LLM_MODEL_NAME}")
 
