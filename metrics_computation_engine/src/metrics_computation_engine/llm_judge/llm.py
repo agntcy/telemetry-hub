@@ -23,6 +23,7 @@ class LLMClient:
         self.api_key = model_config["LLM_API_KEY"]
         self.api_version = model_config.get("api_version", "")
         self.custom_llm_provider = self._determine_provider()
+        self.num_retries = int(model_config.get("NUM_LLM_RETRIES", 3))
 
     def _determine_provider(self) -> Optional[str]:
         """Determine the custom LLM provider based on configuration."""
@@ -49,5 +50,6 @@ class LLMClient:
             # top_p=0.0,
             # seed=42,
             custom_llm_provider=self.custom_llm_provider,
+            num_retries=self.num_retries,
             **kwargs,
         )
