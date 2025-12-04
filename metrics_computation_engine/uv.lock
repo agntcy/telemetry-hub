@@ -1434,7 +1434,7 @@ wheels = [
 
 [[package]]
 name = "metrics-computation-engine"
-version = "1.2.3"
+version = "1.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
