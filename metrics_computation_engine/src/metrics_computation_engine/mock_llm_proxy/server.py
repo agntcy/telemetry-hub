@@ -151,10 +151,12 @@ def _build_response(
         finish_reason = "tool_calls"
     elif _is_json_expected(request.messages):
         # [OPIK] JSON in text response
-        content = json.dumps({
-            "score": settings.mock_metric_score,
-            "reason": settings.mock_reasoning,
-        })
+        content = json.dumps(
+            {
+                "score": settings.mock_metric_score,
+                "reason": settings.mock_reasoning,
+            }
+        )
     else:
         content = settings.mock_reasoning
 
