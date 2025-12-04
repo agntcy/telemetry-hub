@@ -1,14 +1,17 @@
-"""ASGI application that emulates a LiteLLM-compatible chat completion API."""
+"""Mock LLM server for testing DeepEval and Opik metrics without using real tokens.
+
+Reference: https://platform.openai.com/docs/api-reference/chat/create
+"""
 
 from __future__ import annotations
 
 import asyncio
 import json
-import random
 import time
 import uuid
+from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from metrics_computation_engine.mock_llm_proxy.config import MockLLMSettings
@@ -17,121 +20,181 @@ from metrics_computation_engine.mock_llm_proxy.schemas import (
     ChatCompletionMessage,
     ChatCompletionResponse,
     ChatCompletionUsage,
+    FunctionCall,
     MockChatCompletionRequest,
+    ToolCall,
 )
 
 
-def _count_tokens(messages: list[ChatCompletionMessage]) -> int:
-    """Very rough token estimator based on whitespace-delimited words."""
-
-    if not messages:
-        return 0
-
-    joined = " ".join(message.content for message in messages)
-    return max(len(joined.split()), 1)
+# =============================================================================
+# DEEPEVAL: Schema resolution for tool calling
+# DeepEval uses `instructor` library which sends tool calls with JSON schemas.
+# Schemas use $ref to reference nested types in $defs (e.g., Verdict, Statement).
+# =============================================================================
 
 
-def _build_response_content(
-    request: MockChatCompletionRequest, settings: MockLLMSettings
-) -> str:
-    """Generate the assistant content payload based on the requested format."""
+def _resolve_ref(ref: str, root_schema: dict[str, Any]) -> dict[str, Any]:
+    """[DEEPEVAL] Resolve $ref references like '#/$defs/ToxicityVerdict'."""
+    if not ref.startswith("#/"):
+        return {"type": "string"}
 
-    if request.response_format and request.response_format.type == "json_object":
-        payload = {
-            "metric_score": settings.mock_metric_score,
-            "score_reasoning": settings.mock_reasoning,
+    path_parts = ref[2:].split("/")
+    current = root_schema
+
+    for part in path_parts:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return {"type": "string"}
+
+    return current if isinstance(current, dict) else {"type": "string"}
+
+
+def _generate_mock_value(
+    schema: dict[str, Any],
+    settings: MockLLMSettings,
+    root_schema: dict[str, Any] | None = None,
+) -> Any:
+    """[DEEPEVAL] Generate mock values matching JSON schema from instructor."""
+    if root_schema is None:
+        root_schema = schema
+
+    # [DEEPEVAL] Resolve $ref to nested types in $defs
+    if "$ref" in schema:
+        resolved = _resolve_ref(schema["$ref"], root_schema)
+        return _generate_mock_value(resolved, settings, root_schema)
+
+    # [DEEPEVAL] Handle enum - verdict fields require "yes"/"no", not arbitrary strings
+    if "enum" in schema:
+        return schema["enum"][0] if schema["enum"] else settings.mock_reasoning
+
+    # [DEEPEVAL] Handle anyOf - Pydantic uses this for Optional[str] fields
+    if "anyOf" in schema:
+        return _generate_mock_value(schema["anyOf"][0], settings, root_schema)
+
+    schema_type = schema.get("type", "string")
+
+    # [DEEPEVAL] Handle type unions like ["string", "null"] for Optional fields
+    if isinstance(schema_type, list):
+        schema_type = next((t for t in schema_type if t != "null"), "string")
+
+    if schema_type == "string":
+        return settings.mock_reasoning
+    elif schema_type == "null":
+        return None
+    elif schema_type == "array":
+        items_schema = schema.get("items", {"type": "string"})
+        return [_generate_mock_value(items_schema, settings, root_schema)]
+    elif schema_type == "object":
+        return {
+            name: _generate_mock_value(prop, settings, root_schema)
+            for name, prop in schema.get("properties", {}).items()
         }
-        return json.dumps(payload)
-
     return settings.mock_reasoning
 
 
-def _build_chat_completion(
-    request: MockChatCompletionRequest,
-    settings: MockLLMSettings,
-    latency_ms: float,
+def _build_tool_response(
+    request: MockChatCompletionRequest, settings: MockLLMSettings
+) -> ToolCall:
+    """[DEEPEVAL] Build tool call response for instructor-based structured outputs."""
+    tool = request.tools[0]
+    parameters = tool.function.parameters or {}
+
+    mock_args = {
+        name: _generate_mock_value(prop, settings, parameters)
+        for name, prop in parameters.get("properties", {}).items()
+    }
+
+    return ToolCall(
+        id=f"call_{uuid.uuid4().hex[:24]}",
+        type="function",
+        function=FunctionCall(
+            name=tool.function.name,
+            arguments=json.dumps(mock_args),
+        ),
+    )
+
+
+# =============================================================================
+# OPIK: JSON detection for prompt-based JSON responses
+# Opik does NOT use tool calling. It sends prompts asking for JSON output
+# and expects a text response containing {"score": ..., "reason": ...}.
+# =============================================================================
+
+
+def _is_json_expected(messages: list[dict[str, Any]]) -> bool:
+    """[OPIK] Detect if prompt expects JSON based on message content."""
+    indicators = ["json", "JSON"]
+    for msg in messages:
+        content = msg.get("content", "") if isinstance(msg, dict) else ""
+        if content and any(ind in content for ind in indicators):
+            return True
+    return False
+
+
+# =============================================================================
+# SHARED: Response building and FastAPI app
+# =============================================================================
+
+
+def _build_response(
+    request: MockChatCompletionRequest, settings: MockLLMSettings
 ) -> ChatCompletionResponse:
-    """Create a ChatCompletionResponse mirroring LiteLLM/OpenAI shape."""
+    """Build the chat completion response."""
+    content: str | None = None
+    tool_calls: list[ToolCall] | None = None
+    finish_reason = "stop"
 
-    prompt_tokens = _count_tokens(request.messages)
-    response_content = _build_response_content(request, settings)
-    assistant_message = ChatCompletionMessage(
-        role="assistant", content=response_content
-    )
-    completion_tokens = _count_tokens([assistant_message])
+    if request.tools:
+        # [DEEPEVAL] Tool calling via instructor
+        tool_calls = [_build_tool_response(request, settings)]
+        finish_reason = "tool_calls"
+    elif _is_json_expected(request.messages):
+        # [OPIK] JSON in text response
+        content = json.dumps({
+            "score": settings.mock_metric_score,
+            "reason": settings.mock_reasoning,
+        })
+    else:
+        content = settings.mock_reasoning
 
-    choice = ChatCompletionChoice(
-        index=0,
-        message=assistant_message,
-        finish_reason="stop",
-    )
-
-    usage = ChatCompletionUsage(
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        total_tokens=prompt_tokens + completion_tokens,
-    )
-
-    response = ChatCompletionResponse(
+    return ChatCompletionResponse(
         id=f"chatcmpl-mock-{uuid.uuid4().hex}",
         model=request.model,
         created=int(time.time()),
-        choices=[choice],
-        usage=usage,
-        metadata={
-            "mock": True,
-            "api_base": request.api_base,
-            "api_version": request.api_version,
-            "custom_llm_provider": request.custom_llm_provider,
-            "simulated_latency_ms": latency_ms,
-        },
+        choices=[
+            ChatCompletionChoice(
+                index=0,
+                message=ChatCompletionMessage(
+                    role="assistant",
+                    content=content,
+                    tool_calls=tool_calls,
+                ),
+                finish_reason=finish_reason,
+            )
+        ],
+        usage=ChatCompletionUsage(prompt_tokens=1, completion_tokens=1, total_tokens=2),
     )
-
-    return response
-
-
-def _sample_latency(settings: MockLLMSettings) -> float:
-    minimum = settings.response_latency_min_ms
-    maximum = settings.response_latency_max_ms
-
-    if maximum <= minimum:
-        return float(minimum)
-
-    return float(random.uniform(minimum, maximum))
-
-
-def get_settings(app: FastAPI) -> MockLLMSettings:
-    return app.state.settings  # type: ignore[return-value]
 
 
 def create_app(settings: MockLLMSettings | None = None) -> FastAPI:
-    """Instantiate the FastAPI application with the supplied settings."""
-
-    app = FastAPI(title="Mock LiteLLM Proxy", version="0.1.0")
+    """Create the mock LLM FastAPI application."""
+    app = FastAPI(title="Mock LLM Proxy", version="0.1.0")
     app.state.settings = settings or MockLLMSettings()
-
-    async def _get_settings() -> MockLLMSettings:
-        return get_settings(app)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @app.post("/chat/completions")
-    async def chat_completions(
-        request: MockChatCompletionRequest,
-        settings: MockLLMSettings = Depends(_get_settings),
-    ) -> JSONResponse:
+    async def chat_completions(request: MockChatCompletionRequest) -> JSONResponse:
         if request.stream:
-            raise HTTPException(
-                status_code=400,
-                detail="Streaming responses are not supported by the mock proxy.",
-            )
+            raise HTTPException(status_code=400, detail="Streaming not supported.")
 
-        latency_ms = _sample_latency(settings)
-        await asyncio.sleep(latency_ms / 1000.0)
+        settings: MockLLMSettings = app.state.settings
+        await asyncio.sleep(settings.response_latency_min_ms / 1000.0)
 
-        response = _build_chat_completion(request, settings, latency_ms)
+        response = _build_response(request, settings)
         return JSONResponse(content=response.model_dump())
 
     return app
