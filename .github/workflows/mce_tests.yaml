@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # legit:ignore
+        uses: actions/checkout@v5 # legit:ignore
 
       - name: Setup Python
         uses: ./.github/actions/setup-python
