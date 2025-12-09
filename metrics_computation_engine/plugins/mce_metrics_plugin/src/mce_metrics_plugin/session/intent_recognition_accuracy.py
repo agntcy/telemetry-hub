@@ -142,7 +142,7 @@ class IntentRecognitionAccuracy(BaseMetric):
 
                     result = self._create_error_result(
                         error_message=f"Agent '{agent_name}' missing input_query or final_response data",
-                        category="application",
+                        category="agent",
                         description=self.description,
                         app_name=session.app_name,
                         entities_involved=entities_involved,
@@ -178,8 +178,9 @@ class IntentRecognitionAccuracy(BaseMetric):
                     score, reasoning = self.jury.judge(prompt, BinaryGrading)
                     result = self._create_success_result(
                         score=score,
-                        category="application",
+                        category="agent",
                         app_name=session.app_name,
+                        agent_id=agent_name,
                         reasoning=reasoning,
                         entities_involved=entities_involved,
                         span_ids=agent_span_ids,
@@ -197,7 +198,7 @@ class IntentRecognitionAccuracy(BaseMetric):
                 else:
                     result = self._create_error_result(
                         error_message="No model available",
-                        category="application",
+                        category="agent",
                         app_name=session.app_name,
                         entities_involved=entities_involved,
                         span_ids=agent_span_ids,
