@@ -127,7 +127,7 @@ Update your `.env` or per-request config to point at the proxy:
 ```json
 "llm_judge_config": {
   "LLM_BASE_MODEL_URL": "http://localhost:8010",
-  "LLM_MODEL_NAME": "mock-model",
+  "LLM_MODEL_NAME": "openai/mock-model",
   "LLM_API_KEY": "test"
 }
 ```
