@@ -129,9 +129,7 @@ class DeepEvalMetricAdapter(BaseMetric):
 
         return True, ""
 
-    def _check_session_required_params(
-        self, data: SessionEntity
-    ) -> Tuple[bool, str]:
+    def _check_session_required_params(self, data: SessionEntity) -> Tuple[bool, str]:
         """Check required session parameters and return (is_valid, error_message)."""
         # Check if session has at least one span with matching entity type
         required_types = self.required["entity_type"]
