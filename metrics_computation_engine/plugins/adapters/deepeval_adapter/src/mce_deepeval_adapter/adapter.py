@@ -199,6 +199,14 @@ class DeepEvalMetricAdapter(BaseMetric):
 
             return True, "", span_id, session_id
 
+        # Fallback for unexpected data types or aggregation level mismatch
+        return (
+            False,
+            f"Unsupported data type '{type(data).__name__}' or aggregation level mismatch",
+            "",
+            "",
+        )
+
     async def _get_source_data(self, data: Union[SpanEntity, SessionEntity]):
         # Handle single SpanEntity (span-level metrics)
         if isinstance(data, SpanEntity):
