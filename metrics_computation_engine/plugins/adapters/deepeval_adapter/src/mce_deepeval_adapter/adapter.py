@@ -104,11 +104,49 @@ class DeepEvalMetricAdapter(BaseMetric):
             )
             return False
 
+    def _check_span_required_params(self, data: SpanEntity) -> Tuple[bool, str]:
+        """Check required span parameters and return (is_valid, error_message)."""
+        missing = []
+        present = {}
+
+        # Check standard span attributes
+        for param in ["input_payload", "output_payload", "entity_name"]:
+            value = getattr(data, param, None)
+            if not value:
+                missing.append(param)
+            else:
+                present[param] = value
+
+        if missing:
+            present_str = (
+                ", ".join(f"{k}={v}" for k, v in present.items()) if present else "none"
+            )
+            error_message = (
+                f"Missing required attributes: [{', '.join(missing)}]. "
+                f"Present: [{present_str}]"
+            )
+            return False, error_message
+
+        return True, ""
+
+    def _check_session_required_params(self, data: SessionEntity) -> Tuple[bool, str]:
+        """Check required session parameters and return (is_valid, error_message)."""
+        # Check if session has at least one span with matching entity type
+        required_types = self.required["entity_type"]
+        has_matching_type = any(
+            span.entity_type in required_types for span in data.spans
+        )
+        if not has_matching_type:
+            return (
+                False,
+                f"Session must contain at least one entity of type {required_types}",
+            )
+
+        return True, ""
+
     async def _assess_input_data(
         self, data: Union[SpanEntity, SessionEntity]
     ) -> Tuple[bool, str, str, str]:
-        data_is_appropriate: bool = True
-        error_message: str = ""
         span_id: str = ""
         session_id: str = ""
 
@@ -116,47 +154,56 @@ class DeepEvalMetricAdapter(BaseMetric):
         if isinstance(data, SpanEntity):
             span_id = data.span_id
             session_id = data.session_id
+
+            # Check entity type
             if data.entity_type not in self.required["entity_type"]:
-                data_is_appropriate = False
-                error_message = "Entity type must be one of " + ", ".join(
-                    self.required["entity_type"]
+                return (
+                    False,
+                    f"Entity type must be one of {self.required['entity_type']}, got '{data.entity_type}'",
+                    span_id,
+                    session_id,
                 )
-            elif not (data.input_payload and data.output_payload and data.entity_name):
-                data_is_appropriate = False
-                error_message = (
-                    "Entity must have all following attributes :"
-                    " 'input_payload', 'output_payload' and 'entity_name'"
+
+            # Check required parameters
+            is_valid, error_message = self._check_span_required_params(data)
+            if not is_valid:
+                return (
+                    False,
+                    f"{error_message} Entity type: '{data.entity_type}'",
+                    span_id,
+                    session_id,
                 )
+
+            return True, "", span_id, session_id
 
         # Handle SessionEntity (session-level metrics)
-        elif isinstance(data, SessionEntity) and self.aggregation_level == "session":
+        if isinstance(data, SessionEntity) and self.aggregation_level == "session":
             session_id = data.session_id
+
             if not data.spans:
-                data_is_appropriate = False
-                error_message = "Session data cannot be empty"
-            else:
-                # Use first span for span_id, check if any spans match required entity types
-                span_id = data.spans[0].span_id
-                if not any(
-                    span.entity_type in self.required["entity_type"]
-                    for span in data.spans
-                ):
-                    data_is_appropriate = False
-                    error_message = f"Session must contain at least one entity of type: {self.required['entity_type']}"
+                return (
+                    False,
+                    f"Session '{session_id}' spans cannot be empty",
+                    "",
+                    session_id,
+                )
 
-                # Check for required session-level data based on metric requirements
-                required_params = self.required_parameters
-                for param in required_params:
-                    if not hasattr(data, param) or getattr(data, param) is None:
-                        data_is_appropriate = False
-                        error_message = f"Session missing required parameter: {param}"
-                        break
+            span_id = data.spans[0].span_id
 
-        else:
-            data_is_appropriate = False
-            error_message = f"Expected SpanEntity or SessionEntity for {self.aggregation_level}-level metric"
+            # Check required parameters
+            is_valid, error_message = self._check_session_required_params(data)
+            if not is_valid:
+                return False, error_message, span_id, session_id
 
-        return data_is_appropriate, error_message, span_id, session_id
+            return True, "", span_id, session_id
+
+        # Fallback for unexpected data types or aggregation level mismatch
+        return (
+            False,
+            f"Unsupported data type '{type(data).__name__}' or aggregation level mismatch",
+            "",
+            "",
+        )
 
     async def _get_source_data(self, data: Union[SpanEntity, SessionEntity]):
         # Handle single SpanEntity (span-level metrics)
@@ -240,6 +287,13 @@ class DeepEvalMetricAdapter(BaseMetric):
             )
 
         except Exception as e:
+            # Format error message with optional stack trace
+            import traceback
+
+            error_msg = str(e)
+            if context.get("include_stack_trace", False):
+                error_msg = f"{error_msg}\n\nStack trace:\n{traceback.format_exc()}"
+
             return MetricResult(
                 metric_name=self.name,
                 description="",
@@ -250,12 +304,12 @@ class DeepEvalMetricAdapter(BaseMetric):
                 category="application",
                 app_name=app_name,
                 agent_id=data.agent_id,
-                span_id=[],
-                session_id=[],
+                span_id=span_id,
+                session_id=session_id,
                 source="deepeval",
                 entities_involved=entities_involved,
                 edges_involved=[],
                 metadata={},
                 success=False,
-                error_message=str(e),
+                error_message=error_msg,
             )

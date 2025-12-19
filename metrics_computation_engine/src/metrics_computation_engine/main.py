@@ -223,7 +223,12 @@ async def compute_metrics(config: MetricsConfigRequest):
 
         # Process metrics with structured session data
         processor = MetricsProcessor(
-            registry=registry, model_handler=model_handler, llm_config=llm_config
+            registry=registry,
+            model_handler=model_handler,
+            llm_config=llm_config,
+            include_stack_trace=config.should_include_stack_trace(),
+            include_unmatched_spans=config.should_include_unmatched_spans(),
+            reorg_by_entity=config.should_reorg_by_entity(),
         )
 
         # Get computation levels from config
