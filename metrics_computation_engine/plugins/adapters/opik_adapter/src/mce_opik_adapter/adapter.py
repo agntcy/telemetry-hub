@@ -124,23 +124,46 @@ class OpikMetricAdapter(BaseMetric):
         span_id: str = ""
         session_id: str = ""
 
-        if isinstance(data, SpanEntity):
-            span_id = data.span_id
-            session_id = data.session_id
-            if data.entity_type not in self.required["entity_type"]:
-                data_is_appropriate = False
-                error_message = "Entity type must be one of " + ", ".join(
-                    self.required["entity_type"]
-                )
-            elif not (data.input_payload and data.output_payload and data.entity_name):
-                data_is_appropriate = False
-                error_message = (
-                    "Entity must have all following attributes :"
-                    " 'input_payload', 'output_payload' and 'entity_name'"
-                )
-        else:
-            data_is_appropriate = False
-            error_message = "data must be of type 'SpanEntity'"
+        if not isinstance(data, SpanEntity):
+            return (
+                False,
+                f"Expected SpanEntity, got: {type(data).__name__}. Opik adapter requires span-level data",
+                span_id,
+                session_id,
+            )
+
+        span_id = data.span_id
+        session_id = data.session_id
+
+        # Check entity type
+        if data.entity_type not in self.required["entity_type"]:
+            return (
+                False,
+                f"Entity type mismatch: got '{data.entity_type}', expected one of {self.required['entity_type']}. Entity: '{data.entity_name or 'unnamed'}'",
+                span_id,
+                session_id,
+            )
+
+        # Check required parameters from metric configuration
+        required_params = self.metric_configuration.requirements.required_input_parameters
+        missing = []
+        present = {}
+
+        for param in required_params:
+            value = getattr(data, param, None)
+            if not value:
+                missing.append(param)
+            else:
+                present[param] = value
+
+        if missing:
+            present_str = ", ".join(f"{k}={v}" for k, v in present.items()) if present else "none"
+            error_message = (
+                f"Missing required attributes: [{', '.join(missing)}]. "
+                f"Entity type: '{data.entity_type}', "
+                f"present attributes: [{present_str}]"
+            )
+            return False, error_message, span_id, session_id
 
         return data_is_appropriate, error_message, span_id, session_id
 
@@ -231,6 +254,13 @@ class OpikMetricAdapter(BaseMetric):
             )
 
         except Exception as e:
+            # Format error message with optional stack trace
+            error_msg = str(e)
+            if context.get("include_stack_trace", False):
+                import traceback
+
+                error_msg = f"{error_msg}\n\nStack trace:\n{traceback.format_exc()}"
+
             return MetricResult(
                 metric_name=self.name,
                 description="",
@@ -248,5 +278,5 @@ class OpikMetricAdapter(BaseMetric):
                 edges_involved=[],
                 metadata={},
                 success=False,
-                error_message=str(e),
+                error_message=error_msg,
             )

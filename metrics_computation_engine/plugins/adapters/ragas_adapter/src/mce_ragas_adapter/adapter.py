@@ -208,6 +208,15 @@ class RagasAdapter(BaseMetric):
         except Exception:
             return False
 
+    def _truncate_value(self, value, max_length: int = 100) -> str:
+        """Truncate a value for display in error messages."""
+        if value is None:
+            return "None"
+        str_val = str(value)
+        if len(str_val) > max_length:
+            return str_val[:max_length] + "..."
+        return str_val
+
     async def _assess_input_data(
         self, data: SpanEntity | list[SpanEntity] | Any
     ) -> Tuple[bool, str, str, str]:
@@ -231,24 +240,36 @@ class RagasAdapter(BaseMetric):
 
                 if not spans:
                     data_is_appropriate = False
-                    error_message = "Session contains no spans"
+                    error_message = f"Session '{session_id}' contains no spans (empty session)"
                 elif not any(
                     span.entity_type in self.required["entity_type"] for span in spans
                 ):
                     data_is_appropriate = False
-                    error_message = f"Session must contain at least one entity of type: {self.required['entity_type']}"
+                    span_entity_types = list(set([span.entity_type for span in spans]))
+                    error_message = (
+                        f"No spans match required entity types. "
+                        f"Required: {self.required['entity_type']}, "
+                        f"found types in session: {span_entity_types} "
+                        f"({len(spans)} total spans)"
+                    )
                 else:
                     # Use first span for span_id
                     span_id = spans[0].span_id
             else:
                 data_is_appropriate = False
                 error_message = (
-                    f"Expected SessionEntity for {self.aggregation_level}-level metric"
+                    f"Expected SessionEntity for {self.aggregation_level}-level metric. "
+                    f"Got: {type(data).__name__}, "
+                    f"has 'spans': {hasattr(data, 'spans')}, "
+                    f"has 'session_id': {hasattr(data, 'session_id')}"
                 )
         else:
             # For non-session level metrics
             data_is_appropriate = False
-            error_message = f"Unexpected aggregation level: {self.aggregation_level}"
+            error_message = (
+                f"Unexpected aggregation level: '{self.aggregation_level}'. "
+                f"RAGAS adapter currently only supports 'session'-level metrics"
+            )
 
         return (
             data_is_appropriate,
@@ -418,8 +439,14 @@ class RagasAdapter(BaseMetric):
             # Add full traceback for debugging
             import traceback
 
+            full_traceback = traceback.format_exc()
             logger.error(f"DEBUG: Exception type: {type(exc).__name__}")
-            logger.error(f"DEBUG: Full traceback:\n{traceback.format_exc()}")
+            logger.error(f"DEBUG: Full traceback:\n{full_traceback}")
+
+            # Format error message with optional stack trace
+            error_msg = str(exc)
+            if context.get("include_stack_trace", False):
+                error_msg = f"{error_msg}\n\nStack trace:\n{full_traceback}"
 
             return MetricResult(
                 metric_name=self.name,
@@ -437,5 +464,5 @@ class RagasAdapter(BaseMetric):
                 edges_involved=[],
                 metadata={},
                 success=False,
-                error_message=str(exc),
+                error_message=error_msg,
             )

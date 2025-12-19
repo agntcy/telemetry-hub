@@ -5,6 +5,7 @@ import logging
 import asyncio
 import inspect
 import json
+import traceback
 from typing import Any, Dict, List, Optional, Union
 
 from metrics_computation_engine.constants import BINARY_GRADING_LABELS, DEEPEVAL_METRICS
@@ -28,6 +29,9 @@ class MetricsProcessor:
         model_handler: ModelHandler,
         llm_config=None,
         dataset=None,  # TODO: remove dataset
+        include_stack_trace: bool = False,
+        include_unmatched_spans: bool = False,
+        reorg_by_entity: bool = False,
     ):
         self.registry = registry
         self._metric_instances: Dict[str, BaseMetric] = {}
@@ -35,17 +39,58 @@ class MetricsProcessor:
         self.dataset = dataset
         self.llm_config = llm_config
         self.model_handler = model_handler
+        self.include_stack_trace = include_stack_trace
+        self.include_unmatched_spans = include_unmatched_spans
+        self.reorg_by_entity = reorg_by_entity
         # Cache for introspection results
         self._context_support_cache: Dict[str, bool] = {}
+        # Track unmatched spans per metric
+        self._unmatched_spans: List[Dict[str, Any]] = []
+
+    def _format_error_message(self, exception: Exception) -> str:
+        """Format error message, optionally including stack trace."""
+        error_msg = str(exception)
+        if self.include_stack_trace:
+            full_traceback = traceback.format_exc()
+            return f"{error_msg}\n\nStack trace:\n{full_traceback}"
+        return error_msg
+
+    def _record_unmatched_span(
+        self,
+        metric_name: str,
+        aggregation_level: str,
+        entity_id: str,
+        entity_type: str,
+        session_id: str,
+        skip_reason: str,
+        skip_category: str,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Record an unmatched span for tracking purposes."""
+        if not self.include_unmatched_spans:
+            return
+        
+        self._unmatched_spans.append({
+            "metric_name": metric_name,
+            "aggregation_level": aggregation_level,
+            "entity_id": entity_id,
+            "entity_type": entity_type,
+            "session_id": session_id,
+            "skip_reason": skip_reason,
+            "skip_category": skip_category,  # "entity_type_mismatch", "requirement_not_met", "computation_failed"
+            "details": details or {},
+        })
 
     def _metric_supports_context(self, metric: BaseMetric) -> bool:
-        """Check if metric's compute method accepts context parameter (cached)"""
+        """Check if metric's compute method accepts **kwargs (cached)"""
         metric_class_name = metric.__class__.__name__
 
         if metric_class_name not in self._context_support_cache:
             signature = inspect.signature(metric.compute)
-            self._context_support_cache[metric_class_name] = (
-                "context" in signature.parameters
+   
+            self._context_support_cache[metric_class_name] = any(
+                p.kind == inspect.Parameter.VAR_KEYWORD
+                for p in signature.parameters.values()
             )
 
         return self._context_support_cache[metric_class_name]
@@ -211,7 +256,6 @@ class MetricsProcessor:
                 result = await metric.compute(data)
             return result
         except Exception as e:
-            # logger.error(traceback.format_exc())
             logger.exception(f"Error computing metric {metric.name}: {e}")
             # Return error result instead of crashing
             # Extract basic info from data for error reporting
@@ -241,7 +285,7 @@ class MetricsProcessor:
                 edges_involved=[],
                 success=False,
                 metadata={},
-                error_message=str(e),
+                error_message=self._format_error_message(e),
             )
 
     async def _initialize_metric(self, metric_name: str, metric_class) -> BaseMetric:
@@ -283,114 +327,37 @@ class MetricsProcessor:
 
     def _check_session_requirements(
         self, metric_name: str, session_entity: SessionEntity, required_params: list
-    ) -> bool:
+    ) -> tuple[bool, Optional[str]]:
         """
         Check if session entity has all required parameters for a metric.
 
-        Args:
-            session_entity: The SessionEntity to check
-            required_params: List of required parameter names
-
         Returns:
-            bool: True if all requirements are met, False otherwise
+            tuple: (is_valid, skip_reason)
         """
+        missing = []
+        present = {}
+
         for param in required_params:
-            # Check if the attribute exists on the session entity
-            if not hasattr(session_entity, param):
-                return False
+            value = getattr(session_entity, param, None)
 
-            # Check for null attribute values
-            attr_value = getattr(session_entity, param, None)
-            if attr_value is None:
-                return False
+            # Special case: conversation_data needs to check nested elements
+            if param == "conversation_data" and isinstance(value, dict):
+                if not value.get("elements"):
+                    missing.append(f"{param}.elements")
+                    continue
 
-            # Specific validation for known attributes
-            if param == "conversation_data":
-                if not isinstance(attr_value, dict):
-                    return False
-                # Check if conversation_data has elements (the actual structure)
-                elements = attr_value.get("elements", [])
-                if not elements or len(elements) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `conversation_data.elements` is empty"
-                    )
-                    return False
-            elif param == "conversation_elements":
-                if not isinstance(attr_value, list):
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `conversation_elements` is empty"
-                    )
-                    return False
-                if len(attr_value) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `conversation_elements` is empty"
-                    )
-                    return False
-            elif param == "tool_calls":
-                if not isinstance(attr_value, list):
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `tool_calls` is empty"
-                    )
-                    return False
-                if len(attr_value) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `conversation_elements` is empty"
-                    )
-                    return False
-            elif param == "input_query":
-                if not attr_value or len(str(attr_value)) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `input_query` is empty"
-                    )
-                    return False
-            elif param == "final_response":
-                if not attr_value or len(str(attr_value)) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! final_response` is empty"
-                    )
-                    return False
-            elif param == "workflow_data":
-                if not isinstance(attr_value, dict):
-                    return False
-                query = attr_value.get("query", "")
-                response = attr_value.get("response", "")
-                if not query or len(query) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `query` is empty"
-                    )
-                    return False
-                if not response or len(response) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `response` is empty"
-                    )
-                    return False
-            elif param == "agent_transitions":
-                if not isinstance(attr_value, list):
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `agent_transitions` is empty"
-                    )
-                    return False
-                if len(attr_value) == 0:
-                    return False
-            elif param == "agent_transition_counts":
-                # agent_transition_counts should be a Counter (which is a dict-like object)
-                from collections import Counter
+            if not value:
+                missing.append(param)
+            else:
+                present[param] = value
 
-                if not isinstance(attr_value, (Counter, dict)):
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `agent_transition_counts` should be a Counter object"
-                    )
-                    return False
-                if len(attr_value) == 0:
-                    logger.info(
-                        f"{metric_name} invalid for session {session_entity.session_id}! `agent_transition_counts` is empty"
-                    )
-                    return False
-            elif isinstance(attr_value, (str, list, dict)):
-                if not attr_value:  # Empty string, list, or dict
-                    return False
+        if missing:
+            present_str = ", ".join(present.keys()) if present else "none"
+            reason = f"Missing/empty required params: [{', '.join(missing)}]. Present: [{present_str}]"
+            logger.info(f"{metric_name} invalid for session {session_entity.session_id}: {reason}")
+            return (False, reason)
 
-        return True
+        return (True, None)
 
     def _get_metric_requirements(self, metric_class, metric_name: str) -> list:
         """Get required parameters from class without instantiation"""
@@ -417,24 +384,187 @@ class MetricsProcessor:
 
         return deduplicated
 
-    def _should_compute_metric_for_span(
-        self, metric_instance: BaseMetric, span: Any
-    ) -> bool:
-        """Check if metric should be computed for this span based on entity type filtering"""
-        # Check if metric has entity type requirements
-        if (
-            not hasattr(metric_instance, "required")
-            or "entity_type" not in metric_instance.required
-        ):
-            return True  # No requirements = apply to all spans
+    def _reorganize_results_by_entity(
+        self, metric_results: Dict[str, List], unmatched_spans: List[Dict]
+    ) -> Dict[str, List]:
+        """
+        Reorganize results to group by entity (span_id, session_id, agent_id, population_id).
+        
+        Each entity will have:
+        - evaluated_metrics: List of successful metric results
+        - failed_metrics: List of metrics that failed during evaluation
+        - skipped_metrics: List of metrics that were skipped
+        """
+        from collections import defaultdict
 
-        # Check if span has entity type
-        if not hasattr(span, "entity_type") or not span.entity_type:
-            return True  # No entity type info = apply (fallback to original behavior)
+        # Group span metrics by span_id
+        span_groups = defaultdict(lambda: {
+            "span_id": None,
+            "session_id": None,
+            "app_name": None,
+            "evaluated_metrics": [],
+            "failed_metrics": [],
+            "skipped_metrics": [],
+        })
+        
+        for result in metric_results.get("span_metrics", []):
+            span_id = result.span_id[0] if result.span_id else "unknown"
+            span_groups[span_id]["span_id"] = span_id
+            span_groups[span_id]["session_id"] = result.session_id[0] if result.session_id else None
+            span_groups[span_id]["app_name"] = result.app_name
+            span_groups[span_id]["evaluated_metrics"].append(result)
 
-        # Check if span's entity type matches metric requirements
-        required_types = metric_instance.required["entity_type"]
-        return span.entity_type in required_types
+        # Group session metrics by session_id
+        session_groups = defaultdict(lambda: {
+            "session_id": None,
+            "app_name": None,
+            "evaluated_metrics": [],
+            "failed_metrics": [],
+            "skipped_metrics": [],
+        })
+        
+        for result in metric_results.get("session_metrics", []):
+            session_id = result.session_id[0] if result.session_id else "unknown"
+            session_groups[session_id]["session_id"] = session_id
+            session_groups[session_id]["app_name"] = result.app_name
+            session_groups[session_id]["evaluated_metrics"].append(result)
+
+        # Group agent metrics by agent_id
+        agent_groups = defaultdict(lambda: {
+            "agent_id": None,
+            "session_id": None,
+            "app_name": None,
+            "evaluated_metrics": [],
+            "failed_metrics": [],
+            "skipped_metrics": [],
+        })
+        
+        for result in metric_results.get("agent_metrics", []):
+            agent_id = result.metadata.get("agent_id", "unknown") if result.metadata else "unknown"
+            agent_groups[agent_id]["agent_id"] = agent_id
+            agent_groups[agent_id]["session_id"] = result.session_id[0] if result.session_id else None
+            agent_groups[agent_id]["app_name"] = result.app_name
+            agent_groups[agent_id]["evaluated_metrics"].append(result)
+
+        # Group population metrics (typically one group)
+        population_groups = defaultdict(lambda: {
+            "population_id": "all",
+            "evaluated_metrics": [],
+            "failed_metrics": [],
+            "skipped_metrics": [],
+        })
+        
+        for result in metric_results.get("population_metrics", []):
+            population_groups["all"]["evaluated_metrics"].append(result)
+
+        # Distribute failed_metrics to their respective entities
+        for failure in metric_results.get("failed_metrics", []):
+            agg_level = failure.get("aggregation_level", "unknown")
+            
+            if agg_level == "span":
+                # span_id can be a string or list
+                raw_span_id = failure.get("span_id", "unknown")
+                span_id = raw_span_id[0] if isinstance(raw_span_id, list) else raw_span_id
+                if span_id not in span_groups:
+                    span_groups[span_id]["span_id"] = span_id
+                    raw_session = failure.get("session_id")
+                    span_groups[span_id]["session_id"] = raw_session[0] if isinstance(raw_session, list) and raw_session else raw_session
+                    raw_app = failure.get("app_name")
+                    span_groups[span_id]["app_name"] = raw_app[0] if isinstance(raw_app, list) and raw_app else (raw_app or "unknown")
+                span_groups[span_id]["failed_metrics"].append(failure)
+                
+            elif agg_level == "session":
+                raw_session_id = failure.get("session_id", "unknown")
+                session_id = raw_session_id[0] if isinstance(raw_session_id, list) and raw_session_id else raw_session_id
+                if session_id not in session_groups:
+                    session_groups[session_id]["session_id"] = session_id
+                    raw_app = failure.get("app_name")
+                    session_groups[session_id]["app_name"] = raw_app[0] if isinstance(raw_app, list) and raw_app else (raw_app or "unknown")
+                session_groups[session_id]["failed_metrics"].append(failure)
+                
+            elif agg_level == "agent":
+                agent_id = failure.get("metadata", {}).get("agent_id", "unknown")
+                if agent_id not in agent_groups:
+                    agent_groups[agent_id]["agent_id"] = agent_id
+                agent_groups[agent_id]["failed_metrics"].append(failure)
+                
+            else:
+                population_groups["all"]["failed_metrics"].append(failure)
+
+        # Distribute skipped/unmatched spans to their respective entities
+        for skipped in unmatched_spans:
+            agg_level = skipped.get("aggregation_level", "unknown")
+            
+            if agg_level == "span":
+                span_id = skipped.get("entity_id", "unknown")
+                if span_id not in span_groups:
+                    span_groups[span_id]["span_id"] = span_id
+                    span_groups[span_id]["session_id"] = skipped.get("session_id")
+                    span_groups[span_id]["app_name"] = skipped.get("details", {}).get("app_name", "unknown")
+                span_groups[span_id]["skipped_metrics"].append(skipped)
+                
+            elif agg_level == "session":
+                session_id = skipped.get("session_id", "unknown")
+                if session_id not in session_groups:
+                    session_groups[session_id]["session_id"] = session_id
+                    session_groups[session_id]["app_name"] = skipped.get("details", {}).get("app_name", "unknown")
+                session_groups[session_id]["skipped_metrics"].append(skipped)
+                
+            elif agg_level == "agent":
+                session_id = skipped.get("session_id", "unknown")
+                if session_id not in agent_groups:
+                    agent_groups[session_id]["agent_id"] = session_id
+                agent_groups[session_id]["skipped_metrics"].append(skipped)
+
+        return {
+            "span_metrics": list(span_groups.values()),
+            "session_metrics": list(session_groups.values()),
+            "agent_metrics": list(agent_groups.values()),
+            "population_metrics": list(population_groups.values()) if population_groups["all"]["evaluated_metrics"] or population_groups["all"]["failed_metrics"] else [],
+        }
+
+    def _is_span_valid(self, span: Any) -> tuple[bool, Optional[str]]:
+        """
+        Check if span has required basic attributes.
+        
+        Returns:
+            tuple: (is_valid, reason) - reason is set if invalid
+        """
+        if not getattr(span, "span_id", None):
+            return False, "Missing span_id"
+        if not getattr(span, "session_id", None):
+            return False, "Missing session_id"
+        if not getattr(span, "entity_type", None):
+            return False, "Missing entity_type"
+        return True, None
+
+    def _get_matching_metrics_for_span(
+        self, span: Any, span_metrics: List[tuple]
+    ) -> List[tuple]:
+        """
+        Get list of metrics that match this span's entity type.
+        
+        Returns:
+            List of (metric_name, metric_class) tuples that match the span
+        """
+        matching = []
+        span_entity_type = getattr(span, "entity_type", None)
+        
+        for metric_name, metric_class in span_metrics:
+            # Get required entity types for this metric
+            required_types = []
+            if hasattr(metric_class, "required"):
+                required_types = metric_class.required.get("entity_type", [])
+            else:
+                # Need to instantiate to check
+                temp_instance = metric_class(metric_name)
+                if hasattr(temp_instance, "required"):
+                    required_types = temp_instance.required.get("entity_type", [])
+            
+            if span_entity_type in required_types:
+                matching.append((metric_name, metric_class))
+        
+        return matching
 
     def _classify_metrics_by_aggregation_level(self) -> Dict[str, List[tuple]]:
         """
@@ -504,28 +634,73 @@ class MetricsProcessor:
             "population_metrics": [],
             "failed_metrics": [],
         }
+        
+        # Clear unmatched spans tracking for this computation
+        self._unmatched_spans = []
 
         for session_index, session_entity in enumerate(
             sessions_set.sessions
         ):  # browse by SessionEntity
             # Span-level metrics: iterate through spans in the session
             for span in session_entity.spans:
-                for metric_name, metric_class in classified_metrics["span"]:
-                    try:
-                        # For entity filtering, we need a temp instance to check requirements
-                        temp_instance = metric_class(metric_name)
-                        if not self._should_compute_metric_for_span(
-                            temp_instance, span
-                        ):
-                            continue
+                # 1. Check if span is valid (has required basic fields)
+                is_valid, invalid_reason = self._is_span_valid(span)
+                if not is_valid:
+                    self._record_unmatched_span(
+                        metric_name="ALL",
+                        aggregation_level="span",
+                        entity_id=getattr(span, "span_id", "unknown"),
+                        entity_type=getattr(span, "entity_type", "unknown"),
+                        session_id=session_entity.session_id,
+                        skip_reason=invalid_reason,
+                        skip_category="invalid_span",
+                        details={"app_name": getattr(span, "app_name", "unknown")},
+                    )
+                    continue
 
-                        # Only initialize if we're going to compute it
+                # 2. Find which metrics match this span
+                matching_metrics = self._get_matching_metrics_for_span(
+                    span, classified_metrics["span"]
+                )
+
+                # 3. If no metrics match, record as no_matching_metrics
+                if not matching_metrics:
+                    all_required_types = []
+                    for _, mc in classified_metrics["span"]:
+                        if hasattr(mc, "required"):
+                            all_required_types.extend(mc.required.get("entity_type", []))
+                    
+                    self._record_unmatched_span(
+                        metric_name="ALL",
+                        aggregation_level="span",
+                        entity_id=span.span_id,
+                        entity_type=span.entity_type,
+                        session_id=session_entity.session_id,
+                        skip_reason=f"Span entity type '{span.entity_type}' does not match any requested metric",
+                        skip_category="no_matching_metrics",
+                        details={
+                            "app_name": span.app_name,
+                            "requested_metrics_require": list(set(all_required_types)),
+                        },
+                    )
+                    continue
+
+                # 4. Process matching metrics
+                for metric_name, metric_class in matching_metrics:
+                    try:
                         metric_instance = await self._initialize_metric(
                             metric_name, metric_class
                         )
 
                         if metric_instance is not None:
-                            tasks.append(self._safe_compute(metric_instance, span))
+                            span_context = {
+                                "include_stack_trace": self.include_stack_trace,
+                            }
+                            tasks.append(
+                                self._safe_compute(
+                                    metric_instance, span, context=span_context
+                                )
+                            )
 
                     except Exception as e:
                         metric_results["failed_metrics"].append(
@@ -535,7 +710,7 @@ class MetricsProcessor:
                                 "session_id": [session_entity.session_id],
                                 "span_id": span.span_id,
                                 "app_name": [span.app_name],
-                                "error_message": str(e),
+                                "error_message": self._format_error_message(e),
                                 "metadata": {},
                             }
                         )
@@ -550,9 +725,23 @@ class MetricsProcessor:
                     )
                     logger.info(f"REQUIRED PARAMS: {required_params}")
 
-                    if not self._check_session_requirements(
+                    is_valid, skip_reason = self._check_session_requirements(
                         metric_name, session_entity, required_params
-                    ):
+                    )
+                    if not is_valid:
+                        self._record_unmatched_span(
+                            metric_name=metric_name,
+                            aggregation_level="session",
+                            entity_id=session_entity.session_id,
+                            entity_type="session",
+                            session_id=session_entity.session_id,
+                            skip_reason=skip_reason,
+                            skip_category="requirement_not_met",
+                            details={
+                                "app_name": session_entity.app_name,
+                                "required_params": required_params,
+                            },
+                        )
                         continue
 
                     try:
@@ -567,7 +756,7 @@ class MetricsProcessor:
                                 "session_id": [session_entity.session_id],
                                 "span_id": None,
                                 "app_name": [session_entity.app_name],
-                                "error_message": str(e),
+                                "error_message": self._format_error_message(e),
                                 "metadata": {},
                             }
                         )
@@ -575,13 +764,15 @@ class MetricsProcessor:
 
                     if metric_instance is not None:
                         # Prepare context for metrics that need it
-                        context = None
+                        context = {
+                            "include_stack_trace": self.include_stack_trace,
+                        }
                         if sessions_set is not None:
-                            context = {
+                            context.update({
                                 "session_set_stats": sessions_set.stats,
                                 "session_index": session_index,
                                 "session_set": sessions_set,
-                            }
+                            })
                             if logger.isEnabledFor(logging.DEBUG):
                                 logger.debug(
                                     f"Prepared context with keys: {list(context.keys())}"
@@ -605,11 +796,25 @@ class MetricsProcessor:
                     required_params = self._get_metric_requirements(
                         metric_class, metric_name
                     )
-                    if not self._check_session_requirements(
+                    is_valid, skip_reason = self._check_session_requirements(
                         metric_name, session_entity, required_params
-                    ):
+                    )
+                    if not is_valid:
                         logger.debug(
                             f"Session doesn't meet requirements for {metric_name}"
+                        )
+                        self._record_unmatched_span(
+                            metric_name=metric_name,
+                            aggregation_level="agent",
+                            entity_id=session_entity.session_id,
+                            entity_type="session",
+                            session_id=session_entity.session_id,
+                            skip_reason=skip_reason,
+                            skip_category="requirement_not_met",
+                            details={
+                                "app_name": session_entity.app_name,
+                                "required_params": required_params,
+                            },
                         )
                         continue
                     logger.info(f"REQUIRED PARAMS: {required_params}")
@@ -620,14 +825,16 @@ class MetricsProcessor:
 
                     if metric_instance is not None:
                         # Prepare context with agent computation flag
-                        context = None
+                        context = {
+                            "include_stack_trace": self.include_stack_trace,
+                            "agent_computation": True,
+                        }
                         if sessions_set is not None:
-                            context = {
+                            context.update({
                                 "session_set_stats": sessions_set.stats,
                                 "session_index": session_index,
                                 "session_set": sessions_set,
-                                "agent_computation": True,
-                            }
+                            })
                             logger.debug(
                                 f"Prepared context with agent computation flag for {metric_name}"
                             )
@@ -665,7 +872,7 @@ class MetricsProcessor:
                                 ]
                             )
                         ),
-                        "error_message": str(e),
+                        "error_message": self._format_error_message(e),
                         "metadata": {},
                     }
                 )
@@ -758,5 +965,16 @@ class MetricsProcessor:
         metric_results["failed_metrics"] = self._deduplicate_failures(
             metric_results["failed_metrics"]
         )
+
+        # Optionally reorganize results to group by entity
+        if self.reorg_by_entity:
+            return self._reorganize_results_by_entity(
+                metric_results, 
+                self._unmatched_spans if self.include_unmatched_spans else []
+            )
+
+        # Default: return flat structure with optional unmatched_spans
+        if self.include_unmatched_spans:
+            metric_results["unmatched_spans"] = self._unmatched_spans
 
         return metric_results

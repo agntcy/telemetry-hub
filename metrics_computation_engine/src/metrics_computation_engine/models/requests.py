@@ -97,6 +97,9 @@ class MetricOptions(BaseModel):
 
     computation_level: Optional[List[str]] = None
     write_to_db: Optional[bool] = None
+    include_stack_trace: Optional[bool] = False
+    include_unmatched_spans: Optional[bool] = False
+    reorg_by_entity: Optional[bool] = False
 
     def get_computation_levels(self) -> List[str]:
         """Get computation levels, defaulting to session if none specified."""
@@ -107,6 +110,18 @@ class MetricOptions(BaseModel):
     def should_write_to_db(self) -> bool:
         """Check if results should be written to the database."""
         return self.write_to_db if self.write_to_db is not None else False
+
+    def should_include_stack_trace(self) -> bool:
+        """Check if stack traces should be included in error messages."""
+        return self.include_stack_trace if self.include_stack_trace is not None else False
+
+    def should_include_unmatched_spans(self) -> bool:
+        """Check if unmatched spans should be included in the response."""
+        return self.include_unmatched_spans if self.include_unmatched_spans is not None else False
+
+    def should_reorg_by_entity(self) -> bool:
+        """Check if results should be reorganized by entity."""
+        return self.reorg_by_entity if self.reorg_by_entity is not None else False
 
     def supports_session(self) -> bool:
         """Check if session-level computation is requested."""
@@ -150,3 +165,15 @@ class MetricsConfigRequest(BaseModel):
     def should_write_to_db(self) -> bool:
         """Check if results should be written to the database."""
         return self.get_metric_options().should_write_to_db()
+
+    def should_include_stack_trace(self) -> bool:
+        """Check if stack traces should be included in error messages."""
+        return self.get_metric_options().should_include_stack_trace()
+
+    def should_include_unmatched_spans(self) -> bool:
+        """Check if unmatched spans should be included in the response."""
+        return self.get_metric_options().should_include_unmatched_spans()
+
+    def should_reorg_by_entity(self) -> bool:
+        """Check if results should be reorganized by entity."""
+        return self.get_metric_options().should_reorg_by_entity()
