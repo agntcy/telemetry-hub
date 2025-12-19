@@ -113,11 +113,17 @@ class MetricOptions(BaseModel):
 
     def should_include_stack_trace(self) -> bool:
         """Check if stack traces should be included in error messages."""
-        return self.include_stack_trace if self.include_stack_trace is not None else False
+        return (
+            self.include_stack_trace if self.include_stack_trace is not None else False
+        )
 
     def should_include_unmatched_spans(self) -> bool:
         """Check if unmatched spans should be included in the response."""
-        return self.include_unmatched_spans if self.include_unmatched_spans is not None else False
+        return (
+            self.include_unmatched_spans
+            if self.include_unmatched_spans is not None
+            else False
+        )
 
     def should_reorg_by_entity(self) -> bool:
         """Check if results should be reorganized by entity."""

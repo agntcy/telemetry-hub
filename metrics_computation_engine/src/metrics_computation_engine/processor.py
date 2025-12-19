@@ -69,17 +69,19 @@ class MetricsProcessor:
         """Record an unmatched span for tracking purposes."""
         if not self.include_unmatched_spans:
             return
-        
-        self._unmatched_spans.append({
-            "metric_name": metric_name,
-            "aggregation_level": aggregation_level,
-            "entity_id": entity_id,
-            "entity_type": entity_type,
-            "session_id": session_id,
-            "skip_reason": skip_reason,
-            "skip_category": skip_category,  # "entity_type_mismatch", "requirement_not_met", "computation_failed"
-            "details": details or {},
-        })
+
+        self._unmatched_spans.append(
+            {
+                "metric_name": metric_name,
+                "aggregation_level": aggregation_level,
+                "entity_id": entity_id,
+                "entity_type": entity_type,
+                "session_id": session_id,
+                "skip_reason": skip_reason,
+                "skip_category": skip_category,  # "entity_type_mismatch", "requirement_not_met", "computation_failed"
+                "details": details or {},
+            }
+        )
 
     def _metric_supports_context(self, metric: BaseMetric) -> bool:
         """Check if metric's compute method accepts **kwargs (cached)"""
@@ -87,7 +89,7 @@ class MetricsProcessor:
 
         if metric_class_name not in self._context_support_cache:
             signature = inspect.signature(metric.compute)
-   
+
             self._context_support_cache[metric_class_name] = any(
                 p.kind == inspect.Parameter.VAR_KEYWORD
                 for p in signature.parameters.values()
@@ -354,7 +356,9 @@ class MetricsProcessor:
         if missing:
             present_str = ", ".join(present.keys()) if present else "none"
             reason = f"Missing/empty required params: [{', '.join(missing)}]. Present: [{present_str}]"
-            logger.info(f"{metric_name} invalid for session {session_entity.session_id}: {reason}")
+            logger.info(
+                f"{metric_name} invalid for session {session_entity.session_id}: {reason}"
+            )
             return (False, reason)
 
         return (True, None)
@@ -389,7 +393,7 @@ class MetricsProcessor:
     ) -> Dict[str, List]:
         """
         Reorganize results to group by entity (span_id, session_id, agent_id, population_id).
-        
+
         Each entity will have:
         - evaluated_metrics: List of successful metric results
         - failed_metrics: List of metrics that failed during evaluation
@@ -398,31 +402,37 @@ class MetricsProcessor:
         from collections import defaultdict
 
         # Group span metrics by span_id
-        span_groups = defaultdict(lambda: {
-            "span_id": None,
-            "session_id": None,
-            "app_name": None,
-            "evaluated_metrics": [],
-            "failed_metrics": [],
-            "skipped_metrics": [],
-        })
-        
+        span_groups = defaultdict(
+            lambda: {
+                "span_id": None,
+                "session_id": None,
+                "app_name": None,
+                "evaluated_metrics": [],
+                "failed_metrics": [],
+                "skipped_metrics": [],
+            }
+        )
+
         for result in metric_results.get("span_metrics", []):
             span_id = result.span_id[0] if result.span_id else "unknown"
             span_groups[span_id]["span_id"] = span_id
-            span_groups[span_id]["session_id"] = result.session_id[0] if result.session_id else None
+            span_groups[span_id]["session_id"] = (
+                result.session_id[0] if result.session_id else None
+            )
             span_groups[span_id]["app_name"] = result.app_name
             span_groups[span_id]["evaluated_metrics"].append(result)
 
         # Group session metrics by session_id
-        session_groups = defaultdict(lambda: {
-            "session_id": None,
-            "app_name": None,
-            "evaluated_metrics": [],
-            "failed_metrics": [],
-            "skipped_metrics": [],
-        })
-        
+        session_groups = defaultdict(
+            lambda: {
+                "session_id": None,
+                "app_name": None,
+                "evaluated_metrics": [],
+                "failed_metrics": [],
+                "skipped_metrics": [],
+            }
+        )
+
         for result in metric_results.get("session_metrics", []):
             session_id = result.session_id[0] if result.session_id else "unknown"
             session_groups[session_id]["session_id"] = session_id
@@ -430,86 +440,118 @@ class MetricsProcessor:
             session_groups[session_id]["evaluated_metrics"].append(result)
 
         # Group agent metrics by agent_id
-        agent_groups = defaultdict(lambda: {
-            "agent_id": None,
-            "session_id": None,
-            "app_name": None,
-            "evaluated_metrics": [],
-            "failed_metrics": [],
-            "skipped_metrics": [],
-        })
-        
+        agent_groups = defaultdict(
+            lambda: {
+                "agent_id": None,
+                "session_id": None,
+                "app_name": None,
+                "evaluated_metrics": [],
+                "failed_metrics": [],
+                "skipped_metrics": [],
+            }
+        )
+
         for result in metric_results.get("agent_metrics", []):
-            agent_id = result.metadata.get("agent_id", "unknown") if result.metadata else "unknown"
+            agent_id = (
+                result.metadata.get("agent_id", "unknown")
+                if result.metadata
+                else "unknown"
+            )
             agent_groups[agent_id]["agent_id"] = agent_id
-            agent_groups[agent_id]["session_id"] = result.session_id[0] if result.session_id else None
+            agent_groups[agent_id]["session_id"] = (
+                result.session_id[0] if result.session_id else None
+            )
             agent_groups[agent_id]["app_name"] = result.app_name
             agent_groups[agent_id]["evaluated_metrics"].append(result)
 
         # Group population metrics (typically one group)
-        population_groups = defaultdict(lambda: {
-            "population_id": "all",
-            "evaluated_metrics": [],
-            "failed_metrics": [],
-            "skipped_metrics": [],
-        })
-        
+        population_groups = defaultdict(
+            lambda: {
+                "population_id": "all",
+                "evaluated_metrics": [],
+                "failed_metrics": [],
+                "skipped_metrics": [],
+            }
+        )
+
         for result in metric_results.get("population_metrics", []):
             population_groups["all"]["evaluated_metrics"].append(result)
 
         # Distribute failed_metrics to their respective entities
         for failure in metric_results.get("failed_metrics", []):
             agg_level = failure.get("aggregation_level", "unknown")
-            
+
             if agg_level == "span":
                 # span_id can be a string or list
                 raw_span_id = failure.get("span_id", "unknown")
-                span_id = raw_span_id[0] if isinstance(raw_span_id, list) else raw_span_id
+                span_id = (
+                    raw_span_id[0] if isinstance(raw_span_id, list) else raw_span_id
+                )
                 if span_id not in span_groups:
                     span_groups[span_id]["span_id"] = span_id
                     raw_session = failure.get("session_id")
-                    span_groups[span_id]["session_id"] = raw_session[0] if isinstance(raw_session, list) and raw_session else raw_session
+                    span_groups[span_id]["session_id"] = (
+                        raw_session[0]
+                        if isinstance(raw_session, list) and raw_session
+                        else raw_session
+                    )
                     raw_app = failure.get("app_name")
-                    span_groups[span_id]["app_name"] = raw_app[0] if isinstance(raw_app, list) and raw_app else (raw_app or "unknown")
+                    span_groups[span_id]["app_name"] = (
+                        raw_app[0]
+                        if isinstance(raw_app, list) and raw_app
+                        else (raw_app or "unknown")
+                    )
                 span_groups[span_id]["failed_metrics"].append(failure)
-                
+
             elif agg_level == "session":
                 raw_session_id = failure.get("session_id", "unknown")
-                session_id = raw_session_id[0] if isinstance(raw_session_id, list) and raw_session_id else raw_session_id
+                session_id = (
+                    raw_session_id[0]
+                    if isinstance(raw_session_id, list) and raw_session_id
+                    else raw_session_id
+                )
                 if session_id not in session_groups:
                     session_groups[session_id]["session_id"] = session_id
                     raw_app = failure.get("app_name")
-                    session_groups[session_id]["app_name"] = raw_app[0] if isinstance(raw_app, list) and raw_app else (raw_app or "unknown")
+                    session_groups[session_id]["app_name"] = (
+                        raw_app[0]
+                        if isinstance(raw_app, list) and raw_app
+                        else (raw_app or "unknown")
+                    )
                 session_groups[session_id]["failed_metrics"].append(failure)
-                
+
             elif agg_level == "agent":
                 agent_id = failure.get("metadata", {}).get("agent_id", "unknown")
                 if agent_id not in agent_groups:
                     agent_groups[agent_id]["agent_id"] = agent_id
                 agent_groups[agent_id]["failed_metrics"].append(failure)
-                
+
             else:
                 population_groups["all"]["failed_metrics"].append(failure)
 
         # Distribute skipped/unmatched spans to their respective entities
         for skipped in unmatched_spans:
             agg_level = skipped.get("aggregation_level", "unknown")
-            
+
             if agg_level == "span":
                 span_id = skipped.get("entity_id", "unknown")
                 if span_id not in span_groups:
                     span_groups[span_id]["span_id"] = span_id
                     span_groups[span_id]["session_id"] = skipped.get("session_id")
-                    span_groups[span_id]["app_name"] = skipped.get("details", {}).get("app_name", "unknown")
+                    span_groups[span_id]["app_name"] = skipped.get("details", {}).get(
+                        "app_name", "unknown"
+                    )
                 span_groups[span_id]["skipped_metrics"].append(skipped)
-                
+
             elif agg_level == "session":
                 session_id = skipped.get("session_id", "unknown")
                 if session_id not in session_groups:
                     session_groups[session_id]["session_id"] = session_id
-                    session_groups[session_id]["app_name"] = skipped.get("details", {}).get("app_name", "unknown")
+                    session_groups[session_id]["app_name"] = skipped.get(
+                        "details", {}
+                    ).get("app_name", "unknown")
                 session_groups[session_id]["skipped_metrics"].append(skipped)
-                
+
             elif agg_level == "agent":
                 session_id = skipped.get("session_id", "unknown")
                 if session_id not in agent_groups:
@@ -520,13 +562,16 @@ class MetricsProcessor:
             "span_metrics": list(span_groups.values()),
             "session_metrics": list(session_groups.values()),
             "agent_metrics": list(agent_groups.values()),
-            "population_metrics": list(population_groups.values()) if population_groups["all"]["evaluated_metrics"] or population_groups["all"]["failed_metrics"] else [],
+            "population_metrics": list(population_groups.values())
+            if population_groups["all"]["evaluated_metrics"]
+            or population_groups["all"]["failed_metrics"]
+            else [],
         }
 
     def _is_span_valid(self, span: Any) -> tuple[bool, Optional[str]]:
         """
         Check if span has required basic attributes.
-        
+
         Returns:
             tuple: (is_valid, reason) - reason is set if invalid
         """
@@ -543,13 +588,13 @@ class MetricsProcessor:
     ) -> List[tuple]:
         """
         Get list of metrics that match this span's entity type.
-        
+
         Returns:
             List of (metric_name, metric_class) tuples that match the span
         """
         matching = []
         span_entity_type = getattr(span, "entity_type", None)
-        
+
         for metric_name, metric_class in span_metrics:
             # Get required entity types for this metric
             required_types = []
@@ -560,10 +605,10 @@ class MetricsProcessor:
                 temp_instance = metric_class(metric_name)
                 if hasattr(temp_instance, "required"):
                     required_types = temp_instance.required.get("entity_type", [])
-            
+
             if span_entity_type in required_types:
                 matching.append((metric_name, metric_class))
-        
+
         return matching
 
     def _classify_metrics_by_aggregation_level(self) -> Dict[str, List[tuple]]:
@@ -634,7 +679,7 @@ class MetricsProcessor:
             "population_metrics": [],
             "failed_metrics": [],
         }
-        
+
         # Clear unmatched spans tracking for this computation
         self._unmatched_spans = []
 
@@ -668,8 +713,10 @@ class MetricsProcessor:
                     all_required_types = []
                     for _, mc in classified_metrics["span"]:
                         if hasattr(mc, "required"):
-                            all_required_types.extend(mc.required.get("entity_type", []))
-                    
+                            all_required_types.extend(
+                                mc.required.get("entity_type", [])
+                            )
+
                     self._record_unmatched_span(
                         metric_name="ALL",
                         aggregation_level="span",
@@ -768,11 +815,13 @@ class MetricsProcessor:
                             "include_stack_trace": self.include_stack_trace,
                         }
                         if sessions_set is not None:
-                            context.update({
-                                "session_set_stats": sessions_set.stats,
-                                "session_index": session_index,
-                                "session_set": sessions_set,
-                            })
+                            context.update(
+                                {
+                                    "session_set_stats": sessions_set.stats,
+                                    "session_index": session_index,
+                                    "session_set": sessions_set,
+                                }
+                            )
                             if logger.isEnabledFor(logging.DEBUG):
                                 logger.debug(
                                     f"Prepared context with keys: {list(context.keys())}"
@@ -830,11 +879,13 @@ class MetricsProcessor:
                             "agent_computation": True,
                         }
                         if sessions_set is not None:
-                            context.update({
-                                "session_set_stats": sessions_set.stats,
-                                "session_index": session_index,
-                                "session_set": sessions_set,
-                            })
+                            context.update(
+                                {
+                                    "session_set_stats": sessions_set.stats,
+                                    "session_index": session_index,
+                                    "session_set": sessions_set,
+                                }
+                            )
                             logger.debug(
                                 f"Prepared context with agent computation flag for {metric_name}"
                             )
@@ -969,8 +1020,8 @@ class MetricsProcessor:
         # Optionally reorganize results to group by entity
         if self.reorg_by_entity:
             return self._reorganize_results_by_entity(
-                metric_results, 
-                self._unmatched_spans if self.include_unmatched_spans else []
+                metric_results,
+                self._unmatched_spans if self.include_unmatched_spans else [],
             )
 
         # Default: return flat structure with optional unmatched_spans

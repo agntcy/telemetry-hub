@@ -240,7 +240,9 @@ class RagasAdapter(BaseMetric):
 
                 if not spans:
                     data_is_appropriate = False
-                    error_message = f"Session '{session_id}' contains no spans (empty session)"
+                    error_message = (
+                        f"Session '{session_id}' contains no spans (empty session)"
+                    )
                 elif not any(
                     span.entity_type in self.required["entity_type"] for span in spans
                 ):

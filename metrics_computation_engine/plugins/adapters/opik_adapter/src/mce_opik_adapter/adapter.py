@@ -145,7 +145,9 @@ class OpikMetricAdapter(BaseMetric):
             )
 
         # Check required parameters from metric configuration
-        required_params = self.metric_configuration.requirements.required_input_parameters
+        required_params = (
+            self.metric_configuration.requirements.required_input_parameters
+        )
         missing = []
         present = {}
 
@@ -157,7 +159,9 @@ class OpikMetricAdapter(BaseMetric):
                 present[param] = value
 
         if missing:
-            present_str = ", ".join(f"{k}={v}" for k, v in present.items()) if present else "none"
+            present_str = (
+                ", ".join(f"{k}={v}" for k, v in present.items()) if present else "none"
+            )
             error_message = (
                 f"Missing required attributes: [{', '.join(missing)}]. "
                 f"Entity type: '{data.entity_type}', "

@@ -104,9 +104,13 @@ class DeepEvalMetricAdapter(BaseMetric):
             )
             return False
 
-    def _check_required_params(self, data: Union[SpanEntity, SessionEntity]) -> Tuple[bool, str]:
+    def _check_required_params(
+        self, data: Union[SpanEntity, SessionEntity]
+    ) -> Tuple[bool, str]:
         """Check required parameters from metric configuration and return (is_valid, error_message)."""
-        required_params = self.metric_configuration.requirements.required_input_parameters
+        required_params = (
+            self.metric_configuration.requirements.required_input_parameters
+        )
         missing = []
         present = {}
 
@@ -118,7 +122,9 @@ class DeepEvalMetricAdapter(BaseMetric):
                 present[param] = value
 
         if missing:
-            present_str = ", ".join(f"{k}={v}" for k, v in present.items()) if present else "none"
+            present_str = (
+                ", ".join(f"{k}={v}" for k, v in present.items()) if present else "none"
+            )
             error_message = (
                 f"Missing required attributes: [{', '.join(missing)}]. "
                 f"Required: {required_params}, "
@@ -151,7 +157,12 @@ class DeepEvalMetricAdapter(BaseMetric):
             # Check required parameters
             is_valid, error_message = self._check_required_params(data)
             if not is_valid:
-                return False, f"{error_message} Entity type: '{data.entity_type}'", span_id, session_id
+                return (
+                    False,
+                    f"{error_message} Entity type: '{data.entity_type}'",
+                    span_id,
+                    session_id,
+                )
 
             return True, "", span_id, session_id
 
@@ -160,7 +171,12 @@ class DeepEvalMetricAdapter(BaseMetric):
             session_id = data.session_id
 
             if not data.spans:
-                return False, f"Session '{session_id}' has no spans (empty session data)", "", session_id
+                return (
+                    False,
+                    f"Session '{session_id}' has no spans (empty session data)",
+                    "",
+                    session_id,
+                )
 
             span_id = data.spans[0].span_id
 
@@ -255,7 +271,7 @@ class DeepEvalMetricAdapter(BaseMetric):
         except Exception as e:
             # Format error message with optional stack trace
             import traceback
-            
+
             error_msg = str(e)
             if context.get("include_stack_trace", False):
                 error_msg = f"{error_msg}\n\nStack trace:\n{traceback.format_exc()}"
