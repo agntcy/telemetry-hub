@@ -139,7 +139,7 @@ class OpikMetricAdapter(BaseMetric):
         if data.entity_type not in self.required["entity_type"]:
             return (
                 False,
-                f"Entity type mismatch: got '{data.entity_type}', expected one of {self.required['entity_type']}. Entity: '{data.entity_name or 'unnamed'}'",
+                f"Entity type must be one of {self.required['entity_type']}, got '{data.entity_type}'",
                 span_id,
                 session_id,
             )

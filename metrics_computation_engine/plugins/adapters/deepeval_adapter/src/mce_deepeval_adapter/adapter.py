@@ -104,17 +104,13 @@ class DeepEvalMetricAdapter(BaseMetric):
             )
             return False
 
-    def _check_required_params(
-        self, data: Union[SpanEntity, SessionEntity]
-    ) -> Tuple[bool, str]:
-        """Check required parameters from metric configuration and return (is_valid, error_message)."""
-        required_params = (
-            self.metric_configuration.requirements.required_input_parameters
-        )
+    def _check_span_required_params(self, data: SpanEntity) -> Tuple[bool, str]:
+        """Check required span parameters and return (is_valid, error_message)."""
         missing = []
         present = {}
 
-        for param in required_params:
+        # Check standard span attributes
+        for param in ["input_payload", "output_payload", "entity_name"]:
             value = getattr(data, param, None)
             if not value:
                 missing.append(param)
@@ -127,10 +123,26 @@ class DeepEvalMetricAdapter(BaseMetric):
             )
             error_message = (
                 f"Missing required attributes: [{', '.join(missing)}]. "
-                f"Required: {required_params}, "
-                f"present: [{present_str}]"
+                f"Present: [{present_str}]"
             )
             return False, error_message
+
+        return True, ""
+
+    def _check_session_required_params(
+        self, data: SessionEntity
+    ) -> Tuple[bool, str]:
+        """Check required session parameters and return (is_valid, error_message)."""
+        # Check if session has at least one span with matching entity type
+        required_types = self.required["entity_type"]
+        has_matching_type = any(
+            span.entity_type in required_types for span in data.spans
+        )
+        if not has_matching_type:
+            return (
+                False,
+                f"Session must contain at least one entity of type {required_types}",
+            )
 
         return True, ""
 
@@ -149,13 +161,13 @@ class DeepEvalMetricAdapter(BaseMetric):
             if data.entity_type not in self.required["entity_type"]:
                 return (
                     False,
-                    f"Entity type mismatch: got '{data.entity_type}', expected one of {self.required['entity_type']}. Entity: '{data.entity_name or 'unnamed'}'",
+                    f"Entity type must be one of {self.required['entity_type']}, got '{data.entity_type}'",
                     span_id,
                     session_id,
                 )
 
             # Check required parameters
-            is_valid, error_message = self._check_required_params(data)
+            is_valid, error_message = self._check_span_required_params(data)
             if not is_valid:
                 return (
                     False,
@@ -173,7 +185,7 @@ class DeepEvalMetricAdapter(BaseMetric):
             if not data.spans:
                 return (
                     False,
-                    f"Session '{session_id}' has no spans (empty session data)",
+                    f"Session '{session_id}' spans cannot be empty",
                     "",
                     session_id,
                 )
@@ -181,7 +193,7 @@ class DeepEvalMetricAdapter(BaseMetric):
             span_id = data.spans[0].span_id
 
             # Check required parameters
-            is_valid, error_message = self._check_required_params(data)
+            is_valid, error_message = self._check_session_required_params(data)
             if not is_valid:
                 return False, error_message, span_id, session_id
 
