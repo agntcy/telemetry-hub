@@ -30,7 +30,7 @@ jobs:
           - runner: windows-latest
             os: windows
             target: x64
-          - runner: macos-13 # We use macos-13 as it is a x86_64 runner
+          - runner: macos-15-intel # updated to macos-15 as 13 is now deprecated
             os: macos
             target: x86_64
           - runner: macos-15
