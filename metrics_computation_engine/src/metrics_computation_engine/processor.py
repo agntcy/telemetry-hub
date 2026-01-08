@@ -577,8 +577,7 @@ class MetricsProcessor:
         """
         if not getattr(span, "span_id", None):
             return False, "Missing span_id"
-        if not getattr(span, "session_id", None):
-            return False, "Missing session_id"
+        # Note: session_id is Optional in SpanEntity, so we don't require it here
         if not getattr(span, "entity_type", None):
             return False, "Missing entity_type"
         return True, None
