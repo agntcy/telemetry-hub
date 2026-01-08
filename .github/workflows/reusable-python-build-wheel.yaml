@@ -24,12 +24,6 @@ jobs:
           - runner: ubuntu-latest
             os: linux
             target: x86_64
-          - runner: windows-latest
-            os: windows
-            target: x64
-          - runner: macos-latest
-            os: macos
-            target: aarch64
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
