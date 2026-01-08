@@ -15,11 +15,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # MCE is a pure Python package (py3-none-any), only needs one platform
   build-mce-wheel:
-    name: MCE Python wheel
-    uses: ./.github/workflows/reusable-python-build-wheel.yaml
-    with:
-      working-dir: ./metrics_computation_engine
+    name: Build MCE Python wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: ./.github/actions/setup-python
+        with:
+          py-install: false
+          poetry-install: false
+          uv-install: true
+
+      - name: Build wheel
+        working-directory: ./metrics_computation_engine
+        run: uv build
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: mce-wheel
+          path: ./metrics_computation_engine/dist
 
   pypi-publish:
     name: Upload release to PyPI
@@ -38,7 +57,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
-          merge-multiple: true
+          name: mce-wheel
           path: ./dist
 
       - name: Show files
