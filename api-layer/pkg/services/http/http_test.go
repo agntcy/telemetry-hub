@@ -57,6 +57,16 @@ func (m *MockDataService) GetSessionIDSWithPrompts(startTime, endTime time.Time)
 	return args.Get(0).([]models.SessionUniqueID), args.Error(1)
 }
 
+func (m *MockDataService) GetTracesBySessionIDs(sessionIDs []string) (map[string][]models.OtelTraces, []string, error) {
+	args := m.Called(sessionIDs)
+	return args.Get(0).(map[string][]models.OtelTraces), args.Get(1).([]string), args.Error(2)
+}
+
+func (m *MockDataService) GetSpanBySessionIDAndSpanID(sessionID string, spanID string) (models.OtelTraces, error) {
+	args := m.Called(sessionID, spanID)
+	return args.Get(0).(models.OtelTraces), args.Error(1)
+}
+
 // Helper function to create test server
 func createTestServer(mockDataService *MockDataService) *HttpServer {
 	return &HttpServer{
@@ -72,6 +82,7 @@ func createTestRouter(server *HttpServer) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/keepAlive", KeepAlive).Methods(http.MethodGet)
 	router.HandleFunc("/metrics", PrometeusMetrics).Methods(http.MethodGet)
+	router.HandleFunc("/traces/sessions/spans", server.SessionSpans).Methods(http.MethodGet)
 	router.HandleFunc("/traces/sessions", server.Sessions).Methods(http.MethodGet)
 	router.HandleFunc("/traces/session/{session_id}", server.Traces).Methods(http.MethodGet)
 	router.HandleFunc("/metrics/session", server.WriteMetricsSession).Methods(http.MethodPost)

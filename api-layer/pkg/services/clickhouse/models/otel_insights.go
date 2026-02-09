@@ -58,3 +58,9 @@ type SessionsResponse struct {
 	Data  []SessionUniqueID `json:"data"`
 	Total int               `json:"total"`
 }
+
+// SessionSpansResponse represents the response for /traces/sessions/spans endpoint
+type SessionSpansResponse struct {
+	Data               map[string][]OtelTraces `json:"data"`
+	NotFoundSessionIds []string                `json:"notfound_session_ids"`
+}
