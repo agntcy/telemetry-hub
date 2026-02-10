@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 // MockDataService implements the DataService interface for testing
@@ -57,6 +58,16 @@ func (m *MockDataService) GetSessionIDSWithPrompts(startTime, endTime time.Time)
 	return args.Get(0).([]models.SessionUniqueID), args.Error(1)
 }
 
+func (m *MockDataService) GetTracesBySessionIDs(sessionIDs []string) (map[string][]models.OtelTraces, []string, error) {
+	args := m.Called(sessionIDs)
+	return args.Get(0).(map[string][]models.OtelTraces), args.Get(1).([]string), args.Error(2)
+}
+
+func (m *MockDataService) GetSpanBySessionIDAndSpanID(sessionID string, spanID string) (models.OtelTraces, error) {
+	args := m.Called(sessionID, spanID)
+	return args.Get(0).(models.OtelTraces), args.Error(1)
+}
+
 // Helper function to create test server
 func createTestServer(mockDataService *MockDataService) *HttpServer {
 	return &HttpServer{
@@ -72,12 +83,14 @@ func createTestRouter(server *HttpServer) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/keepAlive", KeepAlive).Methods(http.MethodGet)
 	router.HandleFunc("/metrics", PrometeusMetrics).Methods(http.MethodGet)
+	router.HandleFunc("/traces/sessions/spans", server.SessionSpans).Methods(http.MethodGet)
 	router.HandleFunc("/traces/sessions", server.Sessions).Methods(http.MethodGet)
 	router.HandleFunc("/traces/session/{session_id}", server.Traces).Methods(http.MethodGet)
 	router.HandleFunc("/metrics/session", server.WriteMetricsSession).Methods(http.MethodPost)
 	router.HandleFunc("/metrics/span", server.WriteMetricsSpan).Methods(http.MethodPost)
 	router.HandleFunc("/metrics/session/{session_id}", server.GetMetricsSession).Methods(http.MethodGet)
 	router.HandleFunc("/metrics/span/{span_id}", server.GetMetricsSpan).Methods(http.MethodGet)
+	router.HandleFunc("/traces/session/{session_id}/span/{span_id}", server.SpanBySessionAndSpanID).Methods(http.MethodGet)
 	return router
 }
 
@@ -841,6 +854,86 @@ func TestGetMetricsSpan(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
+
+func TestSpanBySessionAndSpanID(t *testing.T) {
+	t.Run("GET with valid session_id and span_id should return span", func(t *testing.T) {
+		mockDataService := new(MockDataService)
+		server := createTestServer(mockDataService)
+		router := createTestRouter(server)
+
+		sessionID := "session_abc123"
+		spanID := "span_def456"
+		expectedSpan := models.OtelTraces{
+			TraceId:     "trace_ghi789",
+			SpanId:      spanID,
+			SpanName:    "ml_inference",
+			Timestamp:   time.Date(2023, 6, 25, 15, 30, 0, 0, time.UTC),
+			ServiceName: "ml-service",
+		}
+
+		mockDataService.On("GetSpanBySessionIDAndSpanID", sessionID, spanID).Return(expectedSpan, nil)
+
+		url := fmt.Sprintf("/traces/session/%s/span/%s", sessionID, spanID)
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+		var response models.OtelTraces
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedSpan, response)
+
+		mockDataService.AssertExpectations(t)
+	})
+
+	t.Run("GET with non-existent span should return 404", func(t *testing.T) {
+		mockDataService := new(MockDataService)
+		server := createTestServer(mockDataService)
+		router := createTestRouter(server)
+
+		sessionID := "session_abc123"
+		spanID := "span_nonexistent"
+
+		mockDataService.On("GetSpanBySessionIDAndSpanID", sessionID, spanID).Return(models.OtelTraces{}, gorm.ErrRecordNotFound)
+
+		url := fmt.Sprintf("/traces/session/%s/span/%s", sessionID, spanID)
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Contains(t, w.Body.String(), "Span not found")
+
+		mockDataService.AssertExpectations(t)
+	})
+
+	t.Run("GET with database error should return 500", func(t *testing.T) {
+		mockDataService := new(MockDataService)
+		server := createTestServer(mockDataService)
+		router := createTestRouter(server)
+
+		sessionID := "session_abc123"
+		spanID := "span_def456"
+
+		mockDataService.On("GetSpanBySessionIDAndSpanID", sessionID, spanID).Return(models.OtelTraces{}, errors.New("database connection error"))
+
+		url := fmt.Sprintf("/traces/session/%s/span/%s", sessionID, spanID)
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Contains(t, w.Body.String(), "Error fetching span")
+
+		mockDataService.AssertExpectations(t)
 	})
 }
 

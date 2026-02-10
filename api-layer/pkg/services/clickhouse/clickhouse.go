@@ -72,3 +72,13 @@ func (cs *ClickhouseService) GetMetricsBySpanIdAndScope(spanID string, scope str
 func (cs *ClickhouseService) GetTracesBySessionID(sessionID string) ([]models.OtelTraces, error) {
 	return cs.Handlers.GetTracesBySessionID(sessionID)
 }
+
+// GetTracesBySessionIDs implements the DataService interface (batch)
+func (cs *ClickhouseService) GetTracesBySessionIDs(sessionIDs []string) (map[string][]models.OtelTraces, []string, error) {
+	return cs.Handlers.GetTracesBySessionIDs(sessionIDs)
+}
+
+// GetSpanBySessionIDAndSpanID implements the DataService interface
+func (cs *ClickhouseService) GetSpanBySessionIDAndSpanID(sessionID string, spanID string) (models.OtelTraces, error) {
+	return cs.Handlers.GetSpanBySessionIDAndSpanID(sessionID, spanID)
+}
