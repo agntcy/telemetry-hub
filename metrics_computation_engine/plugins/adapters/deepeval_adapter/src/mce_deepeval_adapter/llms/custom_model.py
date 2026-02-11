@@ -29,9 +29,7 @@ class LiteLLMModel(DeepEvalBaseLLM):
 
         self.client = instructor.from_litellm(completion)
 
-    def _build_kwargs(
-        self, messages: list, schema: BaseModel
-    ) -> dict:
+    def _build_kwargs(self, messages: list, schema: BaseModel) -> dict:
         """Build kwargs for litellm, handling model-specific parameter support."""
         kwargs = {
             "model": self.model,
