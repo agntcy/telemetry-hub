@@ -1,6 +1,8 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+from typing import Optional
+
 from litellm import acompletion, completion
 from deepeval.models.base_model import DeepEvalBaseLLM
 from pydantic import BaseModel
@@ -15,10 +17,10 @@ logger = setup_logger(__name__)
 class LiteLLMModel(DeepEvalBaseLLM):
     def __init__(
         self,
-        model="gpt-4o",
+        model="gpt-5",
         api_key=None,
         base_url=None,
-        temperature=0.0,
+        temperature: Optional[float] = 1,
     ):
         self.model = model
         self.api_key = api_key
@@ -27,57 +29,46 @@ class LiteLLMModel(DeepEvalBaseLLM):
 
         self.client = instructor.from_litellm(completion)
 
-    def load_model(self):
-        return self.model
-
-    def generate(self, prompt: str, schema: BaseModel) -> BaseModel:
-        messages = [{"content": prompt, "role": "user"}]
-
-        # Prepare kwargs for litellm
+    def _build_kwargs(self, messages: list, schema: BaseModel) -> dict:
+        """Build kwargs for litellm, handling model-specific parameter support."""
         kwargs = {
             "model": self.model,
             "messages": messages,
             "response_model": schema,
-            "temperature": self.temperature,
         }
+
+        if self.temperature is not None:
+            kwargs["temperature"] = self.temperature
+
+        # Safety-net: ask litellm to silently drop any params that
+        # a given model does not support, rather than raising
+        # UnsupportedParamsError.
+        kwargs["drop_params"] = True
 
         if self.api_key:
             kwargs["api_key"] = self.api_key
         if self.base_url:
             kwargs["base_url"] = self.base_url
 
-        try:
-            response = self.client.chat.completions.create(**kwargs)
-        except Exception:
-            logger.exception("LiteLLMModel synchronous generate failed")
-            response = schema.model_construct()
+        return kwargs
 
+    def load_model(self):
+        return self.model
+
+    def generate(self, prompt: str, schema: BaseModel) -> BaseModel:
+        messages = [{"content": prompt, "role": "user"}]
+        kwargs = self._build_kwargs(messages, schema)
+
+        response = self.client.chat.completions.create(**kwargs)
         return response
 
     async def a_generate(self, prompt: str, schema: BaseModel) -> BaseModel:
         client = instructor.from_litellm(acompletion)
 
         messages = [{"content": prompt, "role": "user"}]
+        kwargs = self._build_kwargs(messages, schema)
 
-        # Prepare kwargs for litellm
-        kwargs = {
-            "model": self.model,
-            "messages": messages,
-            "response_model": schema,
-            "temperature": self.temperature,
-        }
-
-        if self.api_key:
-            kwargs["api_key"] = self.api_key
-        if self.base_url:
-            kwargs["base_url"] = self.base_url
-
-        try:
-            response = await client.chat.completions.create(**kwargs)
-        except Exception:
-            logger.exception("LiteLLMModel async generate failed")
-            response = schema.model_construct()
-
+        response = await client.chat.completions.create(**kwargs)
         return response
 
     def get_model_name(self):

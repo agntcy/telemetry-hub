@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 class LLMJudgeConfig(BaseModel):
     LLM_BASE_MODEL_URL: str = "https://api.openai.com/v1"
-    LLM_MODEL_NAME: str = "gpt-4o"
+    LLM_MODEL_NAME: str = "gpt-5"
     LLM_API_KEY: str = "sk-..."
     NUM_LLM_RETRIES: int = 3
 
