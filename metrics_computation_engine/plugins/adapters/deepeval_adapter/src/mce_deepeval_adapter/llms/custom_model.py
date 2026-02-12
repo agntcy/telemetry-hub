@@ -17,7 +17,7 @@ logger = setup_logger(__name__)
 class LiteLLMModel(DeepEvalBaseLLM):
     def __init__(
         self,
-        model="gpt-4o",
+        model="gpt-5",
         api_key=None,
         base_url=None,
         temperature: Optional[float] = 1,
