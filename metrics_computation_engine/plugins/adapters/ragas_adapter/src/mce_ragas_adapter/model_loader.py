@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any
+from typing import Any, Optional
 
 # Import logger from MCE following the standard pattern
 from metrics_computation_engine.logger import setup_logger
@@ -44,6 +44,7 @@ def load_ragas_model(
     llm_model_name: str,
     llm_api_key: str,
     llm_base_url: str,
+    temperature: Optional[float] = 1.0,
 ) -> Any:
     """
     Create a RAGAS-compatible LLM model with uvloop compatibility.
@@ -109,14 +110,17 @@ def load_ragas_model(
         from langchain_openai import ChatOpenAI
 
         # Create base LangChain ChatOpenAI model
-        base_llm = ChatOpenAI(
-            model=llm_model_name,
-            api_key=llm_api_key,
-            base_url=llm_base_url,
-            temperature=0.0,  # Deterministic evaluation
-            timeout=30,  # Reasonable timeout for evaluation
-            max_retries=2,  # Limited retries for production
-        )
+        # temperature defaults to 1.0 for broad model compatibility (e.g. gpt-5)
+        chat_kwargs = {
+            "model": llm_model_name,
+            "api_key": llm_api_key,
+            "base_url": llm_base_url,
+            "timeout": 30,
+            "max_retries": 2,
+        }
+        if temperature is not None:
+            chat_kwargs["temperature"] = temperature
+        base_llm = ChatOpenAI(**chat_kwargs)
 
         # Wrap in RAGAS-required LangchainLLMWrapper
         evaluator_llm = LangchainLLMWrapper(base_llm)
