@@ -1,7 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any
+from typing import Any, Optional
 from opik.evaluation import models
 from metrics_computation_engine.models.requests import LLMJudgeConfig
 
@@ -22,11 +22,14 @@ def load_gpt_model(
     llm_model_name: str,
     llm_api_key: str,
     llm_base_url: str,
+    temperature: Optional[float] = 1.0,
 ) -> models.LiteLLMChatModel:
-    model = models.LiteLLMChatModel(
-        model_name=llm_model_name,
-        base_url=llm_base_url,
-        api_key=llm_api_key,
-        temperature=0.0,
-    )
+    kwargs = {
+        "model_name": llm_model_name,
+        "base_url": llm_base_url,
+        "api_key": llm_api_key,
+    }
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+    model = models.LiteLLMChatModel(**kwargs)
     return model
