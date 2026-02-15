@@ -10,6 +10,9 @@ from metrics_computation_engine.models.requests import LLMJudgeConfig
 from metrics_computation_engine.entities.models.session import SessionEntity
 from metrics_computation_engine.entities.models.span import SpanEntity
 from metrics_computation_engine.types import AggregationLevel
+from metrics_computation_engine.entities.core.agent_role_detector import (
+    get_agent_role_and_skip_decision,
+)
 
 from .metric_configuration import MetricConfiguration, build_metric_configuration_map
 from .model_loader import MODEL_PROVIDER_NAME, load_model
@@ -26,7 +29,7 @@ class DeepEvalMetricAdapter(BaseMetric):
     Adapter to integrate DeepEval metrics as 3rd party plugins into the MCE.
     """
 
-    def __init__(self, deepeval_metric_name: str):
+    def __init__(self, deepeval_metric_name: str, filter_coordinators: bool = True):
         super().__init__()
         metric_configuration_map: Dict[str, MetricConfiguration] = (
             build_metric_configuration_map()
@@ -40,6 +43,7 @@ class DeepEvalMetricAdapter(BaseMetric):
         self.name = deepeval_metric_name
         self.deepeval_metric = None
         self.model = None
+        self.filter_coordinators = filter_coordinators
         metric_configuration: MetricConfiguration = metric_configuration_map[
             deepeval_metric_name
         ]
@@ -84,6 +88,9 @@ class DeepEvalMetricAdapter(BaseMetric):
 
     def create_model(self, llm_config: LLMJudgeConfig) -> Any:
         return load_model(llm_config)
+
+    def supports_agent_computation(self) -> bool:
+        return True
 
     @property
     def required_parameters(self):
@@ -313,3 +320,96 @@ class DeepEvalMetricAdapter(BaseMetric):
                 success=False,
                 error_message=error_msg,
             )
+
+    async def compute_agent_level(
+        self, data: SpanEntity | SessionEntity
+    ) -> List[MetricResult]:
+        """
+        Compute agent-level metrics for a given session.
+        """
+        results: List[MetricResult] = []
+        if not data.agent_stats:
+            return results
+
+        session_id = [data.session_id]
+        app_name = data.spans[0].app_name
+        category = "agent"
+
+        for agent_name in data.agent_stats.keys():
+            try:
+                # Check if agent should be skipped based on role detection
+                should_skip, role_metadata = get_agent_role_and_skip_decision(
+                    data, agent_name, filter_coordinators=self.filter_coordinators
+                )
+
+                if should_skip:
+                    # Skip this agent entirely - don't include in results
+                    # Log the skip for debugging purposes
+                    logger.info(
+                        f"Skipping agent '{agent_name}' for DeepEvalMetric metric: {role_metadata.get('skip_reason', 'Detected as coordinator agent')}"
+                    )
+                    continue
+
+                test_case_calculator = self.metric_configuration.test_case_calculator
+                test_case = test_case_calculator.calculate_test_case_with_agent(
+                    data=data, agent_name=agent_name
+                )
+
+                # Use async version if available, otherwise fallback to sync
+                if hasattr(self.deepeval_metric, "a_measure"):
+                    score = await self.deepeval_metric.a_measure(test_case)
+                else:
+                    score = self.deepeval_metric.measure(test_case)
+
+                # Extract additional metadata from the metric
+                metadata = {
+                    "threshold": getattr(self.deepeval_metric, "threshold", None),
+                    "success": getattr(self.deepeval_metric, "success", None),
+                    "reason": getattr(self.deepeval_metric, "reason", None),
+                    "evaluation_cost": getattr(
+                        self.deepeval_metric, "evaluation_cost", None
+                    ),
+                }
+
+                logger.info(f"metadata: {metadata}")
+                # Filter out None values
+                metadata = {k: v for k, v in metadata.items() if v is not None}
+
+                agent_spans = data._get_spans_for_agent(agent_name)
+                agent_span_ids = [span.span_id for span in agent_spans]
+
+                logger.info(f"aggregation level: {self.aggregation_level}")
+                results.append(
+                    MetricResult(
+                        metric_name=self.name,
+                        description="",
+                        value=score,
+                        reasoning=metadata["reason"],
+                        unit="",
+                        aggregation_level=self.aggregation_level,
+                        category=category,
+                        app_name=app_name,
+                        agent_id=agent_name,
+                        span_id=agent_span_ids,
+                        session_id=session_id,
+                        source="deepeval",
+                        entities_involved=[],
+                        edges_involved=[],
+                        success=getattr(
+                            self.deepeval_metric, "success", score is not None
+                        ),
+                        metadata=metadata,
+                        error_message=None,
+                    )
+                )
+
+            except Exception as e:
+                # Handle errors gracefully for individual agents
+                import traceback
+
+                # Log detailed error information for debugging
+                logger.error(f"ERROR in DeepEval computation for agent {agent_name}:")
+                logger.error(f"Exception type: {type(e).__name__}")
+                logger.error(f"Exception message: {str(e)}")
+                logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        return results

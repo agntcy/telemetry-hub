@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 from typing import Any, Dict, List, Optional
 from collections import Counter, defaultdict
 from pydantic import BaseModel, Field, PrivateAttr
@@ -391,6 +392,21 @@ class SessionEntity(BaseModel):
         # Continue traversing children
         for child in node.children:
             self._collect_tool_llm_tokens(child, tool_tokens)
+
+    def get_conversation_data_without_images(self) -> Optional[Dict[str, Any]]:
+        if not self.conversation_data:
+            return None
+        if "elements" in self.conversation_data:
+            if type(self.conversation_data["elements"]) is list:
+                for element in self.conversation_data["elements"]:
+                    if type(element) is dict:
+                        element = _redact_images_from_payload(element)
+        elif "conversation" in self.conversation_data:
+            if type(self.conversation_data["conversation"]) is list:
+                for element in self.conversation_data["conversation"]:
+                    if type(element) is dict:
+                        element = _redact_images_from_payload(element)
+        return self.conversation_data
 
     def _get_descendant_llm_tokens(self, node) -> int:
         """
@@ -952,6 +968,8 @@ class SessionEntity(BaseModel):
         llm_spans = [s for s in agent_spans if s.entity_type == "llm"]
         for span in llm_spans:
             if span.input_payload:
+                span.input_payload = _redact_images_from_payload(span.input_payload)
+
                 for key, value in span.input_payload.items():
                     if key.startswith("gen_ai.prompt") and ".content" in key:
                         role_key = key.replace(".content", ".role")
@@ -967,6 +985,7 @@ class SessionEntity(BaseModel):
                         )
 
             if span.output_payload:
+                span.output_payload = _redact_images_from_payload(span.output_payload)
                 for key, value in span.output_payload.items():
                     if key.startswith("gen_ai.completion") and ".content" in key:
                         role_key = key.replace(".content", ".role")
@@ -1215,3 +1234,41 @@ class AgentView:
             support_prompt_format_in_output=True,  # AgentView supports both formats
         )
         return final_response
+
+
+def _redact_images_from_payload(payload: dict) -> dict:
+    for k in payload.keys():
+        try:
+            item = json.loads(payload[k])
+            if type(item) is list:
+                for i in item:
+                    if type(i) is dict:
+                        if "image_url" in i.keys():
+                            i["image_url"] = "REDACTED"
+            elif type(item) is dict:
+                if "image_url" in item.keys():
+                    item["image_url"] = "REDACTED"
+            payload[k] = json.dumps(item, indent=2)
+        except Exception:
+            continue
+
+    return payload
+
+
+def _redact_images_from_payload(payload: dict) -> dict:
+    for k in payload.keys():
+        try:
+            item = json.loads(payload[k])
+            if type(item) is list:
+                for i in item:
+                    if type(i) is dict:
+                        if "image_url" in i.keys():
+                            i["image_url"] = "REDACTED"
+            elif type(item) is dict:
+                if "image_url" in item.keys():
+                    item["image_url"] = "REDACTED"
+            payload[k] = json.dumps(item, indent=2)
+        except Exception:
+            continue
+
+    return payload

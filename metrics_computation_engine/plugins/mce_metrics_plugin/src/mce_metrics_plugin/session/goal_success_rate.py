@@ -133,7 +133,7 @@ class GoalSuccessRate(BaseMetric):
 
                     result = self._create_error_result(
                         error_message=f"Agent '{agent_name}' missing input_query or final_response data",
-                        category="application",
+                        category="agent",
                         description=self.description,
                         app_name=session.app_name,
                         entities_involved=entities_involved,
@@ -170,8 +170,9 @@ class GoalSuccessRate(BaseMetric):
                         score=score,
                         reasoning=f"{reasoning}",
                         description=self.description,
-                        category="application",
+                        category="agent",
                         app_name=session.app_name,
+                        agent_id=agent_name,
                         entities_involved=entities_involved,
                         span_ids=agent_span_ids,
                         session_ids=[session.session_id],
@@ -180,7 +181,7 @@ class GoalSuccessRate(BaseMetric):
                     result = self._create_error_result(
                         error_message="No model available",
                         description=self.description,
-                        category="application",
+                        category="agent",
                         app_name=session.app_name,
                         entities_involved=entities_involved,
                         span_ids=agent_span_ids,
