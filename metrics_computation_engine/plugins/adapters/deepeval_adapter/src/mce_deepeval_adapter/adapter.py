@@ -264,6 +264,9 @@ class DeepEvalMetricAdapter(BaseMetric):
             logger.info(f"metadata: {metadata}")
             # Filter out None values
             metadata = {k: v for k, v in metadata.items() if v is not None}
+            entity_type = getattr(data, "entity_type", None)
+            if entity_type is not None:
+                metadata["entity_type"] = entity_type
 
             logger.info(f"aggregation level: {self.aggregation_level}")
             return MetricResult(
@@ -293,6 +296,10 @@ class DeepEvalMetricAdapter(BaseMetric):
             error_msg = str(e)
             if context.get("include_stack_trace", False):
                 error_msg = f"{error_msg}\n\nStack trace:\n{traceback.format_exc()}"
+            error_metadata = {}
+            entity_type = getattr(data, "entity_type", None)
+            if entity_type is not None:
+                error_metadata["entity_type"] = entity_type
 
             return MetricResult(
                 metric_name=self.name,
@@ -309,7 +316,7 @@ class DeepEvalMetricAdapter(BaseMetric):
                 source="deepeval",
                 entities_involved=entities_involved,
                 edges_involved=[],
-                metadata={},
+                metadata=error_metadata,
                 success=False,
                 error_message=error_msg,
             )

@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 from typing import Any, Dict, List, Optional, Type, Union
 
 from deepeval.metrics import AnswerRelevancyMetric
@@ -38,6 +39,29 @@ from pydantic import BaseModel, ConfigDict, Field
 from metrics_computation_engine.types import AggregationLevel
 
 
+SPAN_ENTITY_TYPE_ALLOWLIST_ENV = "MCE_SPAN_METRIC_ENTITY_TYPE_ALLOWLIST"
+_SUPPORTED_SPAN_ENTITY_TYPES = {"llm", "agent", "workflow", "tool", "graph", "task"}
+_ALLOWLIST_ENABLED_METRICS = {
+    AnswerRelevancyMetric.__name__,
+    BiasMetric.__name__,
+    ToxicityMetric.__name__,
+}
+
+
+def _entity_types_for(metric_name: str, default: List[str]) -> List[str]:
+    """Resolve entity types for selected span metrics from env allowlist."""
+    if metric_name not in _ALLOWLIST_ENABLED_METRICS:
+        return default
+
+    raw_allowlist = os.getenv(SPAN_ENTITY_TYPE_ALLOWLIST_ENV, "").strip()
+    if not raw_allowlist:
+        return default
+
+    parsed = [item.strip().lower() for item in raw_allowlist.split(",") if item.strip()]
+    parsed = [item for item in parsed if item in _SUPPORTED_SPAN_ENTITY_TYPES]
+    return parsed or default
+
+
 class MetricRequirements(BaseModel):
     entity_type: List[str]
     aggregation_level: AggregationLevel
@@ -66,7 +90,7 @@ def build_metric_configurations() -> List[MetricConfiguration]:
             metric_name=AnswerRelevancyMetric.__name__,
             test_case_calculator=LLMAnswerRelevancyTestCase(),
             requirements=MetricRequirements(
-                entity_type=["llm"],
+                entity_type=_entity_types_for(AnswerRelevancyMetric.__name__, ["llm"]),
                 aggregation_level="span",
                 required_input_parameters=["input_query", "final_response"],
             ),
@@ -106,7 +130,7 @@ def build_metric_configurations() -> List[MetricConfiguration]:
             metric_name=BiasMetric.__name__,
             test_case_calculator=DeepEvalTestCaseLLM(),
             requirements=MetricRequirements(
-                entity_type=["llm"],
+                entity_type=_entity_types_for(BiasMetric.__name__, ["llm"]),
                 aggregation_level="span",
                 required_input_parameters=["input_payload", "output_payload"],
             ),
@@ -167,7 +191,7 @@ def build_metric_configurations() -> List[MetricConfiguration]:
             metric_name=ToxicityMetric.__name__,
             test_case_calculator=DeepEvalTestCaseLLM(),
             requirements=MetricRequirements(
-                entity_type=["llm"],
+                entity_type=_entity_types_for(ToxicityMetric.__name__, ["llm"]),
                 aggregation_level="span",
                 required_input_parameters=["input_payload", "output_payload"],
             ),
