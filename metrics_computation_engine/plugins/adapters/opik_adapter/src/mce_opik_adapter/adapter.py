@@ -181,8 +181,12 @@ class OpikMetricAdapter(BaseMetric):
             span_id,
             session_id,
         ) = await self._assess_input_data(data=data)
+        entity_type = getattr(data, "entity_type", None)
 
         if not data_is_appropriate:
+            error_metadata = {}
+            if entity_type is not None:
+                error_metadata["entity_type"] = entity_type
             return MetricResult(
                 metric_name=self.name,
                 description="",
@@ -198,7 +202,7 @@ class OpikMetricAdapter(BaseMetric):
                 entities_involved=[],
                 edges_involved=[],
                 success=False,
-                metadata={},
+                metadata=error_metadata,
                 error_message=error_message,
             )
 
@@ -236,6 +240,8 @@ class OpikMetricAdapter(BaseMetric):
 
             # Filter out None values
             metadata = {k: v for k, v in metadata.items() if v is not None}
+            if entity_type is not None:
+                metadata["entity_type"] = entity_type
 
             return MetricResult(
                 metric_name=self.name,
@@ -264,6 +270,9 @@ class OpikMetricAdapter(BaseMetric):
                 import traceback
 
                 error_msg = f"{error_msg}\n\nStack trace:\n{traceback.format_exc()}"
+            error_metadata = {}
+            if entity_type is not None:
+                error_metadata["entity_type"] = entity_type
 
             return MetricResult(
                 metric_name=self.name,
@@ -280,7 +289,7 @@ class OpikMetricAdapter(BaseMetric):
                 source="opik",
                 entities_involved=[],
                 edges_involved=[],
-                metadata={},
+                metadata=error_metadata,
                 success=False,
                 error_message=error_msg,
             )

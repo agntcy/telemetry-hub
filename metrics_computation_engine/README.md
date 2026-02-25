@@ -105,6 +105,7 @@ API_BASE_URL=http://localhost:8080       # API-layer endpoint
 PAGINATION_LIMIT=50                      # Max sessions per API request
 PAGINATION_DEFAULT_MAX_SESSIONS=50       # Default max sessions when not specified
 SESSIONS_TRACES_MAX=20                   # Max sessions per batch for trace retrieval
+MCE_SPAN_METRIC_ENTITY_TYPE_ALLOWLIST=llm  # Comma-separated span entity types allowed for span-level metric execution
 
 # LLM Configuration
 LLM_BASE_MODEL_URL=https://api.openai.com/v1  # LLM API endpoint
