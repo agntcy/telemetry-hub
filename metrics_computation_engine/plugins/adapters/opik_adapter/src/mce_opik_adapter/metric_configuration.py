@@ -1,7 +1,9 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 import os
+from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from mce_opik_adapter.metric_test_case_creation import (
@@ -17,6 +19,27 @@ from metrics_computation_engine.types import AggregationLevel
 SPAN_ENTITY_TYPE_ALLOWLIST_ENV = "MCE_SPAN_METRIC_ENTITY_TYPE_ALLOWLIST"
 _SUPPORTED_SPAN_ENTITY_TYPES = {"llm", "agent", "workflow", "tool", "graph", "task"}
 _ALLOWLIST_ENABLED_METRICS = {"Hallucination", "Sentiment"}
+logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _get_configured_entity_types() -> List[str]:
+    raw_allowlist = os.getenv(SPAN_ENTITY_TYPE_ALLOWLIST_ENV, "").strip()
+    if not raw_allowlist:
+        return []
+
+    requested = [item.strip().lower() for item in raw_allowlist.split(",") if item.strip()]
+    parsed = [item for item in requested if item in _SUPPORTED_SPAN_ENTITY_TYPES]
+    dropped = sorted({item for item in requested if item not in _SUPPORTED_SPAN_ENTITY_TYPES})
+    if dropped:
+        logger.warning(
+            "Ignoring unsupported values in %s: %s. Supported values: %s",
+            SPAN_ENTITY_TYPE_ALLOWLIST_ENV,
+            ", ".join(dropped),
+            ", ".join(sorted(_SUPPORTED_SPAN_ENTITY_TYPES)),
+        )
+
+    return parsed
 
 
 def _entity_types_for(metric_name: str, default: List[str]) -> List[str]:
@@ -24,12 +47,7 @@ def _entity_types_for(metric_name: str, default: List[str]) -> List[str]:
     if metric_name not in _ALLOWLIST_ENABLED_METRICS:
         return default
 
-    raw_allowlist = os.getenv(SPAN_ENTITY_TYPE_ALLOWLIST_ENV, "").strip()
-    if not raw_allowlist:
-        return default
-
-    parsed = [item.strip().lower() for item in raw_allowlist.split(",") if item.strip()]
-    parsed = [item for item in parsed if item in _SUPPORTED_SPAN_ENTITY_TYPES]
+    parsed = _get_configured_entity_types()
     return parsed or default
 
 
