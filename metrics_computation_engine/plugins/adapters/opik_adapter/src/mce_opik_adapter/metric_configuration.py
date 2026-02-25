@@ -28,9 +28,13 @@ def _get_configured_entity_types() -> List[str]:
     if not raw_allowlist:
         return []
 
-    requested = [item.strip().lower() for item in raw_allowlist.split(",") if item.strip()]
+    requested = [
+        item.strip().lower() for item in raw_allowlist.split(",") if item.strip()
+    ]
     parsed = [item for item in requested if item in _SUPPORTED_SPAN_ENTITY_TYPES]
-    dropped = sorted({item for item in requested if item not in _SUPPORTED_SPAN_ENTITY_TYPES})
+    dropped = sorted(
+        {item for item in requested if item not in _SUPPORTED_SPAN_ENTITY_TYPES}
+    )
     if dropped:
         logger.warning(
             "Ignoring unsupported values in %s: %s. Supported values: %s",
