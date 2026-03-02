@@ -35,7 +35,7 @@ jobs:
         run: uv build
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: mce-wheel
           path: ./metrics_computation_engine/dist
@@ -55,7 +55,7 @@ jobs:
       contents: read
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: mce-wheel
           path: ./dist
