@@ -25,11 +25,11 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
 
       - name: Check code has no lint errors
-        uses: astral-sh/ruff-action@0c50076f12c38c3d0115b7b519b54a91cb9cf0ad
+        uses: astral-sh/ruff-action@4919ec5cf1f49eff0871dbcea0da843445b837e6
         with:
           src: "metrics_computation_engine/"
       - name: Check code is correctly formatted
-        uses: astral-sh/ruff-action@0c50076f12c38c3d0115b7b519b54a91cb9cf0ad
+        uses: astral-sh/ruff-action@4919ec5cf1f49eff0871dbcea0da843445b837e6
         with:
           args: "format --check"
           src: "metrics_computation_engine/"
