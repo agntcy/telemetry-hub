@@ -49,7 +49,7 @@ jobs:
         run: |
           uv build
       - name: Upload wheel
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheel-${{ matrix.platform.os }}-${{ matrix.platform.target }}
           path: ${{ inputs.working-dir }}/dist
