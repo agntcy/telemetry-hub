@@ -82,8 +82,8 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 
-[tool.uv.constraint-dependencies]
-litellm = "<1.79.0"
+[tool.uv]
+constraint-dependencies = ["litellm<1.79.0"]
 
 [tool.uv.sources]
 metrics-computation-engine = { path = "../../../" }
