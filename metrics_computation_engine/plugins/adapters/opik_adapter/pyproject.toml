@@ -64,6 +64,9 @@ opik = "mce_opik_adapter.adapter:OpikMetricAdapter"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mce_opik_adapter"]
 
+[tool.uv]
+constraint-dependencies = ["litellm<1.79.0"]
+
 [tool.black]
 line-length = 88
 target-version = ['py38']
