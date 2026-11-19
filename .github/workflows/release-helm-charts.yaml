@@ -50,6 +50,16 @@ jobs:
     needs: [ release ]
     runs-on: ubuntu-latest
     steps:
+      - name: Authenticate as the GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.PROJECT_APP_ID }}
+          private-key: ${{ secrets.PROJECT_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: csit
+          permission-actions: write
+
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -57,4 +67,4 @@ jobs:
       - name: Trigger CSIT integration CI
         uses: ./.github/actions/trigger-integrations
         with:
-          github-token: ${{ secrets.AGNTCY_BUILD_BOT_GH_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
